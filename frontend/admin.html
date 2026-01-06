@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulegal - Administration</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/styles.css">
+    <script src="/static/auth.js"></script>
+    <script>
+        // Protection immédiate
+        Auth.requireAdmin();
+    </script>
+    <style>
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--bg-dark);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius);
+            padding: 2rem;
+            max-width: 700px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+
+        .criteria-list {
+            margin-top: 1rem;
+        }
+
+        .criteria-item {
+            display: grid;
+            grid-template-columns: 1fr 1fr auto auto;
+            gap: 0.5rem;
+            padding: 0.75rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: var(--radius-sm);
+            margin-bottom: 0.5rem;
+            align-items: center;
+        }
+
+        .criteria-item input,
+        .criteria-item select {
+            padding: 0.5rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            color: var(--text-primary);
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--bg-glass);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            margin-top: 0.5rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header style="display: flex; justify-content: space-between; align-items: center; text-align: left;">
+            <div>
+                <h1 class="logo" style="font-size: 1.8rem; margin-bottom: 0;">🔧 Administration Simulegal</h1>
+                <p class="tagline" style="margin-bottom: 0;">Gestion des procédures</p>
+            </div>
+            <div style="display: flex; gap: 0.5rem;">
+                <a href="/app" class="btn btn-secondary">Retour App</a>
+                <button onclick="Auth.logout()" class="btn btn-secondary">Déconnexion</button>
+            </div>
+        </header>
+
+        <!-- Statistiques -->
+        <div class="stats-grid" id="stats"></div>
+
+        <!-- Actions -->
+        <div class="admin-header">
+            <h2>Procédures</h2>
+            <button class="btn btn-primary" onclick="openModal()">+ Nouvelle procédure</button>
+        </div>
+
+        <!-- Liste des procédures -->
+        <div class="procedure-list" id="procedure-list"></div>
+    </div>
+
+    <!-- Modal d'édition -->
+    <div class="modal" id="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modal-title">Nouvelle procédure</h3>
+                <button class="modal-close" onclick="closeModal()">×</button>
+            </div>
+
+            <form id="procedure-form">
+                <input type="hidden" id="edit-id">
+
+                <div class="form-group">
+                    <label class="form-label">Nom de la procédure</label>
+                    <input type="text" class="form-input" id="proc-name" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Description</label>
+                    <textarea class="form-input" id="proc-description" rows="2"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Documents requis (un par ligne)</label>
+                    <textarea class="form-input" id="proc-documents" rows="3"
+                        placeholder="Acte de mariage&#10;Justificatif de domicile"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Critères d'éligibilité</label>
+                    <div class="criteria-list" id="criteria-list"></div>
+                    <button type="button" class="btn btn-secondary" onclick="addCriterion()"
+                        style="margin-top: 0.5rem;">+ Ajouter un critère</button>
+                </div>
+
+                <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">Annuler</button>
+                    <button type="submit" class="btn btn-success" style="flex: 1;">Enregistrer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = window.location.origin;
+        let procedures = [];
+        let criteriaCount = 0;
+
+        async function loadProcedures() {
+            try {
+                const res = await fetch(`${API_URL}/api/procedures`);
+                procedures = await res.json();
+                renderProcedures();
+                renderStats();
+            } catch (e) {
+                console.error('Erreur:', e);
+            }
+        }
+
+        function renderStats() {
+            const totalCriteria = procedures.reduce((sum, p) => sum + (p.base_criteria || []).length, 0);
+            const withExceptions = procedures.filter(p => (p.exceptions || []).length > 0).length;
+
+            document.getElementById('stats').innerHTML = `
+        <div class="stat-card">
+          <div class="stat-value">${procedures.length}</div>
+          <div class="stat-label">Procédures</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">${totalCriteria}</div>
+          <div class="stat-label">Critères</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">${withExceptions}</div>
+          <div class="stat-label">Avec exceptions</div>
+        </div>
+      `;
+        }
+
+        function renderProcedures() {
+            const container = document.getElementById('procedure-list');
+            container.innerHTML = procedures.map(p => `
+        <div class="procedure-item">
+          <div>
+            <strong>${p.name}</strong>
+            <div style="color: var(--text-secondary); font-size: 0.85rem;">
+              ${(p.base_criteria || []).length} critères • ${(p.exceptions || []).length} exceptions
+            </div>
+          </div>
+          <div class="procedure-actions">
+            <button class="btn btn-secondary btn-icon" onclick="editProcedure('${p.id}')" title="Modifier">✏️</button>
+            <button class="btn btn-danger btn-icon" onclick="deleteProcedure('${p.id}')" title="Supprimer">🗑️</button>
+          </div>
+        </div>
+      `).join('');
+        }
+
+        function openModal(procedure = null) {
+            document.getElementById('modal').classList.add('active');
+            document.getElementById('criteria-list').innerHTML = '';
+            criteriaCount = 0;
+
+            if (procedure) {
+                document.getElementById('modal-title').textContent = 'Modifier la procédure';
+                document.getElementById('edit-id').value = procedure.id;
+                document.getElementById('proc-name').value = procedure.name;
+                document.getElementById('proc-description').value = procedure.description || '';
+                document.getElementById('proc-documents').value = (procedure.documents || []).join('\n');
+
+                (procedure.base_criteria || []).forEach(c => addCriterion(c));
+            } else {
+                document.getElementById('modal-title').textContent = 'Nouvelle procédure';
+                document.getElementById('edit-id').value = '';
+                document.getElementById('proc-name').value = '';
+                document.getElementById('proc-description').value = '';
+                document.getElementById('proc-documents').value = '';
+                addCriterion();
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('modal').classList.remove('active');
+        }
+
+        function addCriterion(data = {}) {
+            const list = document.getElementById('criteria-list');
+            const idx = criteriaCount++;
+
+            list.innerHTML += `
+        <div class="criteria-item" id="criterion-${idx}">
+          <input type="text" placeholder="Label" value="${data.label || ''}" id="crit-label-${idx}">
+          <select id="crit-type-${idx}">
+            <option value="bool" ${data.type === 'bool' ? 'selected' : ''}>Oui/Non</option>
+            <option value="int" ${data.type === 'int' ? 'selected' : ''}>Nombre entier</option>
+            <option value="float" ${data.type === 'float' ? 'selected' : ''}>Nombre décimal</option>
+          </select>
+          <input type="number" placeholder="Seuil" value="${data.threshold || ''}" id="crit-threshold-${idx}" style="width: 80px;">
+          <button type="button" onclick="removeCriterion(${idx})" style="background: var(--danger); border: none; color: white; border-radius: 4px; padding: 0.5rem; cursor: pointer;">×</button>
+        </div>
+      `;
+        }
+
+        function removeCriterion(idx) {
+            document.getElementById(`criterion-${idx}`).remove();
+        }
+
+        function editProcedure(id) {
+            const proc = procedures.find(p => p.id === id);
+            if (proc) openModal(proc);
+        }
+
+        async function deleteProcedure(id) {
+            if (!confirm('Supprimer cette procédure ?')) return;
+
+            try {
+                await fetch(`${API_URL}/api/admin/procedures/${id}`, { method: 'DELETE' });
+                loadProcedures();
+            } catch (e) {
+                alert('Erreur lors de la suppression');
+            }
+        }
+
+        document.getElementById('procedure-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const criteria = [];
+            document.querySelectorAll('.criteria-item').forEach(item => {
+                const idx = item.id.split('-')[1];
+                const label = document.getElementById(`crit-label-${idx}`)?.value;
+                if (label) {
+                    criteria.push({
+                        id: label.toLowerCase().replace(/[^a-z0-9]/g, '_'),
+                        label: label,
+                        type: document.getElementById(`crit-type-${idx}`).value,
+                        threshold: parseFloat(document.getElementById(`crit-threshold-${idx}`).value) || null,
+                        expected: document.getElementById(`crit-type-${idx}`).value === 'bool' ? true : null
+                    });
+                }
+            });
+
+            const data = {
+                name: document.getElementById('proc-name').value,
+                description: document.getElementById('proc-description').value,
+                documents: document.getElementById('proc-documents').value.split('\n').filter(d => d.trim()),
+                base_criteria: criteria,
+                exceptions: []
+            };
+
+            const editId = document.getElementById('edit-id').value;
+            const url = editId
+                ? `${API_URL}/api/admin/procedures/${editId}`
+                : `${API_URL}/api/admin/procedures`;
+            const method = editId ? 'PUT' : 'POST';
+
+            try {
+                await fetch(url, {
+                    method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                closeModal();
+                loadProcedures();
+            } catch (e) {
+                alert('Erreur lors de l\'enregistrement');
+            }
+        });
+
+        // Charger les données au démarrage
+        loadProcedures();
+    </script>
+</body>
+
+</html>

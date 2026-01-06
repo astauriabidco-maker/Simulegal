@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulegal AI - Assistant Éligibilité</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/styles.css">
+    <style>
+        .chat-container {
+            max-width: 800px;
+            margin: 2rem auto;
+            height: 70vh;
+            display: flex;
+            flex-direction: column;
+            background: var(--bg-glass);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius);
+            overflow: hidden;
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 1.5rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .message {
+            max-width: 80%;
+            padding: 0.875rem 1.25rem;
+            border-radius: var(--radius-sm);
+            font-size: 0.95rem;
+            line-height: 1.5;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .message.bot {
+            align-self: flex-start;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+            border-bottom-left-radius: 4px;
+        }
+
+        .message.user {
+            align-self: flex-end;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .chat-input-area {
+            padding: 1.5rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            gap: 1rem;
+        }
+
+        .chat-input {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius-sm);
+            padding: 0.75rem 1rem;
+            color: var(--text-primary);
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        .chat-input:focus {
+            border-color: var(--primary);
+        }
+
+        .typing-indicator {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+            display: none;
+        }
+
+        .chat-header {
+            padding: 1rem 1.5rem;
+            background: rgba(255, 255, 255, 0.03);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .chat-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+            color: var(--success);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--success);
+            border-radius: 50%;
+            box-shadow: 0 0 10px var(--success);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <nav class="navbar" id="navbar">
+            <a href="/app" class="nav-link">Retour Formulaire</a>
+        </nav>
+        <header style="padding: 1rem 0;">
+            <h1 class="logo">Simulegal AI</h1>
+            <p class="tagline">Votre expert en droit des étrangers</p>
+        </header>
+
+        <div class="chat-container">
+            <div class="chat-header">
+                <div class="chat-status">
+                    <div class="status-dot"></div>
+                    Assistant en ligne
+                </div>
+                <div id="chat-progress" style="font-size: 0.8rem; color: var(--text-secondary);">Analyse : 0%</div>
+            </div>
+
+            <div class="chat-messages" id="chat-messages">
+                <div class="message bot">Bonjour ! Je suis l'assistant intelligent de Simulegal. Je vais vous aider à
+                    évaluer votre éligibilité en quelques questions.</div>
+                <div class="message bot">Pour commencer, quelle est votre nationalité ?</div>
+            </div>
+
+            <div class="chat-input-area">
+                <input type="text" id="user-input" class="chat-input" placeholder="Tapez votre réponse ici..."
+                    autocomplete="off">
+                <button id="send-btn" class="btn btn-primary">Envoyer</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/auth.js"></script>
+    <script>
+        const API_URL = window.location.origin;
+        let simulationId = null;
+        const messagesContainer = document.getElementById('chat-messages');
+        const inputField = document.getElementById('user-input');
+        const sendBtn = document.getElementById('send-btn');
+
+        async function sendMessage() {
+            const text = inputField.value.trim();
+            if (!text) return;
+
+            // Afficher message utilisateur
+            appendMessage(text, 'user');
+            inputField.value = '';
+
+            try {
+                const response = await fetch(`${API_URL}/api/chat/message`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        message: text,
+                        simulation_id: simulationId
+                    })
+                });
+
+                const data = await response.json();
+                simulationId = data.simulation_id;
+
+                // Simuler un léger délai de reflexion
+                setTimeout(() => {
+                    appendMessage(data.reply, 'bot');
+                    updateProgress(data.current_data);
+
+                    if (data.is_finished) {
+                        // Proposer le bouton de résultats
+                        setTimeout(() => {
+                            appendMessage(`Analyse terminée ! Cliquez ci-dessous pour voir votre score d'éligibilité complet.`, 'bot');
+                            const btn = document.createElement('button');
+                            btn.className = 'btn btn-primary btn-block';
+                            btn.style.marginTop = '1rem';
+                            btn.textContent = 'Voir mes résultats';
+                            btn.onclick = () => window.location.href = `/app?sim_id=${simulationId}&chat_done=true`;
+                            messagesContainer.appendChild(btn);
+                            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                        }, 1000);
+                    }
+                }, 500);
+
+            } catch (e) {
+                appendMessage("Désolé, j'ai rencontré une erreur technique. Réessayons.", 'bot');
+            }
+        }
+
+        function appendMessage(text, side) {
+            const msg = document.createElement('div');
+            msg.className = `message ${side}`;
+            msg.textContent = text;
+            messagesContainer.appendChild(msg);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function updateProgress(data) {
+            // Estimation simple du remplissage du profil
+            const fields = ["nationality", "residence_duration_months", "is_married", "salary_annual"];
+            let filled = 0;
+            fields.forEach(f => { if (data[f] !== undefined && data[f] !== null) filled++; });
+            const percent = Math.round((filled / fields.length) * 100);
+            document.getElementById('chat-progress').textContent = `Analyse : ${percent}%`;
+        }
+
+        sendBtn.onclick = sendMessage;
+        inputField.onkeypress = (e) => { if (e.key === 'Enter') sendMessage(); };
+    </script>
+</body>
+
+</html>

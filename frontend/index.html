@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simulegal - Éligibilité Titre de Séjour</title>
+  <meta name="description" content="Évaluez votre éligibilité aux titres de séjour en France en quelques minutes.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+
+<body>
+  <div class="container">
+    <nav class="navbar" id="navbar">
+      <div class="lang-selector">
+        <select onchange="I18n.setLang(this.value)" id="lang-select">
+          <option value="fr">🇫🇷 FR</option>
+          <option value="en">🇬🇧 EN</option>
+          <option value="es">🇪🇸 ES</option>
+          <option value="ar">🇸🇦 AR</option>
+        </select>
+      </div>
+      <div id="auth-nav"></div>
+    </nav>
+    <header>
+      <h1 class="logo" data-i18n="app_title">Simulegal</h1>
+      <p class="tagline" data-i18n="tagline">Évaluez votre éligibilité aux titres de séjour en France</p>
+      <div style="margin-top: 1rem;">
+        <a href="/chat" class="btn btn-secondary" style="font-size: 0.9rem;" data-i18n="btn_chat">🤖 Discuter avec notre
+          IA</a>
+      </div>
+    </header>
+
+    <!-- Steps indicator -->
+    <div class="steps">
+      <div class="step active" id="step1-indicator">
+        <div class="step-number">1</div>
+        <span data-i18n="step_situation">Situation</span>
+      </div>
+      <div class="step" id="step2-indicator">
+        <div class="step-number">2</div>
+        <span data-i18n="step_criteres">Critères</span>
+      </div>
+      <div class="step" id="step3-indicator">
+        <div class="step-number">3</div>
+        <span data-i18n="step_resultats">Resultats</span>
+      </div>
+    </div>
+
+    <!-- Étape 1: Situation de base -->
+    <div id="step1" class="card">
+      <div class="card-header">
+        <div class="card-icon">👤</div>
+        <h2 class="card-title">Votre situation</h2>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="nationality" data-i18n="lbl_nationality">Nationalité</label>
+          <input type="text" class="form-input" id="nationality" placeholder="Ex: Tunisienne, Algérienne, Marocaine...">
+        </div>
+        <div class="form-group">
+          <label for="residence_months" data-i18n="lbl_residence">Durée de résidence en France (mois)</label>
+          <input type="number" class="form-input" id="residence_months" placeholder="Ex: 24" min="0">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="french_level" data-i18n="lbl_french">Niveau de français (CECRL)</label>
+          <select class="form-select" id="french_level">
+            <option value="A0">Aucun (A0)</option>
+            <option value="A1">Débutant (A1)</option>
+            <option value="A2">Élémentaire (A2)</option>
+            <option value="B1">Intermédiaire (B1)</option>
+            <option value="B2">Intermédiaire avancé (B2)</option>
+            <option value="C1">Avancé (C1)</option>
+            <option value="C2">Maîtrise (C2)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Salaire annuel brut (€)</label>
+          <input type="number" class="form-input" id="salary" placeholder="Ex: 35000" min="0">
+        </div>
+      </div>
+
+      <button class="btn btn-primary btn-block" onclick="nextStep(1)">
+        Continuer →
+      </button>
+    </div>
+
+    <!-- Étape 2: Détails -->
+    <div id="step2" class="card" style="display: none;">
+      <div class="card-header">
+        <div class="card-icon">📋</div>
+        <h2 class="card-title">Détails complémentaires</h2>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Situation familiale</label>
+        <div class="checkbox-group">
+          <label class="checkbox-item">
+            <input type="checkbox" id="is_married">
+            <span>Marié(e) à un(e) Français(e)</span>
+          </label>
+          <label class="checkbox-item">
+            <input type="checkbox" id="is_pacs">
+            <span>Pacsé(e) avec un(e) Français(e)</span>
+          </label>
+          <label class="checkbox-item">
+            <input type="checkbox" id="parent_french_child">
+            <span>Parent d'enfant français</span>
+          </label>
+          <label class="checkbox-item">
+            <input type="checkbox" id="spouse_eu">
+            <span>Conjoint citoyen UE</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="form-row" id="marriage-details" style="display: none;">
+        <div class="form-group">
+          <label class="form-label">Durée de mariage/Pacs (mois)</label>
+          <input type="number" class="form-input" id="marriage_months" placeholder="Ex: 18" min="0">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Nationalité du conjoint</label>
+          <input type="text" class="form-input" id="spouse_nationality" placeholder="Ex: Française">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Formation et emploi</label>
+        <div class="checkbox-group">
+          <label class="checkbox-item">
+            <input type="checkbox" id="has_master">
+            <span>Diplôme Master en France</span>
+          </label>
+          <label class="checkbox-item">
+            <input type="checkbox" id="has_degree_3y">
+            <span>Diplôme Bac+3 ou plus</span>
+          </label>
+          <label class="checkbox-item">
+            <input type="checkbox" id="has_job_auth">
+            <span>Autorisation de travail</span>
+          </label>
+          <label class="checkbox-item">
+            <input type="checkbox" id="has_vls">
+            <span>Visa long séjour (VLS-TS)</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Situation administrative & Spécifique</label>
+        <div class="checkbox-group">
+          <label class="checkbox-item">
+            <input type="checkbox" id="stable_resources">
+            <span>Ressources stables</span>
+          </label>
+          <label class="checkbox-item">
+            <input type="checkbox" id="health_insurance">
+            <span>Assurance maladie</span>
+          </label>
+          <label class="checkbox-item">
+            <input type="checkbox" id="community_life" checked>
+            <span>Communauté de vie effective</span>
+          </label>
+          <label class="checkbox-item">
+            <input type="checkbox" id="no_polygamy" checked>
+            <span>Pas de polygamie</span>
+          </label>
+          <label class="checkbox-item">
+            <input type="checkbox" id="is_refugee">
+            <span>Statut Réfugié (OFPRA/CNDA)</span>
+          </label>
+          <label class="checkbox-item">
+            <input type="checkbox" id="has_reputation">
+            <span>Renommée Internationale</span>
+          </label>
+          <label class="checkbox-item">
+            <input type="checkbox" id="has_project_france">
+            <span>Projet en France</span>
+          </label>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 1rem;">
+        <button class="btn btn-secondary" onclick="prevStep(2)" data-i18n="btn_prev">
+          ← Retour
+        </button>
+        <button class="btn btn-primary" style="flex: 1;" onclick="evaluateEligibility()" data-i18n="btn_evaluate">
+          🔍 Analyser mon éligibilité
+        </button>
+      </div>
+    </div>
+
+    <!-- Loading -->
+    <div id="loading" class="loading">
+      <div class="spinner"></div>
+      <p>Analyse en cours...</p>
+    </div>
+
+    <!-- Étape 3: Résultats -->
+    <div id="step3" class="results-container">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon">✨</div>
+          <h2 class="card-title">Vos résultats d'éligibilité</h2>
+        </div>
+        <div id="results-list"></div>
+      </div>
+
+      <button class="btn btn-secondary btn-block" onclick="resetForm()" data-i18n="btn_new_simulation">
+        ← Nouvelle simulation
+      </button>
+    </div>
+
+  </div>
+
+  <script src="/static/auth.js"></script>
+  <script>
+    const API_URL = window.location.origin;
+
+    // Navbar Logic
+    function updateNavbar() {
+      const authNav = document.getElementById('auth-nav');
+      const user = Auth.getUser();
+
+      if (user) {
+        authNav.innerHTML = `
+                <div class="user-display">
+                    <a href="/dashboard" class="nav-link" style="color: var(--primary); font-weight: 600;" data-i18n="nav_dashboard">Mon Espace</a>
+                    <div class="avatar-placeholder">${user.full_name.charAt(0).toUpperCase()}</div>
+                    <span>${user.full_name.split(' ')[0]}</span>
+                    <a href="#" class="nav-link" onclick="Auth.logout()" data-i18n="nav_logout">Déconnexion</a>
+                    ${user.role === 'admin' ? '<a href="/admin" class="nav-link"><b>Admin</b></a>' : ''}
+                </div>
+            `;
+      } else {
+        authNav.innerHTML = `<a href="/login" class="nav-link" data-i18n="nav_login">Se connecter</a>`;
+      }
+      if (window.I18n) I18n.apply();
+    }
+    updateNavbar();
+
+    // Toggle marriage details
+    document.getElementById('is_married').addEventListener('change', toggleMarriageDetails);
+    document.getElementById('is_pacs').addEventListener('change', toggleMarriageDetails);
+
+    function toggleMarriageDetails() {
+      const isMarried = document.getElementById('is_married').checked;
+      const isPacs = document.getElementById('is_pacs').checked;
+      document.getElementById('marriage-details').style.display = (isMarried || isPacs) ? 'grid' : 'none';
+    }
+
+    function nextStep(current) {
+      document.getElementById(`step${current}`).style.display = 'none';
+      document.getElementById(`step${current + 1}`).style.display = 'block';
+      document.getElementById(`step${current}-indicator`).classList.remove('active');
+      document.getElementById(`step${current}-indicator`).classList.add('completed');
+      document.getElementById(`step${current + 1}-indicator`).classList.add('active');
+    }
+
+    function prevStep(current) {
+      document.getElementById(`step${current}`).style.display = 'none';
+      document.getElementById(`step${current - 1}`).style.display = 'block';
+      document.getElementById(`step${current}-indicator`).classList.remove('active');
+      document.getElementById(`step${current - 1}-indicator`).classList.remove('completed');
+      document.getElementById(`step${current - 1}-indicator`).classList.add('active');
+    }
+
+    async function evaluateEligibility() {
+      document.getElementById('step2').style.display = 'none';
+      document.getElementById('loading').classList.add('active');
+
+      const isMarried = document.getElementById('is_married').checked;
+      const isPacs = document.getElementById('is_pacs').checked;
+
+      const data = {
+        nationality: document.getElementById('nationality').value || 'Non spécifiée',
+        residence_duration_months: parseInt(document.getElementById('residence_months').value) || 0,
+        french_level: document.getElementById('french_level').value,
+        salary_annual: parseFloat(document.getElementById('salary').value) || 0,
+        marriage_duration_months: (isMarried || isPacs) ? parseInt(document.getElementById('marriage_months').value) || 0 : null,
+        spouse_nationality: document.getElementById('spouse_nationality').value || '',
+        community_of_life: document.getElementById('community_life').checked,
+        is_spouse_eu_citizen: document.getElementById('spouse_eu').checked,
+        no_polygamy: document.getElementById('no_polygamy').checked,
+        has_master_france: document.getElementById('has_master').checked,
+        has_degree_3_years: document.getElementById('has_degree_3y').checked,
+        has_job_auth: document.getElementById('has_job_auth').checked,
+        has_vls_ts: document.getElementById('has_vls').checked,
+        is_pacs_french: isPacs,
+        parent_of_french_child: document.getElementById('parent_french_child').checked,
+        stable_resources: document.getElementById('stable_resources').checked,
+        has_health_insurance: document.getElementById('health_insurance').checked,
+        is_adult: true,
+        no_conviction: true,
+        adheres_republic_values: true,
+        // Phase 6
+        has_refugee_status: document.getElementById('is_refugee').checked,
+        has_international_reputation: document.getElementById('has_reputation').checked,
+        has_project_in_france: document.getElementById('has_project_france').checked,
+        language: I18n.currentLang
+      };
+
+      try {
+        const response = await fetch(`${API_URL}/api/evaluate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+        // result contient maintenant simulation_id
+        displayResults(result.results, result.simulation_id);
+      } catch (error) {
+        console.error('Erreur:', error);
+        alert('Erreur lors de l\'évaluation. Vérifiez que le serveur est en cours d\'exécution.');
+        document.getElementById('loading').classList.remove('active');
+        document.getElementById('step2').style.display = 'block';
+      }
+    }
+
+    function displayResults(results, simulationId) {
+      document.getElementById('loading').classList.remove('active');
+      document.getElementById('step2-indicator').classList.remove('active');
+      document.getElementById('step2-indicator').classList.add('completed');
+      document.getElementById('step3-indicator').classList.add('active');
+
+      const container = document.getElementById('results-list');
+      container.innerHTML = '';
+
+      // Vérifier si retour de paiement succès
+      const urlParams = new URLSearchParams(window.location.search);
+      const isSuccess = urlParams.get('success');
+      const paidSimId = urlParams.get('simulation_id');
+
+      // Si on vient de payer, on ne devrait pas être ici mais recharger les données...
+      // Simplification : Le bouton PDF n'apparaît que si payé (géré par le reload ou le backend).
+      // Mais ici resultat vient de l'évaluation immédiate -> donc non payé.
+
+      if (simulationId) {
+        // Mode Freemium : Toujours proposer le paiement
+        container.innerHTML += `
+              <div class="premium-banner">
+                  <h3>${I18n.t('locked_title')}</h3>
+                  <p>${I18n.t('locked_desc')}</p>
+                  <button onclick="unlockReport(${simulationId})" class="btn btn-warning btn-block">
+                    ${I18n.t('btn_unlock')}
+                  </button>
+              </div>
+          `;
+      }
+
+      // Filtrer les résultats avec score > 0 et trier
+      const eligibleResults = results.filter(r => r.score > 0).slice(0, 10);
+
+      if (eligibleResults.length === 0) {
+        container.innerHTML += '<p style="text-align: center; color: var(--text-secondary);">Aucune procédure correspondante trouvée avec les informations fournies.</p>';
+      } else {
+        eligibleResults.forEach(r => {
+          const verdict = r.score === 100 ? I18n.t('score_high') : r.score >= 50 ? I18n.t('score_medium') : I18n.t('score_low');
+          const scoreClass = r.score === 100 ? 'high' : r.score >= 50 ? 'medium' : 'low';
+          const itemClass = r.score === 100 ? 'eligible' : 'partial';
+          const isLocked = r.documents[0].includes("masqués"); // Détection simple
+
+          container.innerHTML += `
+            <div class="result-item ${itemClass}">
+              <div class="result-header">
+                <span class="result-name">${r.name}</span>
+                <span class="result-score ${scoreClass}">${verdict} (${r.score}%)</span>
+              </div>
+              <div class="progress-bar"><div class="progress-fill" style="width: ${r.score}%"></div></div>
+              
+              ${r.applied_exception && r.applied_exception !== "Exception masquée" ? `<div class="result-exception">✓ ${r.applied_exception}</div>` : ''}
+              
+              <div class="documents-list ${isLocked ? 'blurred' : ''}">
+                <h4>📄 ${I18n.t('docs_required')} ${isLocked ? '(Preview)' : ''}</h4>
+                <ul>${r.documents.map(d => `<li>${d}</li>`).join('')}</ul>
+              </div>
+            </div>
+          `;
+        });
+      }
+
+      document.getElementById('step3').classList.add('active');
+    }
+
+    // Check for payment success or chat completion on load
+    window.onload = async () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const simId = urlParams.get('simulation_id') || urlParams.get('sim_id');
+
+      if (urlParams.get('success') === 'true' && simId) {
+        // ... (code existant pour paiement)
+        handlePaymentSuccess(simId);
+      } else if (urlParams.get('chat_done') === 'true' && simId) {
+        // Lancer l'évaluation sur la base des données du chat
+        runEvaluationFromSim(simId);
+      }
+    };
+
+    async function runEvaluationFromSim(simId) {
+      document.getElementById('step1').style.display = 'none';
+      document.getElementById('loading').classList.add('active');
+
+      try {
+        // On a besoin d'un endpoint pour relancer l'évaluation ou récupérer les résultats
+        // Pour l'instant on peut juste tricher en récupérant les données et en appelant evaluate
+        // Mais le plus propre est un GET /api/evaluate/{id}
+        const response = await fetch(`${API_URL}/api/simulation/${simId}/results`);
+        const data = await response.json();
+        displayResults(data.results, simId);
+      } catch (e) {
+        console.error(e);
+        alert("Erreur lors de la récupération des résultats du chat.");
+      }
+    }
+
+    async function handlePaymentSuccess(simId) {
+      document.getElementById('step2').style.display = 'none';
+      document.getElementById('step1').style.display = 'none';
+      document.getElementById('step3').classList.add('active');
+      document.getElementById('step3').innerHTML = `
+                 <div class="card" style="text-align: center;">
+                    <div style="font-size: 3rem;">🎉</div>
+                    <h2>Merci pour votre commande !</h2>
+                    <p>Votre dossier complet est débloqué.</p>
+                    <a href="${API_URL}/api/reports/download/${simId}" target="_blank" class="btn btn-primary btn-block" style="margin-top: 1rem;">
+                        📄 Télécharger mon Rapport PDF Complet
+                    </a>
+                    <button class="btn btn-secondary" onclick="window.location.href='/app'" style="margin-top: 1rem;">Retour à l'accueil</button>
+                 </div>
+            `;
+      // Notifier le backend que la session est payée (callback de sécurité client, mais le webhook serveur est mieux)
+      // On peut appeler verify-session ici si l'ID de session est dans l'URL
+      const urlParams = new URLSearchParams(window.location.search);
+      const sessionId = urlParams.get('session_id');
+      if (sessionId) {
+        fetch(`${API_URL}/api/payment/verify-session/${sessionId}?simulation_id=${simId}`);
+      }
+    }
+
+    async function unlockReport(simulationId) {
+      try {
+        const res = await fetch(`${API_URL}/api/payment/create-checkout/${simulationId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        const data = await res.json();
+        if (data.checkout_url) {
+          window.location.href = data.checkout_url;
+        } else {
+          alert('Erreur: ' + (data.detail || 'Impossible de créer le paiement'));
+        }
+      } catch (e) {
+        console.error(e);
+        alert('Erreur de connexion au service de paiement');
+      }
+    }
+
+    function resetForm() {
+      document.getElementById('step3').classList.remove('active');
+      document.getElementById('step1').style.display = 'block';
+      document.querySelectorAll('.step').forEach(s => s.classList.remove('active', 'completed'));
+      document.getElementById('step1-indicator').classList.add('active');
+      document.querySelectorAll('input[type="text"], input[type="number"]').forEach(i => i.value = '');
+      document.querySelectorAll('input[type="checkbox"]').forEach(i => {
+        i.checked = i.id === 'community_life' || i.id === 'no_polygamy';
+      });
+      document.getElementById('french_level').value = 'A0';
+      document.getElementById('marriage-details').style.display = 'none';
+    }
+  </script>
+</body>
+
+</html>
