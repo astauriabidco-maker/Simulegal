@@ -7,6 +7,7 @@ import os
 import json
 import io
 from typing import List, Optional
+from dataclasses import fields
 
 import sentry_sdk
 from sentry_sdk.integrations.fastapi import FastApiIntegration
@@ -90,6 +91,9 @@ async def evaluate_eligibility(user_input: UserSituationInput, db: AsyncSession 
     Sauvegarde la simulation si l'évaluation est valide.
     """
     user_kwargs = user_input.model_dump()
+    # Filter to only include fields defined in UserSituation dataclass
+    valid_fields = {f.name for f in fields(UserSituation)}
+    user_kwargs = {k: v for k, v in user_kwargs.items() if k in valid_fields}
     user = UserSituation(**user_kwargs)
     
     # Exécution du moteur
@@ -230,6 +234,17 @@ async def get_procedure(procedure_id: str):
 
 
 # === ENDPOINTS ADMIN ===
+
+@app.get("/api/admin/simulations")
+async def list_all_simulations(admin: User = Depends(auth.get_current_admin), db: AsyncSession = Depends(get_db)):
+    """Liste toutes les simulations utilisateurs (Vue Juriste)."""
+    result = await db.execute(
+        select(Simulation).order_by(Simulation.created_at.desc())
+    )
+    sims = result.scalars().all()
+    return sims
+
+
 
 @app.post("/api/admin/procedures", response_model=ProcedureSchema)
 async def create_procedure(procedure: ProcedureCreateUpdate, admin: User = Depends(auth.get_current_admin)):

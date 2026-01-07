@@ -28,6 +28,7 @@ class Procedure:
 
 @dataclass
 class UserSituation:
+    # Base Situation
     nationality: str
     residence_duration_months: int
     marriage_duration_months: Optional[int] = None
@@ -39,111 +40,140 @@ class UserSituation:
     job_contract_related: bool = False
     salary_annual: float = 0.0
     no_polygamy: bool = True
-    french_level: str = "A0"  # A0, A1, A2, B1, B2, C1, C2
+    french_level: str = "A0"
     is_adult: bool = True
     stable_resources: bool = False
     parent_of_french_child: bool = False
     is_pacs_french: bool = False
     has_job_auth: bool = False
     has_vls_ts: bool = False
-    # Nouveaux attributs Phase 2
-    contribution_education: bool = False
-    spouse_long_stay_eu: bool = False
-    legal_residence_other_eu: bool = False
+    has_long_stay_visa: bool = False
+    is_married_french: bool = False
+    goal: str = "both"
+    regular_situation: bool = True
+    has_residence_card: bool = False
+
+    # Administrative & Protection (P1)
+    no_oqtf: bool = True
     has_health_insurance: bool = False
-    entered_minor_regroupement: bool = False
-    born_france_or_entered_before_13: bool = False
-    receives_pension_accident: bool = False
-    incapacity_rate: int = 0
-    hosted_community_org: bool = False
-    activity_duration_years: int = 0
+    contribution_education: bool = False
+    is_refugee_or_stateless: bool = False
     humanitarian_reasons: bool = False
     protection_order: bool = False
     filed_complaint: bool = False
     no_contact_accused: bool = True
     no_threat_public_order: bool = True
-    no_oqtf: bool = True
-    registered_business: bool = False
-    monthly_income: float = 0.0
-    had_temp_card: bool = False
-    cir_compliance: bool = False
-    recruited_innovative_company: bool = False
-    job_rd_related: bool = False
-    has_degree_3_years: bool = False
-    contract_duration_months: int = 0
-    seniority_months: int = 0
-    has_contract_france: bool = False
-    research_activity: bool = False
-    has_hosting_agreement: bool = False
-    has_master_or_5_years_exp: bool = False
-    business_project_real: bool = False
-    investment_amount: float = 0.0
-    # Phase 6: Niches
-    has_refugee_status: bool = False
-    has_international_reputation: bool = False
-    has_project_in_france: bool = False
-    resources_smic: bool = False
-    innovative_project_recognized: bool = False
-    creates_jobs_4_years: bool = False
-    is_legal_representative: bool = False
-    is_artist: bool = False
-    meets_remuneration_threshold: bool = False
-    international_reputation: bool = False
-    activity_in_france: bool = False
-    family_of_talent: bool = False
-    seasonal_contract: bool = False
-    residence_outside_france: bool = False
-    has_long_stay_visa: bool = False
-    child_needs_care: bool = False
-    no_care_origin_country: bool = False
-    parent_responsible: bool = False
-    volunteer_mission: bool = False
-    org_public_utility: bool = False
-    commitment_leave: bool = False
-    entered_regroupement_familial: bool = False
-    is_algerian: bool = False
-    not_algerian: bool = True
-    had_resident_card: bool = False
-    no_absence_3_years: bool = True
-    is_veteran: bool = False
-    has_combatant_card: bool = False
-    ascendant_french_child: bool = False
-    dependent_on_child: bool = False
-    no_sufficient_resources: bool = False
-    had_student_card: bool = False
-    had_researcher_card: bool = False
-    completed_research: bool = False
-    bilateral_agreement: bool = False
-    has_degree_higher_ed: bool = False
-    has_vls_ts_ict: bool = False
-    is_manager_expert: bool = False
-    has_vls_ts_visitor: bool = False
-    commitment_no_work: bool = False
-    annual_resources: float = 0.0
-    enrolled_higher_ed: bool = False
-    monthly_resources: float = 0.0
-    has_long_stay_visa_student: bool = False
-    main_residence_outside: bool = False
-    has_french_pension: bool = False
-    no_conviction: bool = True
-    adheres_republic_values: bool = True
+    public_order_compliance: bool = True # New field based on no_threat_public_order
+
+    # Life Path & Education (P2)
     born_in_france: bool = False
-    residence_at_18: bool = False
-    residence_5_years_since_11: bool = False
-    exceptional_services: bool = False
-    residence_france: bool = False
-    is_refugee_or_stateless: bool = False
-    employment_24_months_tension: bool = False
-    ascendant_of_french: bool = False
-    sibling_of_french: bool = False
     schooling_france: bool = False
     residence_since_6: bool = False
+    residence_at_18: bool = False
+    residence_5_years_since_11: bool = False
+    entered_minor_regroupement: bool = False
+    born_france_or_entered_before_13: bool = False
+    graduated_french_higher_ed: bool = False
+
+    # Extended Family (P2)
+    sibling_of_french: bool = False
+    ascendant_of_french: bool = False
+    ascendant_french_child: bool = False
+    dependent_on_child: bool = False
     adopted_by_french: bool = False
     lives_with_adoptive_parent: bool = False
     recueilli_by_french: bool = False
     residence_with_french_years: int = 0
+    entered_regroupement_familial: bool = False
+
+    # Work, Talent & Expert (P3)
+    is_artist: bool = False
+    is_legal_representative: bool = False
+    is_manager_expert: bool = False
+    activity_in_france: bool = False
+    international_reputation: bool = False # Kept as a separate field as it was in the original
+    talent_reputation: bool = False # New field, likely derived or for future use
+    has_international_reputation: bool = False # Kept as a separate field as it was in the original
+    meets_remuneration_threshold: bool = False
+    job_rd_related: bool = False
+    has_degree_3_years: bool = False
+    has_degree_higher_ed: bool = False
+    has_master_or_5_years_exp: bool = False
+    has_hosting_agreement: bool = False
+    business_project_real: bool = False
+    innovative_project_recognized: bool = False
+    has_project_in_france: bool = False
+    creates_jobs_4_years: bool = False
+    has_contract_france: bool = False
+    seasonal_contract: bool = False
+    activity_duration_years: int = 0
+    employment_24_months_tension: bool = False
+    registered_business: bool = False
+    investment_amount: float = 0.0
+    seniority_months: int = 0
+    contract_duration_months: int = 0
+    recruited_innovative_company: bool = False
+    research_activity: bool = False
+
+    # Social & Health (P3)
+    child_needs_care: bool = False
+    no_care_origin_country: bool = False
+    parent_responsible: bool = False
+    no_sufficient_resources: bool = False
+    has_french_pension: bool = False
+    receives_pension_accident: bool = False
+    incapacity_rate: int = 0
+    hosted_community_org: bool = False
+    volunteer_mission: bool = False
+    org_public_utility: bool = False
+    health_issue: bool = False # New field, likely for future use
+
+    # Special Paths & History (P3)
+    is_veteran: bool = False
+    has_combatant_card: bool = False
+    exceptional_services: bool = False
     lost_french_nationality: bool = False
-    graduated_french_higher_ed: bool = False
+    bilateral_agreement: bool = False
+    had_resident_card: bool = False
+    had_student_card: bool = False
+    had_researcher_card: bool = False
+    had_temp_card: bool = False
+    completed_research: bool = False
+    residence_france: bool = False
+    cir_compliance: bool = True
+    no_absence_3_years: bool = True
+    commitment_leave: bool = False
+    commitment_no_work: bool = False
+    legal_residence_other_eu: bool = False
+    spouse_long_stay_eu: bool = False
+    main_residence_outside: bool = False
+    residence_outside_france: bool = False
+    has_long_stay_visa_student: bool = False
+    has_long_stay_visa_visitor: bool = False
+    has_vls_ts_ict: bool = False
+    has_vls_ts_visitor: bool = False
+    enrolled_higher_ed: bool = False
+    has_refugee_status: bool = False
+    refugee_status: bool = False # New field, likely derived or for future use
+    is_refugee: bool = False # New field, likely derived or for future use
+
+    # Financials
+    monthly_income: float = 0.0
+    monthly_resources: float = 0.0
+    annual_resources: float = 0.0
+    family_of_talent: bool = False
+    resources_smic: bool = False
+    stable_resources_smic: bool = False
+
+    # Legal & Integration
+    no_conviction: bool = True
+    adheres_republic_values: bool = True
+    
+    # Bilateral Agreements
+    is_algerian: bool = False
+    not_algerian: bool = False
+    is_tunisian: bool = False
+    is_moroccan: bool = False
 
     def get_attr(self, attr_id: str) -> Any:
         # Mapping des critères vers les attributs de l'utilisateur
@@ -170,6 +200,8 @@ class UserSituation:
             "common_life_duration": self.marriage_duration_months if self.is_pacs_french else 0,
             "has_job_auth": self.has_job_auth,
             "has_vls_ts": self.has_vls_ts,
+            "has_long_stay_visa": self.has_long_stay_visa or self.has_vls_ts,
+            "is_married_french": self.is_married_french or (self.spouse_nationality == "Française" and self.marriage_duration_months is not None),
             # Nouveaux mappings Phase 2
             "contribution_education": self.contribution_education,
             "spouse_long_stay_eu": self.spouse_long_stay_eu,
@@ -269,6 +301,12 @@ class UserSituation:
             "has_refugee_status": self.has_refugee_status,
             "has_international_reputation": self.has_international_reputation,
             "has_project_in_france": self.has_project_in_france,
-            "no_threat_public_order": self.no_threat_public_order,  # Ajout explicite
+            "no_threat_public_order": self.no_threat_public_order,
+            "has_residence_card": self.has_residence_card,
+            "regular_situation": self.regular_situation,
+            "is_algerian": self.is_algerian,
+            "not_algerian": self.not_algerian,
+            "is_tunisian": self.is_tunisian,
+            "is_moroccan": self.is_moroccan,
         }
         return mapping.get(attr_id)

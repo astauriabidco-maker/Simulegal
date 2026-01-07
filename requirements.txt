@@ -13,3 +13,4 @@ sentry-sdk[fastapi]
 python-dotenv
 pytest
 httpx
+aiosqlite

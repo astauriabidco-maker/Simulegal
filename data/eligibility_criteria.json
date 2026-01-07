@@ -6,6 +6,12 @@
       "description": "Délivrée au conjoint de Français.",
       "base_criteria": [
         {
+          "id": "regular_situation",
+          "label": "Situation administrative régulière (Visa ou Titre)",
+          "type": "bool",
+          "expected": true
+        },
+        {
           "id": "is_married_to_french",
           "label": "Être marié à un citoyen français",
           "type": "bool",
@@ -22,6 +28,12 @@
           "label": "Absence de polygamie",
           "type": "bool",
           "expected": true
+        },
+        {
+          "id": "no_threat_public_order",
+          "label": "Pas de menace pour l'ordre public",
+          "type": "bool",
+          "expected": true
         }
       ],
       "documents": [
@@ -36,6 +48,12 @@
       "name": "Carte de séjour - Vie privée et familiale - Pacs avec Français",
       "description": "Pour les partenaires pacsés avec un Français.",
       "base_criteria": [
+        {
+          "id": "regular_situation",
+          "label": "Situation administrative régulière (Visa ou Titre)",
+          "type": "bool",
+          "expected": true
+        },
         {
           "id": "is_pacs_french",
           "label": "Avoir conclu un Pacs avec un citoyen français",
@@ -61,6 +79,12 @@
       "name": "Carte de séjour - Vie privée et familiale - Parent d'enfant français mineur",
       "description": "Parent d'enfant français résidant en France.",
       "base_criteria": [
+        {
+          "id": "regular_situation",
+          "label": "Situation administrative régulière (Visa ou Titre)",
+          "type": "bool",
+          "expected": true
+        },
         {
           "id": "parent_of_french_child",
           "label": "Être parent d'un enfant français mineur résidant en France",
@@ -92,6 +116,12 @@
       "name": "Carte de séjour - Vie privée et familiale - Membre de famille d'un résident longue durée-UE",
       "description": "Conjoint d'un titulaire de carte résident longue durée UE.",
       "base_criteria": [
+        {
+          "id": "regular_situation",
+          "label": "Situation administrative régulière (Visa ou Titre)",
+          "type": "bool",
+          "expected": true
+        },
         {
           "id": "spouse_long_stay_eu",
           "label": "Conjoint d'un titulaire carte résident longue durée-UE",
@@ -136,6 +166,12 @@
       "description": "Jeune entré mineur par regroupement familial.",
       "base_criteria": [
         {
+          "id": "regular_situation",
+          "label": "Situation administrative régulière (Visa ou Titre)",
+          "type": "bool",
+          "expected": true
+        },
+        {
           "id": "entered_minor_regroupement",
           "label": "Être entré en France mineur par regroupement familial",
           "type": "bool",
@@ -159,6 +195,12 @@
       "name": "Carte de séjour - Vie privée et familiale - Jeune né ou entré mineur",
       "description": "Jeune né en France ou entré avant 13 ans avec parent titulaire d'un titre.",
       "base_criteria": [
+        {
+          "id": "regular_situation",
+          "label": "Situation administrative régulière (Visa ou Titre)",
+          "type": "bool",
+          "expected": true
+        },
         {
           "id": "born_france_or_entered_before_13",
           "label": "Né en France ou entré avant 13 ans avec parent titulaire titre",
@@ -187,6 +229,12 @@
       "description": "Bénéficiaire d'une pension d'accident du travail ou maladie professionnelle.",
       "base_criteria": [
         {
+          "id": "regular_situation",
+          "label": "Situation administrative régulière (Visa ou Titre)",
+          "type": "bool",
+          "expected": true
+        },
+        {
           "id": "receives_pension_accident",
           "label": "Percevoir une pension d'accident du travail/maladie professionnelle",
           "type": "bool",
@@ -210,6 +258,12 @@
       "name": "Carte de séjour - Vie privée et familiale - Travail solidaire",
       "description": "Hébergé par un organisme d'accueil communautaire agréé.",
       "base_criteria": [
+        {
+          "id": "regular_situation",
+          "label": "Situation administrative régulière (Visa ou Titre)",
+          "type": "bool",
+          "expected": true
+        },
         {
           "id": "hosted_community_org",
           "label": "Hébergé par organisme d'accueil communautaire agréé",
@@ -295,10 +349,66 @@
       "exceptions": []
     },
     {
-      "id": "salaried_worker",
-      "name": "Carte de séjour - Salarié",
-      "description": "Travailleur en CDI.",
+      "id": "aes_spouse",
+      "name": "Admission Exceptionnelle au Séjour - Vie privée et familiale (Conjoint de Français)",
+      "description": "Régularisation pour conjoint de Français.",
       "base_criteria": [
+        {
+          "id": "regular_situation",
+          "label": "Situation administrative irrégulière",
+          "type": "bool",
+          "expected": false
+        },
+        {
+          "id": "is_married_to_french",
+          "label": "Être marié à un citoyen français",
+          "type": "bool",
+          "expected": true
+        },
+        {
+          "id": "community_of_life",
+          "label": "Communauté de vie effective (> 6 mois en France)",
+          "type": "bool",
+          "expected": true
+        },
+        {
+          "id": "residence_duration_years",
+          "label": "Durée de résidence habituelle (années)",
+          "type": "int",
+          "threshold": 7
+        },
+        {
+          "id": "entry_legal",
+          "label": "Entrée régulière (Visa même expiré)",
+          "type": "bool",
+          "expected": true
+        },
+        {
+          "id": "no_polygamy",
+          "label": "Absence de polygamie",
+          "type": "bool",
+          "expected": true
+        }
+      ],
+      "documents": [
+        "Acte de mariage",
+        "Preuve de nationalité du conjoint",
+        "Justificatifs de domicile commun (6 mois)",
+        "Preuve d'entrée légale (Visa)"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "salaried_worker_first",
+      "name": "Carte de séjour - Salarié (Première demande)",
+      "description": "Travailleur en CDI - Première demande (Visa validé)",
+      "base_criteria": [
+        {
+          "id": "regular_situation",
+          "label": "Situation administrative régulière (Visa ou Titre)",
+          "type": "bool",
+          "expected": true
+        },
         {
           "id": "has_job_auth",
           "label": "Posséder une autorisation de travail",
@@ -306,8 +416,8 @@
           "expected": true
         },
         {
-          "id": "has_vls_ts",
-          "label": "Détenir un VLS-TS mention salarié",
+          "id": "has_long_stay_visa",
+          "label": "Détenir un Visa Long Séjour ou Titre Étudiant (Changement de statut)",
           "type": "bool",
           "expected": true
         },
@@ -321,7 +431,44 @@
       "documents": [
         "Contrat de travail CDI",
         "Autorisation de travail",
-        "VLS-TS"
+        "Visa Long Séjour validé (VLS-TS)"
+      ],
+      "exceptions": []
+    },
+    {
+      "id": "salaried_worker_renewal",
+      "name": "Carte de séjour - Salarié (Renouvellement)",
+      "description": "Renouvellement de titre de séjour Salarié.",
+      "base_criteria": [
+        {
+          "id": "regular_situation",
+          "label": "Situation administrative régulière (Visa ou Titre)",
+          "type": "bool",
+          "expected": true
+        },
+        {
+          "id": "has_job_auth",
+          "label": "Posséder une autorisation de travail",
+          "type": "bool",
+          "expected": true
+        },
+        {
+          "id": "has_residence_card",
+          "label": "Être déjà titulaire d'une carte de séjour",
+          "type": "bool",
+          "expected": true
+        },
+        {
+          "id": "no_oqtf",
+          "label": "Pas d'OQTF non respectée",
+          "type": "bool",
+          "expected": true
+        }
+      ],
+      "documents": [
+        "Contrat de travail CDI",
+        "Autorisation de travail",
+        "Ancienne Carte de séjour"
       ],
       "exceptions": []
     },
@@ -330,6 +477,12 @@
       "name": "Carte de séjour - Travailleur temporaire",
       "description": "Travailleur en CDD.",
       "base_criteria": [
+        {
+          "id": "regular_situation",
+          "label": "Situation administrative régulière (Visa ou Titre)",
+          "type": "bool",
+          "expected": true
+        },
         {
           "id": "has_job_auth",
           "label": "Posséder une autorisation de travail",
@@ -362,6 +515,12 @@
       "description": "Activité commerciale, artisanale ou libérale.",
       "base_criteria": [
         {
+          "id": "regular_situation",
+          "label": "Situation administrative régulière (Visa ou Titre)",
+          "type": "bool",
+          "expected": true
+        },
+        {
           "id": "registered_business",
           "label": "Inscription au guichet unique des formalités des entreprises",
           "type": "bool",
@@ -392,6 +551,12 @@
       "name": "Carte de séjour pluriannuelle - Générale",
       "description": "Renouvellement après carte temporaire ou VLS-TS.",
       "base_criteria": [
+        {
+          "id": "regular_situation",
+          "label": "Situation administrative régulière (Visa ou Titre)",
+          "type": "bool",
+          "expected": true
+        },
         {
           "id": "had_temp_card",
           "label": "Avoir détenu une carte de séjour temporaire ou VLS-TS",
@@ -424,6 +589,12 @@
       "description": "Hautement qualifié avec Master.",
       "base_criteria": [
         {
+          "id": "regular_situation",
+          "label": "Situation administrative régulière (Visa ou Titre)",
+          "type": "bool",
+          "expected": true
+        },
+        {
           "id": "has_master_france",
           "label": "Diplôme équivalent Master en France",
           "type": "bool",
@@ -447,6 +618,12 @@
       "name": "Carte de séjour - Passeport talent - Recrutement entreprise innovante",
       "description": "Recruté par entreprise innovante reconnue.",
       "base_criteria": [
+        {
+          "id": "regular_situation",
+          "label": "Situation administrative régulière (Visa ou Titre)",
+          "type": "bool",
+          "expected": true
+        },
         {
           "id": "recruited_innovative_company",
           "label": "Recruté par entreprise innovante (reconnue Ministère Économie)",
@@ -479,6 +656,12 @@
       "description": "Travailleur hautement qualifié.",
       "base_criteria": [
         {
+          "id": "regular_situation",
+          "label": "Situation administrative régulière (Visa ou Titre)",
+          "type": "bool",
+          "expected": true
+        },
+        {
           "id": "has_degree_3_years",
           "label": "Diplôme >= 3 ans ou 5 ans d'expérience équivalente",
           "type": "bool",
@@ -509,6 +692,12 @@
       "name": "Carte de séjour - Passeport talent - Salarié en mission",
       "description": "Salarié d'entreprise étrangère en mission en France.",
       "base_criteria": [
+        {
+          "id": "regular_situation",
+          "label": "Situation administrative régulière (Visa ou Titre)",
+          "type": "bool",
+          "expected": true
+        },
         {
           "id": "seniority_months",
           "label": "Ancienneté dans le groupe (mois)",
@@ -541,6 +730,12 @@
       "description": "Chercheur ou enseignant supérieur.",
       "base_criteria": [
         {
+          "id": "regular_situation",
+          "label": "Situation administrative régulière (Visa ou Titre)",
+          "type": "bool",
+          "expected": true
+        },
+        {
           "id": "has_master_france",
           "label": "Diplôme >= Master",
           "type": "bool",
@@ -571,6 +766,12 @@
       "name": "Carte de séjour - Passeport talent - Création d'entreprise",
       "description": "Créateur d'entreprise avec investissement significatif.",
       "base_criteria": [
+        {
+          "id": "regular_situation",
+          "label": "Situation administrative régulière (Visa ou Titre)",
+          "type": "bool",
+          "expected": true
+        },
         {
           "id": "has_master_or_5_years_exp",
           "label": "Diplôme >= Master ou 5 ans d'expérience comparable",
@@ -609,6 +810,12 @@
       "description": "Porteur de projet économique innovant.",
       "base_criteria": [
         {
+          "id": "regular_situation",
+          "label": "Situation administrative régulière (Visa ou Titre)",
+          "type": "bool",
+          "expected": true
+        },
+        {
           "id": "innovative_project_recognized",
           "label": "Projet économique innovant reconnu par un organisme public",
           "type": "bool",
@@ -634,6 +841,12 @@
       "description": "Investisseur direct dans entreprise française.",
       "base_criteria": [
         {
+          "id": "regular_situation",
+          "label": "Situation administrative régulière (Visa ou Titre)",
+          "type": "bool",
+          "expected": true
+        },
+        {
           "id": "investment_amount",
           "label": "Investissement minimum (€)",
           "type": "float",
@@ -658,6 +871,12 @@
       "name": "Carte de séjour - Passeport talent - Mandataire social",
       "description": "Représentant légal d'entreprise en France.",
       "base_criteria": [
+        {
+          "id": "regular_situation",
+          "label": "Situation administrative régulière (Visa ou Titre)",
+          "type": "bool",
+          "expected": true
+        },
         {
           "id": "is_legal_representative",
           "label": "Occuper fonction de représentant légal en France",
@@ -690,6 +909,12 @@
       "description": "Artiste-interprète ou auteur d'œuvre.",
       "base_criteria": [
         {
+          "id": "regular_situation",
+          "label": "Situation administrative régulière (Visa ou Titre)",
+          "type": "bool",
+          "expected": true
+        },
+        {
           "id": "is_artist",
           "label": "Artiste-interprète ou auteur d'œuvre littéraire/artistique",
           "type": "bool",
@@ -714,6 +939,12 @@
       "name": "Carte de séjour - Passeport talent - Personne de renommée internationale",
       "description": "Réputation nationale/internationale reconnue.",
       "base_criteria": [
+        {
+          "id": "regular_situation",
+          "label": "Situation administrative régulière (Visa ou Titre)",
+          "type": "bool",
+          "expected": true
+        },
         {
           "id": "international_reputation",
           "label": "Réputation nationale/internationale dans domaine reconnu",
@@ -746,6 +977,12 @@
       "description": "Famille du titulaire Passeport Talent.",
       "base_criteria": [
         {
+          "id": "regular_situation",
+          "label": "Situation administrative régulière (Visa ou Titre)",
+          "type": "bool",
+          "expected": true
+        },
+        {
           "id": "family_of_talent",
           "label": "Époux (>18 ans) ou enfant majeur du titulaire Passeport Talent",
           "type": "bool",
@@ -763,6 +1000,12 @@
       "name": "Carte de séjour - Travailleur saisonnier",
       "description": "Travaux saisonniers <= 6 mois/an.",
       "base_criteria": [
+        {
+          "id": "regular_situation",
+          "label": "Situation administrative régulière (Visa ou Titre)",
+          "type": "bool",
+          "expected": true
+        },
         {
           "id": "seasonal_contract",
           "label": "Contrat saisonnier >= 3 mois, approuvé",
@@ -794,6 +1037,12 @@
       "name": "APS - Parent d'enfant malade",
       "description": "Parent étranger d'enfant nécessitant des soins indispensables.",
       "base_criteria": [
+        {
+          "id": "regular_situation",
+          "label": "Situation administrative régulière (Visa ou Titre)",
+          "type": "bool",
+          "expected": true
+        },
         {
           "id": "child_needs_care",
           "label": "Enfant résidant France nécessite soins indispensables",
@@ -832,6 +1081,12 @@
       "description": "Mission de volontariat à caractère social/humanitaire.",
       "base_criteria": [
         {
+          "id": "regular_situation",
+          "label": "Situation administrative régulière (Visa ou Titre)",
+          "type": "bool",
+          "expected": true
+        },
+        {
           "id": "volunteer_mission",
           "label": "Mission de volontariat à caractère social/humanitaire",
           "type": "bool",
@@ -869,6 +1124,12 @@
       "description": "Carte de résident (10 ans) pour conjoint de Français.",
       "base_criteria": [
         {
+          "id": "regular_situation",
+          "label": "Situation administrative régulière (Visa ou Titre)",
+          "type": "bool",
+          "expected": true
+        },
+        {
           "id": "marriage_duration",
           "label": "Durée de mariage (mois)",
           "type": "int",
@@ -881,8 +1142,8 @@
           "expected": true
         },
         {
-          "id": "french_level_a2",
-          "label": "Maîtrise du français niveau A2",
+          "id": "french_level_b1",
+          "label": "Maîtrise du français niveau B1",
           "type": "bool",
           "expected": true
         },
@@ -926,6 +1187,12 @@
       "description": "Résident de longue durée après 5 ans de séjour légal.",
       "base_criteria": [
         {
+          "id": "regular_situation",
+          "label": "Situation administrative régulière (Visa ou Titre)",
+          "type": "bool",
+          "expected": true
+        },
+        {
           "id": "residence_duration_years",
           "label": "Durée de résidence légale continue (années)",
           "type": "int",
@@ -944,8 +1211,8 @@
           "expected": true
         },
         {
-          "id": "french_level_a2",
-          "label": "Maîtrise du français niveau A2",
+          "id": "french_level_b1",
+          "label": "Maîtrise du français niveau B1",
           "type": "bool",
           "expected": true
         }
@@ -963,6 +1230,12 @@
       "name": "Carte de résident au titre du regroupement familial",
       "description": "Entré en France via procédure de regroupement familial.",
       "base_criteria": [
+        {
+          "id": "regular_situation",
+          "label": "Situation administrative régulière (Visa ou Titre)",
+          "type": "bool",
+          "expected": true
+        },
         {
           "id": "entered_regroupement_familial",
           "label": "Être entré via regroupement familial",
@@ -1001,6 +1274,12 @@
       "description": "Certificat de résidence algérien (10 ans) via regroupement familial.",
       "base_criteria": [
         {
+          "id": "regular_situation",
+          "label": "Situation administrative régulière (Visa ou Titre)",
+          "type": "bool",
+          "expected": true
+        },
+        {
           "id": "is_algerian",
           "label": "Être ressortissant algérien",
           "type": "bool",
@@ -1032,6 +1311,12 @@
       "description": "Carte de résident permanent (non algérien).",
       "base_criteria": [
         {
+          "id": "regular_situation",
+          "label": "Situation administrative régulière (Visa ou Titre)",
+          "type": "bool",
+          "expected": true
+        },
+        {
           "id": "not_algerian",
           "label": "Ne pas être algérien",
           "type": "bool",
@@ -1044,8 +1329,8 @@
           "expected": true
         },
         {
-          "id": "french_level_a2",
-          "label": "Maîtrise du français niveau A2",
+          "id": "french_level_b1",
+          "label": "Maîtrise du français niveau B1",
           "type": "bool",
           "expected": true
         },
@@ -1069,6 +1354,12 @@
       "description": "Ancien combattant de l'armée française ou alliée.",
       "base_criteria": [
         {
+          "id": "regular_situation",
+          "label": "Situation administrative régulière (Visa ou Titre)",
+          "type": "bool",
+          "expected": true
+        },
+        {
           "id": "is_veteran",
           "label": "Avoir servi dans une unité combattante de l'armée française ou alliée",
           "type": "bool",
@@ -1081,8 +1372,8 @@
           "expected": true
         },
         {
-          "id": "french_level_a2",
-          "label": "Maîtrise du français niveau A2",
+          "id": "french_level_b1",
+          "label": "Maîtrise du français niveau B1",
           "type": "bool",
           "expected": true
         }
@@ -1099,6 +1390,12 @@
       "name": "Carte de résident pour ascendant à charge d'un enfant français",
       "description": "Ascendant direct (parent, grand-parent) d'un enfant français.",
       "base_criteria": [
+        {
+          "id": "regular_situation",
+          "label": "Situation administrative régulière (Visa ou Titre)",
+          "type": "bool",
+          "expected": true
+        },
         {
           "id": "ascendant_french_child",
           "label": "Être ascendant direct d'un enfant français résidant en France",
@@ -1118,8 +1415,8 @@
           "expected": true
         },
         {
-          "id": "french_level_a2",
-          "label": "Maîtrise du français niveau A2",
+          "id": "french_level_b1",
+          "label": "Maîtrise du français niveau B1",
           "type": "bool",
           "expected": true
         }
@@ -1144,6 +1441,12 @@
       "name": "Carte de séjour temporaire - Recherche d'emploi ou création d'entreprise - Étudiant",
       "description": "Après diplôme >= Master pour recherche d'emploi.",
       "base_criteria": [
+        {
+          "id": "regular_situation",
+          "label": "Situation administrative régulière (Visa ou Titre)",
+          "type": "bool",
+          "expected": true
+        },
         {
           "id": "had_student_card",
           "label": "Titulaire d'un VLS-TS ou carte de séjour étudiant",
@@ -1170,6 +1473,12 @@
       "description": "Après achèvement des travaux de recherche.",
       "base_criteria": [
         {
+          "id": "regular_situation",
+          "label": "Situation administrative régulière (Visa ou Titre)",
+          "type": "bool",
+          "expected": true
+        },
+        {
           "id": "had_researcher_card",
           "label": "Titulaire d'un VLS-TS ou carte de séjour chercheur",
           "type": "bool",
@@ -1194,6 +1503,12 @@
       "name": "Autorisation provisoire de séjour - Recherche d'emploi (accords bilatéraux)",
       "description": "APS pour ressortissants d'accords bilatéraux.",
       "base_criteria": [
+        {
+          "id": "regular_situation",
+          "label": "Situation administrative régulière (Visa ou Titre)",
+          "type": "bool",
+          "expected": true
+        },
         {
           "id": "bilateral_agreement",
           "label": "Bénéficier d'un accord bilatéral",
@@ -1225,6 +1540,12 @@
       "name": "Carte de séjour - Salarié détaché ICT",
       "description": "Salarié détaché intra-groupe (hors Algériens).",
       "base_criteria": [
+        {
+          "id": "regular_situation",
+          "label": "Situation administrative régulière (Visa ou Titre)",
+          "type": "bool",
+          "expected": true
+        },
         {
           "id": "not_algerian",
           "label": "Être non algérien",
@@ -1270,6 +1591,12 @@
       "description": "Séjour >3 mois sans travailler.",
       "base_criteria": [
         {
+          "id": "regular_situation",
+          "label": "Situation administrative régulière (Visa ou Titre)",
+          "type": "bool",
+          "expected": true
+        },
+        {
           "id": "not_algerian",
           "label": "Être non algérien",
           "type": "bool",
@@ -1313,6 +1640,12 @@
       "name": "Certificat de résidence pour Algérien d'1 ou 2 ans - Étudiant",
       "description": "Certificat de résidence algérien pour étudiant.",
       "base_criteria": [
+        {
+          "id": "regular_situation",
+          "label": "Situation administrative régulière (Visa ou Titre)",
+          "type": "bool",
+          "expected": true
+        },
         {
           "id": "is_algerian",
           "label": "Être ressortissant algérien",
@@ -1358,6 +1691,12 @@
       "description": "Ancien résident avec pension française.",
       "base_criteria": [
         {
+          "id": "regular_situation",
+          "label": "Situation administrative régulière (Visa ou Titre)",
+          "type": "bool",
+          "expected": true
+        },
+        {
           "id": "not_algerian",
           "label": "Être non algérien",
           "type": "bool",
@@ -1395,6 +1734,12 @@
       "description": "Acquisition de la nationalité française par mariage.",
       "base_criteria": [
         {
+          "id": "republican_commitment",
+          "label": "Signature du contrat d'engagement républicain",
+          "type": "bool",
+          "expected": true
+        },
+        {
           "id": "marriage_duration",
           "label": "Durée de mariage (mois)",
           "type": "int",
@@ -1407,8 +1752,14 @@
           "expected": true
         },
         {
-          "id": "french_level_b1",
-          "label": "Maîtrise du français niveau B1",
+          "id": "french_level_b2",
+          "label": "Maîtrise du français niveau B2 (Oral & Écrit)",
+          "type": "bool",
+          "expected": true
+        },
+        {
+          "id": "civic_exam",
+          "label": "Réussite de l'examen civique",
           "type": "bool",
           "expected": true
         },
@@ -1446,6 +1797,12 @@
       "description": "Acquisition de la nationalité française par naturalisation.",
       "base_criteria": [
         {
+          "id": "republican_commitment",
+          "label": "Signature du contrat d'engagement républicain",
+          "type": "bool",
+          "expected": true
+        },
+        {
           "id": "is_adult",
           "label": "Être majeur",
           "type": "bool",
@@ -1458,14 +1815,20 @@
           "threshold": 5
         },
         {
-          "id": "stable_resources",
-          "label": "Ressources stables et suffisantes",
+          "id": "stable_resources_5y",
+          "label": "Insertion professionnelle et ressources stables (5 ans)",
           "type": "bool",
           "expected": true
         },
         {
-          "id": "french_level_b1",
-          "label": "Maîtrise du français niveau B1",
+          "id": "french_level_b2",
+          "label": "Maîtrise du français niveau B2 (Oral & Écrit)",
+          "type": "bool",
+          "expected": true
+        },
+        {
+          "id": "civic_exam",
+          "label": "Réussite de l'examen civique",
           "type": "bool",
           "expected": true
         },
@@ -1476,8 +1839,8 @@
           "expected": true
         },
         {
-          "id": "no_conviction",
-          "label": "Pas de condamnation pour crimes/délits contre la Nation",
+          "id": "no_conviction_6_months",
+          "label": "Pas de condamnation d'emprisonnement >= 6 mois",
           "type": "bool",
           "expected": true
         }
@@ -1606,25 +1969,45 @@
     {
       "id": "admission_exceptional_tension",
       "name": "Admission exceptionnelle au séjour - métiers en tension",
-      "description": "Régularisation pour travailleur en métier en tension.",
+      "description": "Régularisation pour travailleur en métier en tension (Circulaire Retailleau 2025).",
       "base_criteria": [
         {
+          "id": "republican_commitment",
+          "label": "Signature du contrat d'engagement républicain",
+          "type": "bool",
+          "expected": true
+        },
+        {
           "id": "residence_duration_years",
-          "label": "Durée de résidence (années)",
+          "label": "Durée de résidence ininterrompue (années)",
           "type": "int",
           "threshold": 3
         },
         {
-          "id": "employment_24_months_tension",
-          "label": "12 bulletins de salaire (24 derniers mois) dans un métier en tension",
+          "id": "employment_tension_sector",
+          "label": "12 mois de travail (24 derniers mois) dans un métier listé par arrêté préfectoral",
+          "type": "bool",
+          "expected": true
+        },
+        {
+          "id": "no_oqtf",
+          "label": "Pas d'OQTF non respectée",
+          "type": "bool",
+          "expected": true
+        },
+        {
+          "id": "no_threat_public_order",
+          "label": "Pas de menace pour l'ordre public (casier judiciaire vierge)",
           "type": "bool",
           "expected": true
         }
       ],
       "documents": [
-        "Bulletins de salaire (12)",
+        "Contrat d'engagement républicain signé",
+        "Bulletins de salaire (12 mois)",
         "Justificatifs de résidence (3 ans)",
-        "Attestation employeur"
+        "Attestation employeur",
+        "Preuve du métier en tension (arrêté préfectoral)"
       ],
       "exceptions": []
     },
@@ -1844,6 +2227,12 @@
       "name": "Passeport Talent - Renommée Internationale",
       "description": "Pour les domaines scientifique, littéraire, artistique, intellectuel, éducatif ou sportif.",
       "base_criteria": [
+        {
+          "id": "regular_situation",
+          "label": "Situation administrative régulière (Visa ou Titre)",
+          "type": "bool",
+          "expected": true
+        },
         {
           "id": "has_international_reputation",
           "label": "Renommée nationale ou internationale établie",

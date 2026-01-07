@@ -9,442 +9,1102 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+  <script src="i18n.js"></script>
+  <script src="script.js"></script>
 </head>
 
-<body>
+<body x-data="simulegal">
   <div class="container">
-    <nav class="navbar" id="navbar">
-      <div class="lang-selector">
-        <select onchange="I18n.setLang(this.value)" id="lang-select">
-          <option value="fr">🇫🇷 FR</option>
-          <option value="en">🇬🇧 EN</option>
-          <option value="es">🇪🇸 ES</option>
-          <option value="ar">🇸🇦 AR</option>
-        </select>
+    <!-- Global Navbar -->
+    <nav class="navbar-glass global-navbar">
+      <div class="logo-small" @click="goHome()" style="cursor: pointer;">SimuLegal</div>
+      <div class="nav-links">
+        <a href="#" @click.prevent="startSimulation()" data-i18n="nav_simulateur">Simulateur</a>
+        <a href="#how-it-works" @click="goHome()" data-i18n="nav_how_it_works">Comment ça marche</a>
+        <a href="#features" @click="goHome()" data-i18n="nav_features">Avantages</a>
       </div>
-      <div id="auth-nav"></div>
+      <div class="nav-right">
+        <div class="lang-selector">
+          <select onchange="Alpine.store('i18n').setLang(this.value)" id="lang-select">
+            <option value="fr">🇫🇷 FR</option>
+            <option value="en">🇬🇧 EN</option>
+            <option value="es">🇪🇸 ES</option>
+            <option value="ar">🇸🇦 AR</option>
+          </select>
+        </div>
+        <button class="btn btn-sm btn-primary" @click="startSimulation()" x-show="step === 0"
+          data-i18n="btn_commencer">Commencer</button>
+        <button class="btn btn-sm btn-secondary" @click="goHome()" x-show="step > 0" data-i18n="nav_hello">Retour
+          Accueil</button>
+      </div>
     </nav>
-    <header>
-      <h1 class="logo" data-i18n="app_title">Simulegal</h1>
-      <p class="tagline" data-i18n="tagline">Évaluez votre éligibilité aux titres de séjour en France</p>
-      <div style="margin-top: 1rem;">
-        <a href="/chat" class="btn btn-secondary" style="font-size: 0.9rem;" data-i18n="btn_chat">🤖 Discuter avec notre
-          IA</a>
-      </div>
-    </header>
 
-    <!-- Steps indicator -->
-    <div class="steps">
-      <div class="step active" id="step1-indicator">
-        <div class="step-number">1</div>
-        <span data-i18n="step_situation">Situation</span>
+    <!-- Steps indicator (Visible only if Step > 0) -->
+    <div class="steps-container" style="text-align: center; margin-bottom: 2rem;" x-show="step > 0" x-transition>
+      <div class="steps">
+        <div class="step" :class="{ 'active': step === 1, 'completed': step > 1 }" id="step1-indicator">
+          <div class="step-number">1</div>
+          <span data-i18n="step_situation">Situation</span>
+        </div>
+        <div class="step" :class="{ 'active': step === 2, 'completed': step > 2 }" id="step2-indicator">
+          <div class="step-number">2</div>
+          <span data-i18n="step_criteres">Critères</span>
+        </div>
+        <div class="step" :class="{ 'active': step === 3 }" id="step3-indicator">
+          <div class="step-number">3</div>
+          <span data-i18n="step_resultats">Resultats</span>
+        </div>
       </div>
-      <div class="step" id="step2-indicator">
-        <div class="step-number">2</div>
-        <span data-i18n="step_criteres">Critères</span>
+      <p class="text-muted" style="margin-top: -1.5rem; font-size: 0.9rem;"
+        x-text="step === 3 ? 'Analyse terminée' : 'Étape ' + step + '/3 • Temps estimé : ' + (step === 1 ? '2 min' : '1 min')">
+      </p>
+    </div>
+
+    <!-- Étape 0: Landing Page -->
+    <!-- SaaS Landing Page (Step 0) -->
+    <div id="step0" class="landing-page" x-show="step === 0" x-transition:enter="transition ease-out duration-700"
+      x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100">
+
+
+
+      <!-- Hero Split -->
+      <div class="hero-split">
+        <div class="hero-content">
+          <div class="badge-new">✨ Nouveau : Moteur IA v2.0</div>
+          <h1 class="hero-title-lg">Votre titre de séjour, <br><span class="gradient-text">analysé par IA.</span></h1>
+          <p class="hero-subtitle-lg">Obtenez une évaluation précise de votre éligibilité en moins de 3 minutes. Basé
+            sur les 115 critères officiels du CESEDA.</p>
+
+          <div class="hero-cta-group">
+            <button class="btn btn-primary btn-xl pulse-btn" @click="startSimulation()">
+              Faire le test gratuit →
+            </button>
+            <div class="hero-stats">
+              <span>👥 10k+ analyses</span>
+              <span>⭐ 4.9/5 satisfaction</span>
+            </div>
+          </div>
+        </div>
+        <div class="hero-visual">
+          <!-- Placeholder for Abstract Visual -->
+          <div class="abstract-shape">
+            <div class="shape-1"></div>
+            <div class="shape-2"></div>
+            <div class="glass-card-mockup">
+              <div class="mockup-header">Analysis Result</div>
+              <div class="mockup-bar" style="width: 80%"></div>
+              <div class="mockup-bar" style="width: 60%"></div>
+              <div class="mockup-pill">Eligible ✅</div>
+            </div>
+          </div>
+        </div>
       </div>
-      <div class="step" id="step3-indicator">
-        <div class="step-number">3</div>
-        <span data-i18n="step_resultats">Resultats</span>
+
+      <!-- Trust Strip -->
+      <div class="trust-strip">
+        <p>BASÉ SUR LES TEXTES OFFICIELS & SOURCES GOUVERNEMENTALES</p>
+        <div class="trust-logos">
+          <span>🏛️ Légifrance</span>
+          <span>🇫🇷 Service-Public.fr</span>
+          <span>⚖️ Ministère de l'Intérieur</span>
+          <span>🇪🇺 Droit Européen</span>
+        </div>
       </div>
+
+      <!-- Features Grid -->
+      <div class="section" id="features">
+        <h2 class="section-title">Pourquoi SimuLegal ?</h2>
+        <div class="features-grid-premium">
+          <div class="feature-card-premium">
+            <div class="feature-icon-lg">🚀</div>
+            <h3>Analyse Instantanée</h3>
+            <p>Ne perdez plus des mois à attendre un rendez-vous. Notre IA analyse votre dossier en temps réel.</p>
+          </div>
+          <div class="feature-card-premium">
+            <div class="feature-icon-lg">🔒</div>
+            <h3>100% Anonyme</h3>
+            <p>Vos données ne quittent pas votre navigateur avant soumission. Confidentialité totale garantie.</p>
+          </div>
+          <div class="feature-card-premium">
+            <div class="feature-icon-lg">📄</div>
+            <h3>Checklist Précise</h3>
+            <p>Recevez la liste exacte des pièces justificatives à fournir selon votre situation spécifique.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- How it Works -->
+      <div class="section bg-glass-subtle" id="how-it-works">
+        <h2 class="section-title">Comment ça marche ?</h2>
+        <div class="steps-visual">
+          <div class="step-card">
+            <div class="step-num">1</div>
+            <h4>Répondez</h4>
+            <p>15 questions simples sur votre parcours.</p>
+          </div>
+          <div class="arrow-connector">→</div>
+          <div class="step-card">
+            <div class="step-num">2</div>
+            <h4>Analysez</h4>
+            <p>Notre moteur croise 115 critères juridiques.</p>
+          </div>
+          <div class="arrow-connector">→</div>
+          <div class="step-card">
+            <div class="step-num">3</div>
+            <h4>Obtenez</h4>
+            <p>Votre score d'éligibilité et démarches.</p>
+          </div>
+        </div>
+      </div>
+
+
     </div>
 
     <!-- Étape 1: Situation de base -->
-    <div id="step1" class="card">
-      <div class="card-header">
-        <div class="card-icon">👤</div>
-        <h2 class="card-title">Votre situation</h2>
+    <div id="step1" class="card" x-show="step === 1" x-transition:enter="transition ease-out duration-300"
+      x-transition:enter-start="opacity-0 transform scale-95" x-transition:enter-end="opacity-100 transform scale-100">
+
+      <div class="sub-progress-container" style="margin-bottom: 2rem;">
+        <div class="sub-progress-bar">
+          <div class="sub-progress-fill" :style="'width: ' + ((subStep - 1) * 25) + '%'"></div>
+        </div>
+        <div class="sub-progress-text" x-text="'Questionnaire : ' + subStep + '/5'"></div>
       </div>
 
-      <div class="form-row">
-        <div class="form-group">
-          <label for="nationality" data-i18n="lbl_nationality">Nationalité</label>
-          <input type="text" class="form-input" id="nationality" placeholder="Ex: Tunisienne, Algérienne, Marocaine...">
+      <!-- Sub 1: Goal First (Le Projet) - Card Version -->
+      <!-- Sub 1: Goal First (Le Projet) - Card Version -->
+      <div x-show="subStep === 1" x-transition>
+        <div class="text-center mb-8">
+          <h2 class="text-2xl font-bold mb-2" x-text="$store.i18n.t('step1_title')"></h2>
+          <p class="text-muted" x-text="$store.i18n.t('step1_subtitle')"></p>
         </div>
-        <div class="form-group">
-          <label for="residence_months" data-i18n="lbl_residence">Durée de résidence en France (mois)</label>
-          <input type="number" class="form-input" id="residence_months" placeholder="Ex: 24" min="0">
+
+        <div class="selection-grid">
+          <!-- Nationalité -->
+          <div class="selection-card" :class="{ 'active': formData.user_goal === 'nationality' }"
+            @click="formData.user_goal = 'nationality'; nextSubStep()">
+            <div class="card-icon">🇫🇷</div>
+            <div class="card-title" x-text="$store.i18n.t('goal_nat_title')"></div>
+            <div class="card-desc" x-text="$store.i18n.t('goal_nat_desc')"></div>
+          </div>
+
+          <!-- Titre de Séjour -->
+          <div class="selection-card" :class="{ 'active': formData.user_goal === 'residence' }"
+            @click="formData.user_goal = 'residence'; nextSubStep()">
+            <div class="card-icon">🪪</div>
+            <div class="card-title" x-text="$store.i18n.t('goal_res_title')"></div>
+            <div class="card-desc" x-text="$store.i18n.t('goal_res_desc')"></div>
+          </div>
+
+          <!-- Les Deux -->
+          <div class="selection-card" :class="{ 'active': formData.user_goal === 'both' }"
+            @click="formData.user_goal = 'both'; nextSubStep()">
+            <div class="card-icon">✨</div>
+            <div class="card-title" x-text="$store.i18n.t('goal_both_title')"></div>
+            <div class="card-desc" x-text="$store.i18n.t('goal_both_desc')"></div>
+          </div>
         </div>
       </div>
+      <div class="card-title" data-i18n="goal_both_title">Explorer les options</div>
+      <div class="card-desc" data-i18n="goal_both_desc">Je ne sais pas encore</div>
+    </div>
+  </div>
+  </div>
 
-      <div class="form-row">
+  <!-- Sub 2: Current Visa Status (Card Version) -->
+  <!-- Sub 2: Current Visa Status (Card Version) -->
+  <div x-show="subStep === 2" x-transition>
+    <div class="text-center mb-6">
+      <h2 class="text-2xl font-bold mb-2" x-text="$store.i18n.t('step1_2_title')"></h2>
+      <p class="text-muted" x-text="$store.i18n.t('step1_2_subtitle')"></p>
+    </div>
+
+    <div class="selection-grid">
+      <!-- Sans Papiers -->
+      <div class="selection-card" :class="{ 'active': formData.current_visa_status === 'none' }"
+        @click="formData.current_visa_status = 'none'; nextSubStep()">
+        <div class="card-icon">🚫</div>
+        <div class="card-title" x-text="$store.i18n.t('status_none_title')"></div>
+        <div class="card-desc" x-text="$store.i18n.t('status_none_desc')"></div>
+      </div>
+
+      <!-- Visa Long Séjour -->
+      <div class="selection-card" :class="{ 'active': formData.current_visa_status === 'vls_ts' }"
+        @click="formData.current_visa_status = 'vls_ts'; nextSubStep()">
+        <div class="card-icon">🛂</div>
+        <div class="card-title" x-text="$store.i18n.t('status_vls_title')"></div>
+        <div class="card-desc" x-text="$store.i18n.t('status_vls_desc')"></div>
+      </div>
+
+      <!-- Carte de Séjour -->
+      <div class="selection-card"
+        :class="{ 'active': ['carte_1an', 'carte_pluriannuelle'].includes(formData.current_visa_status) }"
+        @click="formData.current_visa_status = 'carte_1an'; nextSubStep()">
+        <div class="card-icon">🪪</div>
+        <div class="card-title" x-text="$store.i18n.t('status_card_title')"></div>
+        <div class="card-desc" x-text="$store.i18n.t('status_card_desc')"></div>
+      </div>
+
+      <!-- Carte de Résident -->
+      <div class="selection-card" :class="{ 'active': formData.current_visa_status === 'resident_10y' }"
+        @click="formData.current_visa_status = 'resident_10y'; nextSubStep()">
+        <div class="card-icon">♾️</div>
+        <div class="card-title" x-text="$store.i18n.t('status_res_title')"></div>
+        <div class="card-desc" x-text="$store.i18n.t('status_res_desc')"></div>
+      </div>
+
+      <!-- Récépissé -->
+      <div class="selection-card" :class="{ 'active': formData.current_visa_status === 'recepisse' }"
+        @click="formData.current_visa_status = 'recepisse'; nextSubStep()">
+        <div class="card-icon">📄</div>
+        <div class="card-title" x-text="$store.i18n.t('status_recep_title')"></div>
+        <div class="card-desc" x-text="$store.i18n.t('status_recep_desc')"></div>
+      </div>
+
+      <!-- Autre / Etudiant / Talent -->
+      <div class="selection-card"
+        :class="{ 'active': ['student', 'talent', 'tourist', 'eu_citizen'].includes(formData.current_visa_status) }"
+        @click="formData.current_visa_status = 'student'; nextSubStep()">
+        <div class="card-icon">🎓</div>
+        <div class="card-title" x-text="$store.i18n.t('status_other_title')"></div>
+        <div class="card-desc" x-text="$store.i18n.t('status_other_desc')"></div>
+      </div>
+    </div>
+  </div>
+  <div class="card-desc" data-i18n="status_recep_desc">Demande ou renouvellement en cours.</div>
+  </div>
+
+  <!-- Autre / Etudiant / Talent -->
+  <div class="selection-card"
+    :class="{ 'active': ['student', 'talent', 'tourist', 'eu_citizen'].includes(formData.current_visa_status) }"
+    @click="formData.current_visa_status = 'student'; nextSubStep()">
+    <div class="card-icon">🎓</div>
+    <div class="card-title" data-i18n="status_other_title">Autre Situation</div>
+    <div class="card-desc" data-i18n="status_other_desc">Étudiant, Talent, Touriste, Européen...</div>
+  </div>
+  </div>
+  </div>
+
+  <!-- Sub 3: Nationality -->
+  <div x-show="subStep === 3" x-transition>
+    <div class="card-header">
+      <div class="card-icon">🌍</div>
+      <h2 class="card-title" x-text="$store.i18n.t('step1_3_title')"></h2>
+    </div>
+    <div class="form-group">
+      <label for="nationality" x-text="$store.i18n.t('lbl_nationality_q')"></label>
+      <select class="form-select" id="nationality" x-model="formData.nationality">
+        <option value="" x-text="$store.i18n.t('opt_select_nat')"></option>
+        <optgroup :label="$store.i18n.t('opt_americas')">
+          <option value="Haitienne">Haïtienne</option>
+          <option value="Brésilienne">Brésilienne</option>
+        </optgroup>
+        <optgroup :label="$store.i18n.t('opt_maghreb')">
+          <option value="Algérienne">Algérienne</option>
+          <option value="Marocaine">Marocaine</option>
+          <option value="Tunisienne">Tunisienne</option>
+        </optgroup>
+        <optgroup :label="$store.i18n.t('opt_west_africa')">
+          <option value="Sénégalaise">Sénégalaise</option>
+          <option value="Ivoirienne">Ivoirienne</option>
+          <option value="Malienne">Malienne</option>
+          <option value="Camerounaise">Camerounaise</option>
+          <option value="Congolaise">Congolaise</option>
+        </optgroup>
+        <optgroup :label="$store.i18n.t('opt_asia')">
+          <option value="Chinoise">Chinoise</option>
+          <option value="Indienne">Indienne</option>
+        </optgroup>
+        <option value="Autre" x-text="$store.i18n.t('opt_other')"></option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Sub 4: Residence & Language -->
+  <div x-show="subStep === 4" x-transition>
+    <div class="card-header">
+      <div class="card-icon">⏱️</div>
+      <h2 class="card-title" x-text="$store.i18n.t('step1_4_title')"></h2>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label x-text="$store.i18n.t('lbl_residence_duration')"></label>
+        <div style="display: flex; gap: 0.5rem;">
+          <select class="form-select" x-model="formData.res_years">
+            <option value="0" x-text="'0 ' + $store.i18n.t('opt_year')"></option>
+            <option value="1" x-text="'1 ' + $store.i18n.t('opt_year')"></option>
+            <option value="2" x-text="'2 ' + $store.i18n.t('opt_years')"></option>
+            <option value="3" x-text="'3 ' + $store.i18n.t('opt_years')"></option>
+            <option value="4" x-text="'4 ' + $store.i18n.t('opt_years')"></option>
+            <option value="5" x-text="'5 ' + $store.i18n.t('opt_years')"></option>
+            <option value="10" x-text="'10 ' + $store.i18n.t('opt_years') + ' +'"></option>
+          </select>
+          <select class="form-select" x-model="formData.res_months">
+            <option value="0" x-text="'0 ' + $store.i18n.t('opt_month')"></option>
+            <option value="6" x-text="'6 ' + $store.i18n.t('opt_month')"></option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="french_level" x-text="$store.i18n.t('lbl_french_level')"></label>
+        <select class="form-select" id="french_level" x-model="formData.french_level">
+          <option value="A0" x-text="$store.i18n.t('opt_no_level_fr')"></option>
+          <option value="A1">Débutant (A1)</option>
+          <option value="A2">Élémentaire (A2)</option>
+          <option value="B1">Intermédiaire (B1)</option>
+          <option value="B2">Avancé (B2)</option>
+          <option value="C1">Autonome (C1)</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sub 5: Salary -->
+  <div x-show="subStep === 5" x-transition>
+    <div class="card-header">
+      <div class="card-icon">💶</div>
+      <h2 class="card-title" x-text="$store.i18n.t('step1_5_title')"></h2>
+    </div>
+    <div class="form-group">
+      <label class="form-label" x-text="$store.i18n.t('lbl_salary')"></label>
+      <input type="number" class="form-input" placeholder="Ex: 1400" x-model="formData.salary_monthly">
+      <small class="form-hint" x-text="$store.i18n.t('hint_salary')"></small>
+    </div>
+  </div>
+
+  <div class="conversational-nav" style="display: flex; gap: 1rem; margin-top: 2rem;">
+    <button class="btn btn-secondary" @click="prevSubStep()" style="flex: 1;" data-i18n="btn_prev">
+      ← Précédent
+    </button>
+    <button class="btn btn-primary" @click="nextSubStep()" :disabled="!subStepValid"
+      :class="{ 'btn-disabled': !subStepValid }" style="flex: 2;">
+      <span x-show="subStepValid" data-i18n="btn_next">Suivant →</span>
+      <span x-show="!subStepValid" data-i18n="btn_next_disabled">Veuillez répondre pour continuer</span>
+    </button>
+  </div>
+  </div>
+
+  <!-- Étape 2: Détails -->
+  <div id="step2" class="card" x-show="step === 2" x-transition:enter="transition ease-out duration-300"
+    x-transition:enter-start="opacity-0 transform translate-y-4"
+    x-transition:enter-end="opacity-100 transform translate-y-0" style="display: none;">
+
+    <div class="sub-progress-container" style="margin-bottom: 2rem;">
+      <div class="sub-progress-bar">
+        <div class="sub-progress-fill" :style="'width: ' + ((subStep - 6) * 33) + '%'"></div>
+      </div>
+      <div class="sub-progress-text" x-text="'Détails : ' + (subStep - 5) + '/4'"></div>
+    </div>
+
+    <!-- STEP 2.1: SITUATION FAMILIALE (Card Version) -->
+    <div x-show="subStep === 6" x-transition>
+      <div class="text-center mb-6">
+        <h2 class="text-2xl font-bold mb-2" x-text="$store.i18n.t('step2_1_title')"></h2>
+        <p class="text-muted" x-text="$store.i18n.t('step2_1_subtitle')"></p>
+      </div>
+
+      <div class="selection-grid">
+        <!-- Célibataire -->
+        <div class="selection-card" :class="{ 'active': formData.family_status === 'single' }"
+          @click="formData.family_status = 'single'; nextSubStep()">
+          <div class="card-icon">👤</div>
+          <div class="card-title" x-text="$store.i18n.t('fam_single_title')"></div>
+          <div class="card-desc" x-text="$store.i18n.t('fam_single_desc')"></div>
+        </div>
+
+        <!-- Marié(e) -->
+        <div class="selection-card" :class="{ 'active': formData.family_status === 'married' }"
+          @click="formData.family_status = 'married'; nextSubStep()">
+          <div class="card-icon">💍</div>
+          <div class="card-title" x-text="$store.i18n.t('fam_married_title')"></div>
+          <div class="card-desc" x-text="$store.i18n.t('fam_married_desc')"></div>
+        </div>
+
+        <!-- Pacsé(e) / Concubinage -->
+        <div class="selection-card" :class="{ 'active': ['pacs', 'concubinage'].includes(formData.family_status) }"
+          @click="formData.family_status = 'pacs'; nextSubStep()">
+          <div class="card-icon">🤝</div>
+          <div class="card-title" x-text="$store.i18n.t('fam_pacs_title')"></div>
+          <div class="card-desc" x-text="$store.i18n.t('fam_pacs_desc')"></div>
+        </div>
+
+        <!-- Divorcé(e) / Veuf(ve) -->
+        <div class="selection-card" :class="{ 'active': ['divorced', 'widowed'].includes(formData.family_status) }"
+          @click="formData.family_status = 'divorced'; nextSubStep()">
+          <div class="card-icon">💔</div>
+          <div class="card-title" x-text="$store.i18n.t('fam_div_title')"></div>
+          <div class="card-desc" x-text="$store.i18n.t('fam_div_desc')"></div>
+        </div>
+      </div>
+      <div class="form-row" id="marriage-details" x-show="showMarriage" x-transition style="display: none;">
         <div class="form-group">
-          <label for="french_level" data-i18n="lbl_french">Niveau de français (CECRL)</label>
-          <select class="form-select" id="french_level">
-            <option value="A0">Aucun (A0)</option>
-            <option value="A1">Débutant (A1)</option>
-            <option value="A2">Élémentaire (A2)</option>
-            <option value="B1">Intermédiaire (B1)</option>
-            <option value="B2">Intermédiaire avancé (B2)</option>
-            <option value="C1">Avancé (C1)</option>
-            <option value="C2">Maîtrise (C2)</option>
+          <label class="form-label" x-text="$store.i18n.t('lbl_marriage_years')"></label>
+          <select class="form-select" id="marriage_years" x-model="formData.marriage_years">
+            <option value="0" x-text="'< 1 ' + $store.i18n.t('opt_year')"></option>
+            <option value="1" x-text="'1 ' + $store.i18n.t('opt_year')"></option>
+            <option value="2" x-text="'2 ' + $store.i18n.t('opt_years')"></option>
+            <option value="3" x-text="'3 ' + $store.i18n.t('opt_years')"></option>
+            <option value="4" x-text="'4 ' + $store.i18n.t('opt_years') + ' +'"></option>
           </select>
         </div>
         <div class="form-group">
-          <label class="form-label">Salaire annuel brut (€)</label>
-          <input type="number" class="form-input" id="salary" placeholder="Ex: 35000" min="0">
+          <label class="form-label" x-text="$store.i18n.t('lbl_spouse_nat')"></label>
+          <select class="form-select" id="spouse_nationality_select" x-model="formData.spouse_nationality">
+            <option value="foreign" x-text="$store.i18n.t('opt_spouse_foreign')"></option>
+            <option value="french" x-text="$store.i18n.t('opt_spouse_fr')"></option>
+            <option value="eu" x-text="$store.i18n.t('opt_spouse_eu')"></option>
+          </select>
         </div>
       </div>
-
-      <button class="btn btn-primary btn-block" onclick="nextStep(1)">
-        Continuer →
-      </button>
+      <div class="form-group">
+        <label class="checkbox-item">
+          <input type="checkbox" id="parent_french_child" x-model="formData.parent_french_child">
+          <span x-text="$store.i18n.t('chk_parent_fr_child')"></span>
+        </label>
+      </div>
     </div>
 
-    <!-- Étape 2: Détails -->
-    <div id="step2" class="card" style="display: none;">
+    <!-- Sub 7: Life Path & Links -->
+    <div x-show="subStep === 7" x-transition>
       <div class="card-header">
-        <div class="card-icon">📋</div>
-        <h2 class="card-title">Détails complémentaires</h2>
+        <div class="card-icon">🔗</div>
+        <h2 class="card-title" x-text="$store.i18n.t('step2_2_title')"></h2>
       </div>
-
-      <div class="form-group">
-        <label class="form-label">Situation familiale</label>
+      <div id="life_path_section" class="form-group" x-show="showLifePath">
+        <label class="form-label text-info" x-text="$store.i18n.t('lbl_personal_path')"></label>
         <div class="checkbox-group">
           <label class="checkbox-item">
-            <input type="checkbox" id="is_married">
-            <span>Marié(e) à un(e) Français(e)</span>
+            <input type="checkbox" id="born_in_france" x-model="formData.born_in_france">
+            <span x-text="$store.i18n.t('chk_born_france')"></span>
           </label>
           <label class="checkbox-item">
-            <input type="checkbox" id="is_pacs">
-            <span>Pacsé(e) avec un(e) Français(e)</span>
+            <input type="checkbox" id="schooling_france" x-model="formData.schooling_france">
+            <span x-text="$store.i18n.t('chk_schooling')"></span>
           </label>
           <label class="checkbox-item">
-            <input type="checkbox" id="parent_french_child">
-            <span>Parent d'enfant français</span>
+            <input type="checkbox" id="residence_at_18" x-model="formData.residence_at_18">
+            <span x-text="$store.i18n.t('chk_res_18')"></span>
           </label>
           <label class="checkbox-item">
-            <input type="checkbox" id="spouse_eu">
-            <span>Conjoint citoyen UE</span>
+            <input type="checkbox" id="entered_minor_regroupement" x-model="formData.entered_minor_regroupement">
+            <span x-text="$store.i18n.t('chk_entered_minor')"></span>
           </label>
         </div>
       </div>
-
-      <div class="form-row" id="marriage-details" style="display: none;">
-        <div class="form-group">
-          <label class="form-label">Durée de mariage/Pacs (mois)</label>
-          <input type="number" class="form-input" id="marriage_months" placeholder="Ex: 18" min="0">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Nationalité du conjoint</label>
-          <input type="text" class="form-input" id="spouse_nationality" placeholder="Ex: Française">
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label class="form-label">Formation et emploi</label>
+      <div id="extended_family_section" class="form-group border-top pt-3">
+        <label class="form-label text-warning" x-text="$store.i18n.t('lbl_family_links')"></label>
         <div class="checkbox-group">
           <label class="checkbox-item">
-            <input type="checkbox" id="has_master">
-            <span>Diplôme Master en France</span>
+            <input type="checkbox" id="sibling_of_french" x-model="formData.sibling_of_french">
+            <span x-text="$store.i18n.t('chk_sibling_fr')"></span>
           </label>
           <label class="checkbox-item">
-            <input type="checkbox" id="has_degree_3y">
-            <span>Diplôme Bac+3 ou plus</span>
+            <input type="checkbox" id="ascendant_of_french" x-model="formData.ascendant_of_french">
+            <span x-text="$store.i18n.t('chk_ascendant_fr')"></span>
           </label>
           <label class="checkbox-item">
-            <input type="checkbox" id="has_job_auth">
-            <span>Autorisation de travail</span>
+            <input type="checkbox" id="adopted_by_french" x-model="formData.adopted_by_french">
+            <span x-text="$store.i18n.t('chk_adopted_fr')"></span>
           </label>
           <label class="checkbox-item">
-            <input type="checkbox" id="has_vls">
-            <span>Visa long séjour (VLS-TS)</span>
+            <input type="checkbox" id="recueilli_by_french" x-model="formData.recueilli_by_french">
+            <span x-text="$store.i18n.t('chk_recueilli_fr')"></span>
           </label>
         </div>
-      </div>
-
-      <div class="form-group">
-        <label class="form-label">Situation administrative & Spécifique</label>
-        <div class="checkbox-group">
-          <label class="checkbox-item">
-            <input type="checkbox" id="stable_resources">
-            <span>Ressources stables</span>
-          </label>
-          <label class="checkbox-item">
-            <input type="checkbox" id="health_insurance">
-            <span>Assurance maladie</span>
-          </label>
-          <label class="checkbox-item">
-            <input type="checkbox" id="community_life" checked>
-            <span>Communauté de vie effective</span>
-          </label>
-          <label class="checkbox-item">
-            <input type="checkbox" id="no_polygamy" checked>
-            <span>Pas de polygamie</span>
-          </label>
-          <label class="checkbox-item">
-            <input type="checkbox" id="is_refugee">
-            <span>Statut Réfugié (OFPRA/CNDA)</span>
-          </label>
-          <label class="checkbox-item">
-            <input type="checkbox" id="has_reputation">
-            <span>Renommée Internationale</span>
-          </label>
-          <label class="checkbox-item">
-            <input type="checkbox" id="has_project_france">
-            <span>Projet en France</span>
-          </label>
+        <div class="form-group mt-2" x-show="showResidenceWithFrench" style="display: none;">
+          <label class="form-label" x-text="$store.i18n.t('lbl_res_with_fr')"></label>
+          <input type="number" class="form-input" id="residence_with_french_years_sub" placeholder="0" min="0"
+            x-model="formData.residence_with_french_years">
         </div>
-      </div>
-
-      <div style="display: flex; gap: 1rem;">
-        <button class="btn btn-secondary" onclick="prevStep(2)" data-i18n="btn_prev">
-          ← Retour
-        </button>
-        <button class="btn btn-primary" style="flex: 1;" onclick="evaluateEligibility()" data-i18n="btn_evaluate">
-          🔍 Analyser mon éligibilité
-        </button>
       </div>
     </div>
 
-    <!-- Loading -->
-    <div id="loading" class="loading">
-      <div class="spinner"></div>
-      <p>Analyse en cours...</p>
+    <!-- Sub 8: Education & Professional -->
+    <div x-show="subStep === 8" x-transition>
+      <div class="card-header">
+        <div class="card-icon">🎓</div>
+        <h2 class="card-title" x-text="$store.i18n.t('step2_3_title')"></h2>
+      </div>
+      <div class="form-group">
+        <label class="form-label" x-text="$store.i18n.t('lbl_education')"></label>
+        <select class="form-select" id="education_level" x-model="formData.education_level">
+          <option value="none" x-text="$store.i18n.t('opt_edu_none')"></option>
+          <option value="bac3" x-text="$store.i18n.t('opt_edu_bac3')"></option>
+          <option value="master_fr" x-text="$store.i18n.t('opt_edu_master_fr')"></option>
+          <option value="master_foreign" x-text="$store.i18n.t('opt_edu_master_foreign')"></option>
+          <option value="phd" x-text="$store.i18n.t('opt_edu_phd')"></option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label" x-text="$store.i18n.t('lbl_job')"></label>
+        <select class="form-select" id="job_contract" x-model="formData.job_contract">
+          <option value="none" x-text="$store.i18n.t('opt_job_none')"></option>
+          <option value="cdi" x-text="$store.i18n.t('opt_job_cdi')"></option>
+          <option value="cdd" x-text="$store.i18n.t('opt_job_cdd')"></option>
+          <option value="interim" x-text="$store.i18n.t('opt_job_interim')"></option>
+          <option value="freelance" x-text="$store.i18n.t('opt_job_freelance')"></option>
+        </select>
+      </div>
     </div>
 
-    <!-- Étape 3: Résultats -->
-    <div id="step3" class="results-container">
-      <div class="card">
-        <div class="card-header">
-          <div class="card-icon">✨</div>
-          <h2 class="card-title">Vos résultats d'éligibilité</h2>
-        </div>
-        <div id="results-list"></div>
+    <!-- Sub 9: Specifics & Expert -->
+    <div x-show="subStep === 9" x-transition>
+      <div class="card-header">
+        <div class="card-icon">⚙️</div>
+        <h2 class="card-title" x-text="$store.i18n.t('step2_4_title')"></h2>
       </div>
+      <div class="form-group">
+        <div class="checkbox-group">
+          <label class="checkbox-item">
+            <input type="checkbox" id="health_issue" x-model="formData.health_issue">
+            <span x-text="$store.i18n.t('chk_health')"></span>
+          </label>
+          <label class="checkbox-item">
+            <input type="checkbox" id="is_refugee" x-model="formData.is_refugee">
+            <span x-text="$store.i18n.t('chk_refugee')"></span>
+          </label>
+          <label class="checkbox-item">
+            <input type="checkbox" id="no_oqtf" checked x-model="formData.no_oqtf">
+            <span x-text="$store.i18n.t('chk_no_oqtf')"></span>
+          </label>
+        </div>
+      </div>
+      <div class="form-group border-top pt-3">
+        <button type="button" class="btn btn-secondary btn-sm btn-block" @click="expertMode = !expertMode"
+          x-text="$store.i18n.t('btn_expert')">
+        </button>
+        <div x-show="expertMode" x-transition.duration.500ms class="expert-box-sub">
+          <p class="text-muted" style="font-size: 0.8rem; margin-bottom: 1.5rem;"
+            x-text="$store.i18n.t('txt_expert_intro')">
+          </p>
 
-      <button class="btn btn-secondary btn-block" onclick="resetForm()" data-i18n="btn_new_simulation">
-        ← Nouvelle simulation
+          <!-- Expert Groups -->
+          <div class="expert-grid-sub" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+            <div class="expert-col">
+              <h4 style="font-size: 0.9rem; margin-bottom: 0.5rem; color: var(--primary);"
+                x-text="$store.i18n.t('cat_military')">
+              </h4>
+              <div class="checkbox-group">
+                <label class="checkbox-item"><input type="checkbox" x-model="formData.is_veteran"> <span
+                    x-text="$store.i18n.t('chk_veteran')"></span></label>
+                <label class="checkbox-item"><input type="checkbox" x-model="formData.has_combatant_card">
+                  <span x-text="$store.i18n.t('chk_combatant_card')"></span></label>
+                <label class="checkbox-item"><input type="checkbox" x-model="formData.exceptional_services">
+                  <span x-text="$store.i18n.t('chk_exc_services')"></span></label>
+              </div>
+            </div>
+            <div class="expert-col">
+              <h4 style="font-size: 0.9rem; margin-bottom: 0.5rem; color: var(--danger);"
+                x-text="$store.i18n.t('cat_health')"></h4>
+              <div class="checkbox-group">
+                <label class="checkbox-item"><input type="checkbox" x-model="formData.receives_pension_accident">
+                  <span x-text="$store.i18n.t('chk_pension')"></span></label>
+                <label class="checkbox-item"><input type="checkbox" x-model="formData.child_needs_care">
+                  <span x-text="$store.i18n.t('chk_child_care')"></span></label>
+                <label class="checkbox-item"><input type="checkbox" x-model="formData.hosted_community_org">
+                  <span>Hébergement communautaire</span></label>
+              </div>
+              <div class="form-group mt-2" x-show="formData.receives_pension_accident">
+                <label class="form-label" style="font-size: 0.8rem;">Taux d'incapacité (%)</label>
+                <input type="number" class="form-input" placeholder="20" min="0" max="100"
+                  x-model="formData.incapacity_rate">
+              </div>
+            </div>
+            <div class="expert-col">
+              <h4 style="font-size: 0.9rem; margin-bottom: 0.5rem; color: var(--warning);">📜 Administratif</h4>
+              <div class="checkbox-group">
+                <label class="checkbox-item"><input type="checkbox" x-model="formData.had_resident_card">
+                  <span>Ex-Carte Résident</span></label>
+                <label class="checkbox-item"><input type="checkbox" x-model="formData.bilateral_agreement">
+                  <span>Accord bilatéral</span></label>
+                <label class="checkbox-item"><input type="checkbox" x-model="formData.volunteer_mission">
+                  <span>Mission de volontariat</span></label>
+                <label class="checkbox-item"><input type="checkbox" x-model="formData.seasonal_contract">
+                  <span>Contrat saisonnier</span></label>
+              </div>
+            </div>
+            <div class="expert-col">
+              <h4 style="font-size: 0.9rem; margin-bottom: 0.5rem; color: var(--success);">💼 Business & Talent</h4>
+              <div class="checkbox-group">
+                <label class="checkbox-item"><input type="checkbox" x-model="formData.is_artist"> <span>Artiste /
+                    Auteur</span></label>
+                <label class="checkbox-item"><input type="checkbox" x-model="formData.is_legal_representative">
+                  <span>Mandataire social</span></label>
+                <label class="checkbox-item"><input type="checkbox" x-model="formData.is_manager_expert"> <span>Cadre
+                    expert</span></label>
+                <label class="checkbox-item"><input type="checkbox" x-model="formData.business_project_real">
+                  <span>Projet réel</span></label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="conversational-nav" style="display: flex; gap: 1rem; margin-top: 2rem;">
+      <button class="btn btn-secondary" @click="prevSubStep()" style="flex: 1;" x-text="$store.i18n.t('btn_prev')">
+      </button>
+      <button class="btn btn-primary" @click="nextSubStep()" :disabled="!subStepValid"
+        :class="{ 'btn-disabled': !subStepValid }" style="flex: 2;">
+        <span x-show="subStep < 9" x-text="$store.i18n.t('btn_next')"></span>
+        <span x-show="subStep === 9 && !loading" x-text="$store.i18n.t('btn_evaluate')"></span>
+        <span x-show="subStep === 9 && loading">Analyse en cours...</span>
       </button>
     </div>
+  </div>
 
+  <!-- Loading -->
+  <div id="loading" class="loading" :class="{ 'active': loading }">
+    <div class="spinner"></div>
+    <p>Analyse en cours...</p>
+  </div>
+
+  <!-- Étape 3: Résultats -->
+  <div id="step3" class="results-container" x-show="step === 3" x-transition:enter="transition ease-out duration-500"
+    x-transition:enter-start="opacity-0 scale-90" x-transition:enter-end="opacity-100 scale-100" style="display: none;">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon">✨</div>
+        <h2 class="card-title" x-text="$store.i18n.t('step_resultats')"></h2>
+      </div>
+      <div id="results-list"></div>
+    </div>
+
+    <button class="btn btn-secondary btn-block" @click="resetForm()" x-text="$store.i18n.t('btn_new_sim')">
+    </button>
+  </div>
+
+  <!-- Global Footer -->
+  <footer class="footer-premium">
+    <div class="footer-content">
+      <div class="footer-col">
+        <strong style="font-size: 1.2rem; color: var(--primary);">SimuLegal</strong>
+        <p>L'intelligence juridique simplifiée pour votre avenir en France.</p>
+      </div>
+      <div class="footer-col">
+        <strong>Navigation</strong>
+        <a href="#" @click.prevent="goHome()">Accueil</a>
+        <a href="#" @click.prevent="startSimulation()">Simulateur</a>
+        <a href="/chat">Chat IA</a>
+      </div>
+      <div class="footer-col">
+        <strong>Légal</strong>
+        <a href="#">Conditions Générales</a>
+        <a href="#">Protection des Données</a>
+        <a href="#">Mentions Légales</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      © 2026 SimuLegal. Tous droits réservés. Basé sur les textes du CESEDA.
+    </div>
+  </footer>
   </div>
 
   <script src="/static/auth.js"></script>
   <script>
-    const API_URL = window.location.origin;
+    document.addEventListener('alpine:init', () => {
+      Alpine.data('simulegal', () => ({
+        step: 0,
+        subStep: 1,
+        loading: false,
+        expertMode: false,
+
+        init() {
+          // Persistence: Load from localStorage
+          const saved = localStorage.getItem('simulegal_form');
+          if (saved) {
+            try {
+              const parsed = JSON.parse(saved);
+              this.formData = { ...this.formData, ...parsed };
+              console.log('Restored session from localStorage');
+            } catch (e) { console.error('Error loading session', e); }
+          }
+
+          // Persistence: Watch for changes
+          this.$watch('formData', (val) => {
+            localStorage.setItem('simulegal_form', JSON.stringify(val));
+          });
+        },
+
+        formData: {
+          nationality: '',
+          user_goal: 'both',
+          res_years: '0',
+          res_months: '0',
+          french_level: 'A0',
+          current_visa_status: 'none',
+          salary_monthly: '',
+          family_status: 'single',
+          marriage_years: '0',
+          spouse_nationality: 'foreign',
+          parent_french_child: false,
+
+          // P2 Fields
+          born_in_france: false,
+          schooling_france: false,
+          residence_at_18: false,
+          entered_minor_regroupement: false,
+
+          // Extended Family
+          sibling_of_french: false,
+          ascendant_of_french: false,
+          adopted_by_french: false,
+          recueilli_by_french: false,
+          residence_with_french_years: '0',
+
+          education_level: 'none',
+          job_contract: 'none',
+
+          // Specific
+          health_issue: false,
+          is_refugee: false,
+          has_reputation: false,
+          has_project_france: false,
+
+          // New P1
+          no_oqtf: true,
+          has_health_insurance: false,
+          contribution_education: false,
+
+          // Protection
+          humanitarian_reasons: false,
+          protection_order: false,
+          filed_complaint: false,
+
+          // Expertise
+          investment_amount: '',
+          seniority_months: '',
+          recruited_innovative_company: false,
+          research_activity: false,
+          is_artist: false,
+          is_legal_representative: false,
+
+          // Expert
+          is_veteran: false,
+          has_combatant_card: false,
+          exceptional_services: false,
+          lost_french_nationality: false,
+          incapacity_rate: '',
+          annual_resources: '',
+          receives_pension_accident: false,
+          hosted_community_org: false,
+          volunteer_mission: false,
+          child_needs_care: false,
+          seasonal_contract: false,
+          has_french_pension: false,
+          had_resident_card: false,
+          had_student_card: false,
+          bilateral_agreement: false,
+          cir_compliance: true,
+          no_absence_3_years: true,
+          entered_regroupement_familial: false,
+          is_manager_expert: false,
+          business_project_real: false,
+          creates_jobs_4_years: false,
+          meets_remuneration_threshold: false
+        },
+
+        // Computed properties (Adaptive UI)
+        get showProtection() { return this.formData.current_visa_status === 'none'; },
+        get showParentEducation() { return this.formData.parent_french_child; },
+        get showExpertise() {
+          const salary = parseFloat(this.formData.salary_monthly) || 0;
+          const level = this.formData.education_level;
+          return (salary > 2500 || ['master_fr', 'phd', 'master_foreign'].includes(level));
+        },
+        get showMarriage() { return ['married', 'pacs'].includes(this.formData.family_status); },
+        get showLifePath() { return this.formData.user_goal === 'nationality' || parseInt(this.formData.res_years) >= 5; },
+        get showResidenceWithFrench() { return this.formData.adopted_by_french || this.formData.recueilli_by_french; },
+
+        get subStepValid() {
+          const f = this.formData;
+          if (this.subStep === 1) return f.user_goal !== '';
+          if (this.subStep === 2) return f.current_visa_status !== '';
+          if (this.subStep === 3) return f.nationality !== '';
+          if (this.subStep === 4) return f.french_level !== '' && (f.res_years !== '' || f.res_months !== '');
+          if (this.subStep === 5) return f.salary_monthly !== '';
+          return true;
+        },
+
+        get isValid() {
+          const f = this.formData;
+          return f.nationality !== '' &&
+            f.user_goal !== '' &&
+            f.french_level !== '' &&
+            f.current_visa_status !== '' &&
+            f.salary_monthly !== '';
+        },
+
+        nextStep() {
+          this.step++;
+          window.scrollTo(0, 0);
+        },
+
+        startSimulation() {
+          this.step = 1;
+          this.subStep = 1;
+          window.scrollTo(0, 0);
+        },
+
+        goHome() {
+          this.step = 0;
+          this.subStep = 1;
+          window.scrollTo(0, 0);
+        },
+
+        nextSubStep() {
+          if (this.subStep === 5) {
+            this.step = 2;
+            this.subStep = 6;
+          } else if (this.subStep === 9) {
+            this.evaluateEligibility();
+          } else {
+            this.subStep++;
+          }
+          window.scrollTo(0, 0);
+        },
+
+        prevSubStep() {
+          if (this.subStep === 6) {
+            this.step = 1;
+            this.subStep = 5;
+          } else if (this.subStep > 1) {
+            this.subStep--;
+          } else {
+            this.goHome();
+          }
+          window.scrollTo(0, 0);
+        },
+
+        prevStep() {
+          this.step--;
+          window.scrollTo(0, 0);
+        },
+
+        resetForm() {
+          window.location.reload();
+        },
+
+        async evaluateEligibility() {
+          this.loading = true;
+          // scroll to loading
+
+          // Mapping Data for API
+          const f = this.formData;
+          const totalResidence = (parseInt(f.res_years) * 12) + parseInt(f.res_months);
+          const annualSalary = (parseFloat(f.salary_monthly) || 0) * 12;
+          const marriageMonths = (parseInt(f.marriage_years) * 12);
+
+          const hasMaster = ['master_fr', 'phd'].includes(f.education_level);
+          const hasBac3 = ['bac3', 'master_foreign', 'master_fr', 'phd'].includes(f.education_level);
+          const stableResources = ['cdi', 'freelance'].includes(f.job_contract);
+
+          const isMarriedFrench = (f.family_status === 'married' && f.spouse_nationality === 'french');
+          const isPacsFrench = (f.family_status === 'pacs' && f.spouse_nationality === 'french');
+
+          const hasVls = ['vls_ts', 'student'].includes(f.current_visa_status);
+          const hasCard = ['carte_1an', 'carte_pluriannuelle', 'resident_10y', 'talent', 'algerian_1y', 'algerian_10y', 'eu_citizen'].includes(f.current_visa_status);
+
+          // Bilateral Agreement Derived Values
+          const isAlgerian = f.nationality === 'Algérienne';
+          const isTunisian = f.nationality === 'Tunisienne';
+          const isMoroccan = f.nationality === 'Marocaine';
+
+          const payload = {
+            goal: f.user_goal,
+            nationality: f.nationality || 'Inconnue',
+            is_algerian: isAlgerian,
+            not_algerian: !isAlgerian,
+            is_tunisian: isTunisian,
+            is_moroccan: isMoroccan,
+            residence_duration_months: totalResidence,
+            french_level: f.french_level,
+            salary_annual: annualSalary,
+
+            has_master_france: hasMaster,
+            has_degree_3y: hasBac3,
+            is_married_french: isMarriedFrench,
+            is_pacs_french: isPacsFrench,
+            spouse_nationality: f.spouse_nationality === 'french' ? 'Française' : (f.spouse_nationality === 'eu' ? 'Européenne' : 'Etrangère'),
+            marriage_duration_months: marriageMonths,
+            parent_french_child: f.parent_french_child,
+            spouse_eu_citizen: f.spouse_nationality === 'eu',
+
+            stable_resources: stableResources,
+            has_vls_ts: hasVls,
+            has_long_stay_visa: hasVls,
+            has_residence_card: hasCard,
+            regular_entry: f.current_visa_status !== 'none',
+            regular_situation: f.current_visa_status !== 'none',
+
+            health_issue: f.health_issue,
+            refugee_status: f.is_refugee,
+            talent_reputation: f.has_reputation,
+            innovative_project: f.has_project_france,
+
+            no_oqtf: f.no_oqtf,
+            has_health_insurance: f.has_health_insurance,
+            contribution_education: f.contribution_education,
+
+            is_refugee_or_stateless: f.is_refugee,
+            humanitarian_reasons: f.humanitarian_reasons,
+            protection_order: f.protection_order,
+            filed_complaint: f.filed_complaint,
+            no_contact_accused: true,
+
+            investment_amount: parseFloat(f.investment_amount) || 0,
+            seniority_months: parseInt(f.seniority_months) || 0,
+            contract_duration_months: 0,
+            recruited_innovative_company: f.recruited_innovative_company,
+            research_activity: f.research_activity,
+
+            born_in_france: f.born_in_france,
+            schooling_france: f.schooling_france,
+            residence_at_18: f.residence_at_18,
+            entered_minor_regroupement: f.entered_minor_regroupement,
+
+            sibling_of_french: f.sibling_of_french,
+            ascendant_of_french: f.ascendant_of_french,
+            adopted_by_french: f.adopted_by_french,
+            recueilli_by_french: f.recueilli_by_french,
+            residence_with_french_years: parseInt(f.residence_with_french_years) || 0,
+            lives_with_adoptive_parent: true,
+
+            is_artist: f.is_artist,
+            is_legal_representative: f.is_legal_representative,
+            is_manager_expert: f.is_manager_expert,
+            is_veteran: f.is_veteran,
+            has_combatant_card: f.has_combatant_card,
+            exceptional_services: f.exceptional_services,
+            lost_french_nationality: f.lost_french_nationality,
+            incapacity_rate: parseInt(f.incapacity_rate) || 0,
+            annual_resources: parseFloat(f.annual_resources) || 0,
+            receives_pension_accident: f.receives_pension_accident,
+            hosted_community_org: f.hosted_community_org,
+            volunteer_mission: f.volunteer_mission,
+            child_needs_care: f.child_needs_care,
+            seasonal_contract: f.seasonal_contract,
+            has_french_pension: f.has_french_pension,
+            had_resident_card: f.had_resident_card,
+            had_student_card: f.had_student_card,
+            bilateral_agreement: f.bilateral_agreement,
+            cir_compliance: f.cir_compliance,
+            no_absence_3_years: f.no_absence_3_years,
+            entered_regroupement_familial: f.entered_regroupement_familial,
+            business_project_real: f.business_project_real,
+            creates_jobs_4_years: f.creates_jobs_4_years,
+            meets_remuneration_threshold: f.meets_remuneration_threshold,
+
+            // Smart Mapping (Derived)
+            residence_france: totalResidence > 0,
+            residence_5_years_since_11: (totalResidence >= 60),
+
+            // Valeurs par défaut (masqués)
+            community_life: true,
+            no_polygamy: true,
+            no_threat_public_order: true,
+            public_order_compliance: true
+          };
+
+          try {
+            // Use API call
+            const response = await fetch('/api/evaluate', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${Auth.getToken() || ''}`
+              },
+              body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) throw new Error("Erreur évaluation");
+
+            const result = await response.json();
+            this.displayResults(result);
+            this.step = 3;
+          } catch (e) {
+            console.error(e);
+            alert("Une erreur est survenue lors de l'évaluation.");
+          } finally {
+            this.loading = false;
+          }
+        },
+
+        displayResults(data) {
+          const container = document.getElementById('results-list');
+          if (!container) return;
+
+          const results = data.results || [];
+          if (results.length === 0) {
+            container.innerHTML = "<p>Aucun résultat trouvé.</p>";
+            return;
+          }
+
+          container.innerHTML = results.slice(0, 5).map(res => `
+                <div class="result-item ${res.score >= 100 ? 'eligible' : 'partial'}">
+                    <div class="result-header">
+                        <span class="result-name">${res.name}</span>
+                        <span class="result-score ${res.score >= 100 ? 'high' : (res.score > 50 ? 'medium' : 'low')}">${Math.round(res.score)}%</span>
+                    </div>
+                    ${res.missing_criteria.length > 0 ? `
+                        <div class="result-details">
+                            Manque: ${res.missing_criteria.slice(0, 3).join(', ')}...
+                        </div>
+                    ` : '<div class="result-details">Vous semblez éligible !</div>'}
+                    ${res.applied_exception ? `<div class="result-exception">Exception: ${res.applied_exception}</div>` : ''}
+                </div>
+                <!-- Action Button -->
+                <div class="result-actions" style="margin-top: 1rem; text-align: right;">
+                  ${res.score > 0 ? `
+                  <button class="btn btn-primary btn-sm" onclick="alert('Téléchargement de la checklist pour ${res.name}... (Demo)')">
+                    📄 Télécharger la fiche
+                  </button>
+                  <button class="btn btn-secondary btn-sm" onclick="window.open('https://www.service-public.fr', '_blank')">
+                    🔗 En savoir plus
+                  </button>
+                  ` : ''}
+                </div>
+              </div>
+          `).join('');
+        }
+      }))
+    })
 
     // Navbar Logic
     function updateNavbar() {
-      const authNav = document.getElementById('auth-nav');
-      const user = Auth.getUser();
-
-      if (user) {
-        authNav.innerHTML = `
-                <div class="user-display">
-                    <a href="/dashboard" class="nav-link" style="color: var(--primary); font-weight: 600;" data-i18n="nav_dashboard">Mon Espace</a>
-                    <div class="avatar-placeholder">${user.full_name.charAt(0).toUpperCase()}</div>
-                    <span>${user.full_name.split(' ')[0]}</span>
-                    <a href="#" class="nav-link" onclick="Auth.logout()" data-i18n="nav_logout">Déconnexion</a>
-                    ${user.role === 'admin' ? '<a href="/admin" class="nav-link"><b>Admin</b></a>' : ''}
-                </div>
-            `;
-      } else {
-        authNav.innerHTML = `<a href="/login" class="nav-link" data-i18n="nav_login">Se connecter</a>`;
-      }
-      if (window.I18n) I18n.apply();
-    }
-    updateNavbar();
-
-    // Toggle marriage details
-    document.getElementById('is_married').addEventListener('change', toggleMarriageDetails);
-    document.getElementById('is_pacs').addEventListener('change', toggleMarriageDetails);
-
-    function toggleMarriageDetails() {
-      const isMarried = document.getElementById('is_married').checked;
-      const isPacs = document.getElementById('is_pacs').checked;
-      document.getElementById('marriage-details').style.display = (isMarried || isPacs) ? 'grid' : 'none';
-    }
-
-    function nextStep(current) {
-      document.getElementById(`step${current}`).style.display = 'none';
-      document.getElementById(`step${current + 1}`).style.display = 'block';
-      document.getElementById(`step${current}-indicator`).classList.remove('active');
-      document.getElementById(`step${current}-indicator`).classList.add('completed');
-      document.getElementById(`step${current + 1}-indicator`).classList.add('active');
-    }
-
-    function prevStep(current) {
-      document.getElementById(`step${current}`).style.display = 'none';
-      document.getElementById(`step${current - 1}`).style.display = 'block';
-      document.getElementById(`step${current}-indicator`).classList.remove('active');
-      document.getElementById(`step${current - 1}-indicator`).classList.remove('completed');
-      document.getElementById(`step${current - 1}-indicator`).classList.add('active');
-    }
-
-    async function evaluateEligibility() {
-      document.getElementById('step2').style.display = 'none';
-      document.getElementById('loading').classList.add('active');
-
-      const isMarried = document.getElementById('is_married').checked;
-      const isPacs = document.getElementById('is_pacs').checked;
-
-      const data = {
-        nationality: document.getElementById('nationality').value || 'Non spécifiée',
-        residence_duration_months: parseInt(document.getElementById('residence_months').value) || 0,
-        french_level: document.getElementById('french_level').value,
-        salary_annual: parseFloat(document.getElementById('salary').value) || 0,
-        marriage_duration_months: (isMarried || isPacs) ? parseInt(document.getElementById('marriage_months').value) || 0 : null,
-        spouse_nationality: document.getElementById('spouse_nationality').value || '',
-        community_of_life: document.getElementById('community_life').checked,
-        is_spouse_eu_citizen: document.getElementById('spouse_eu').checked,
-        no_polygamy: document.getElementById('no_polygamy').checked,
-        has_master_france: document.getElementById('has_master').checked,
-        has_degree_3_years: document.getElementById('has_degree_3y').checked,
-        has_job_auth: document.getElementById('has_job_auth').checked,
-        has_vls_ts: document.getElementById('has_vls').checked,
-        is_pacs_french: isPacs,
-        parent_of_french_child: document.getElementById('parent_french_child').checked,
-        stable_resources: document.getElementById('stable_resources').checked,
-        has_health_insurance: document.getElementById('health_insurance').checked,
-        is_adult: true,
-        no_conviction: true,
-        adheres_republic_values: true,
-        // Phase 6
-        has_refugee_status: document.getElementById('is_refugee').checked,
-        has_international_reputation: document.getElementById('has_reputation').checked,
-        has_project_in_france: document.getElementById('has_project_france').checked,
-        language: I18n.currentLang
-      };
-
       try {
-        const response = await fetch(`${API_URL}/api/evaluate`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data)
-        });
+        const authNav = document.getElementById('auth-nav');
+        const user = Auth?.getUser();
 
-        const result = await response.json();
-        // result contient maintenant simulation_id
-        displayResults(result.results, result.simulation_id);
-      } catch (error) {
-        console.error('Erreur:', error);
-        alert('Erreur lors de l\'évaluation. Vérifiez que le serveur est en cours d\'exécution.');
-        document.getElementById('loading').classList.remove('active');
-        document.getElementById('step2').style.display = 'block';
-      }
-    }
-
-    function displayResults(results, simulationId) {
-      document.getElementById('loading').classList.remove('active');
-      document.getElementById('step2-indicator').classList.remove('active');
-      document.getElementById('step2-indicator').classList.add('completed');
-      document.getElementById('step3-indicator').classList.add('active');
-
-      const container = document.getElementById('results-list');
-      container.innerHTML = '';
-
-      // Vérifier si retour de paiement succès
-      const urlParams = new URLSearchParams(window.location.search);
-      const isSuccess = urlParams.get('success');
-      const paidSimId = urlParams.get('simulation_id');
-
-      // Si on vient de payer, on ne devrait pas être ici mais recharger les données...
-      // Simplification : Le bouton PDF n'apparaît que si payé (géré par le reload ou le backend).
-      // Mais ici resultat vient de l'évaluation immédiate -> donc non payé.
-
-      if (simulationId) {
-        // Mode Freemium : Toujours proposer le paiement
-        container.innerHTML += `
-              <div class="premium-banner">
-                  <h3>${I18n.t('locked_title')}</h3>
-                  <p>${I18n.t('locked_desc')}</p>
-                  <button onclick="unlockReport(${simulationId})" class="btn btn-warning btn-block">
-                    ${I18n.t('btn_unlock')}
-                  </button>
-              </div>
-          `;
-      }
-
-      // Filtrer les résultats avec score > 0 et trier
-      const eligibleResults = results.filter(r => r.score > 0).slice(0, 10);
-
-      if (eligibleResults.length === 0) {
-        container.innerHTML += '<p style="text-align: center; color: var(--text-secondary);">Aucune procédure correspondante trouvée avec les informations fournies.</p>';
-      } else {
-        eligibleResults.forEach(r => {
-          const verdict = r.score === 100 ? I18n.t('score_high') : r.score >= 50 ? I18n.t('score_medium') : I18n.t('score_low');
-          const scoreClass = r.score === 100 ? 'high' : r.score >= 50 ? 'medium' : 'low';
-          const itemClass = r.score === 100 ? 'eligible' : 'partial';
-          const isLocked = r.documents[0].includes("masqués"); // Détection simple
-
-          container.innerHTML += `
-            <div class="result-item ${itemClass}">
-              <div class="result-header">
-                <span class="result-name">${r.name}</span>
-                <span class="result-score ${scoreClass}">${verdict} (${r.score}%)</span>
-              </div>
-              <div class="progress-bar"><div class="progress-fill" style="width: ${r.score}%"></div></div>
-              
-              ${r.applied_exception && r.applied_exception !== "Exception masquée" ? `<div class="result-exception">✓ ${r.applied_exception}</div>` : ''}
-              
-              <div class="documents-list ${isLocked ? 'blurred' : ''}">
-                <h4>📄 ${I18n.t('docs_required')} ${isLocked ? '(Preview)' : ''}</h4>
-                <ul>${r.documents.map(d => `<li>${d}</li>`).join('')}</ul>
-              </div>
-            </div>
-          `;
-        });
-      }
-
-      document.getElementById('step3').classList.add('active');
-    }
-
-    // Check for payment success or chat completion on load
-    window.onload = async () => {
-      const urlParams = new URLSearchParams(window.location.search);
-      const simId = urlParams.get('simulation_id') || urlParams.get('sim_id');
-
-      if (urlParams.get('success') === 'true' && simId) {
-        // ... (code existant pour paiement)
-        handlePaymentSuccess(simId);
-      } else if (urlParams.get('chat_done') === 'true' && simId) {
-        // Lancer l'évaluation sur la base des données du chat
-        runEvaluationFromSim(simId);
-      }
-    };
-
-    async function runEvaluationFromSim(simId) {
-      document.getElementById('step1').style.display = 'none';
-      document.getElementById('loading').classList.add('active');
-
-      try {
-        // On a besoin d'un endpoint pour relancer l'évaluation ou récupérer les résultats
-        // Pour l'instant on peut juste tricher en récupérant les données et en appelant evaluate
-        // Mais le plus propre est un GET /api/evaluate/{id}
-        const response = await fetch(`${API_URL}/api/simulation/${simId}/results`);
-        const data = await response.json();
-        displayResults(data.results, simId);
+        if (authNav) { // Check if element exists
+          if (user) {
+            authNav.innerHTML = `
+                    <div class="user-display">
+                        <a href="/dashboard" class="nav-link" style="color: var(--primary); font-weight: 600;" data-i18n="nav_dashboard">Mon Espace</a>
+                        <div class="avatar-placeholder">${user.full_name.charAt(0).toUpperCase()}</div>
+                        <span>${user.full_name.split(' ')[0]}</span>
+                        <a href="#" class="nav-link" onclick="Auth.logout()" data-i18n="nav_logout">Déconnexion</a>
+                        ${user.role === 'admin' ? '<a href="/admin" class="nav-link"><b>Admin</b></a>' : ''}
+                    </div>
+                `;
+          } else {
+            authNav.innerHTML = `<a href="/login" class="nav-link" data-i18n="nav_login">Se connecter</a>`;
+          }
+        }
+        if (window.I18n) I18n.apply();
       } catch (e) {
-        console.error(e);
-        alert("Erreur lors de la récupération des résultats du chat.");
+        console.error('updateNavbar error:', e);
       }
     }
 
-    async function handlePaymentSuccess(simId) {
-      document.getElementById('step2').style.display = 'none';
-      document.getElementById('step1').style.display = 'none';
-      document.getElementById('step3').classList.add('active');
-      document.getElementById('step3').innerHTML = `
-                 <div class="card" style="text-align: center;">
-                    <div style="font-size: 3rem;">🎉</div>
-                    <h2>Merci pour votre commande !</h2>
-                    <p>Votre dossier complet est débloqué.</p>
-                    <a href="${API_URL}/api/reports/download/${simId}" target="_blank" class="btn btn-primary btn-block" style="margin-top: 1rem;">
-                        📄 Télécharger mon Rapport PDF Complet
-                    </a>
-                    <button class="btn btn-secondary" onclick="window.location.href='/app'" style="margin-top: 1rem;">Retour à l'accueil</button>
-                 </div>
-            `;
-      // Notifier le backend que la session est payée (callback de sécurité client, mais le webhook serveur est mieux)
-      // On peut appeler verify-session ici si l'ID de session est dans l'URL
-      const urlParams = new URLSearchParams(window.location.search);
-      const sessionId = urlParams.get('session_id');
-      if (sessionId) {
-        fetch(`${API_URL}/api/payment/verify-session/${sessionId}?simulation_id=${simId}`);
-      }
+    // Safe initialization
+    try {
+      updateNavbar();
+    } catch (e) {
+      console.error('Init error:', e);
     }
-
+    // Global functions for Payment/Unlock (called from innerHTML)
     async function unlockReport(simulationId) {
       try {
         const res = await fetch(`${API_URL}/api/payment/create-checkout/${simulationId}`, {
@@ -463,18 +1123,58 @@
       }
     }
 
-    function resetForm() {
-      document.getElementById('step3').classList.remove('active');
-      document.getElementById('step1').style.display = 'block';
-      document.querySelectorAll('.step').forEach(s => s.classList.remove('active', 'completed'));
-      document.getElementById('step1-indicator').classList.add('active');
-      document.querySelectorAll('input[type="text"], input[type="number"]').forEach(i => i.value = '');
-      document.querySelectorAll('input[type="checkbox"]').forEach(i => {
-        i.checked = i.id === 'community_life' || i.id === 'no_polygamy';
+    // Init Logic for Payment Return & Global i18n
+    document.addEventListener('alpine:init', () => {
+      // 1. Initialize i18n Store
+      Alpine.store('i18n', {
+        current: localStorage.getItem('simulegal_lang') || 'fr',
+        init() {
+          // Force apply on init to handle static elements
+          if (window.I18n) setTimeout(() => window.I18n.apply(), 100);
+        },
+        t(key) {
+          this.current; // Depend on current lang for reactivity
+          return (window.I18n && window.I18n.t(key)) || key;
+        },
+        setLang(lang) {
+          if (window.I18n) {
+            window.I18n.setLang(lang);
+            this.current = lang;
+            // Force re-evaluation of data-i18n attributes for non-Alpine elements
+            setTimeout(() => window.I18n.apply(), 50);
+          }
+        }
       });
-      document.getElementById('french_level').value = 'A0';
-      document.getElementById('marriage-details').style.display = 'none';
-    }
+
+      // 2. Handle Payment Return
+      const urlParams = new URLSearchParams(window.location.search);
+      const simId = urlParams.get('simulation_id') || urlParams.get('sim_id');
+      const isSuccess = urlParams.get('success') === 'true';
+
+      if (isSuccess && simId) {
+        const step3 = document.getElementById('step3');
+        if (step3) {
+          step3.innerHTML = `
+                     <div class="card" style="text-align: center;">
+                        <div style="font-size: 3rem;">🎉</div>
+                        <h2>Merci pour votre commande !</h2>
+                        <p>Votre dossier complet est débloqué.</p>
+                        <a href="/api/reports/download/${simId}" target="_blank" class="btn btn-primary btn-block" style="margin-top: 1rem;">
+                            📄 Télécharger mon Rapport PDF Complet
+                        </a>
+                        <button class="btn btn-secondary" onclick="window.location.href='/app'" style="margin-top: 1rem;">Retour à l'accueil</button>
+                     </div>
+                `;
+        }
+      }
+    });
+
+    // Ensure translations are applied after DOM is ready and Alpine rendered
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        if (window.I18n) window.I18n.apply();
+      }, 300);
+    });
   </script>
 </body>
 

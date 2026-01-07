@@ -37,10 +37,22 @@ class EligibilityEngine:
         results = []
         for procedure in self.procedures:
             score, missing_criteria, applied_exception = self._calculate_procedure_score(user, procedure)
+
+            # Bonus for Matching Goal (Nationality vs Residence)
+            is_nationality = procedure.id.startswith('naturalization') or procedure.id.startswith('nationality') or procedure.id.startswith('reintegration')
+            is_residence = not is_nationality
+            
+            # Boost logic
+            if user.goal == 'nationality' and is_nationality:
+                score += 0.1 # Boost léger pour départager
+            elif user.goal == 'residence' and is_residence:
+                score += 0.1
+
             results.append({
                 "procedure_id": procedure.id,
                 "name": procedure.name,
                 "score": score,
+                "display_score": min(score, 100.0), # Cap for clean display
                 "missing_criteria": missing_criteria,
                 "applied_exception": applied_exception,
                 "documents": procedure.documents
