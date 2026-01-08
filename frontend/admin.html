@@ -4,16 +4,182 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simulegal - Espace Juriste</title>
+    <title>Simulegal - Admin Dashboard</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="/static/auth.js"></script>
+    <script src="/static/i18n.js"></script>
     <script>
-        // Protection immédiate
         Auth.requireAdmin();
     </script>
     <style>
+        .admin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--bg-glass);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius);
+            padding: 1.25rem;
+            text-align: center;
+            transition: transform 0.2s, border-color 0.2s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            border-color: var(--primary);
+        }
+
+        .stat-card.highlight {
+            background: rgba(99, 102, 241, 0.15);
+            border-color: var(--primary);
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .stat-value.revenue {
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            margin-top: 0.25rem;
+            font-size: 0.85rem;
+        }
+
+        .charts-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        @media (max-width: 900px) {
+            .charts-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .chart-card {
+            background: var(--bg-glass);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+        }
+
+        .chart-card h4 {
+            margin: 0 0 1rem;
+            color: var(--text-primary);
+            font-size: 1rem;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            overflow-x: auto;
+        }
+
+        .tab-btn {
+            padding: 1rem 1.5rem;
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            white-space: nowrap;
+            transition: color 0.2s;
+        }
+
+        .tab-btn:hover {
+            color: var(--text-primary);
+        }
+
+        .tab-btn.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .data-table th,
+        .data-table td {
+            text-align: left;
+            padding: 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .data-table th {
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+        }
+
+        .data-table tbody tr:hover {
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .tag {
+            padding: 0.25rem 0.75rem;
+            border-radius: 999px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .tag-success {
+            background: rgba(34, 197, 94, 0.2);
+            color: #22c55e;
+        }
+
+        .tag-warning {
+            background: rgba(234, 179, 8, 0.2);
+            color: #eab308;
+        }
+
+        .tag-error {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+
+        .tag-admin {
+            background: rgba(168, 85, 247, 0.2);
+            color: #a855f7;
+        }
+
+        .tag-user {
+            background: rgba(99, 102, 241, 0.2);
+            color: #6366f1;
+        }
+
         .modal {
             display: none;
             position: fixed;
@@ -91,103 +257,36 @@
             color: white;
         }
 
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1rem;
-            margin-bottom: 2rem;
-        }
-
-        .stat-card {
+        .procedure-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 1.5rem;
             background: var(--bg-glass);
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: var(--radius);
-            padding: 1.5rem;
-            text-align: center;
+            margin-bottom: 0.75rem;
         }
 
-        .stat-value {
-            font-size: 2.5rem;
-            font-weight: 700;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .stat-label {
-            color: var(--text-secondary);
-            margin-top: 0.5rem;
-        }
-
-        .tabs {
+        .procedure-actions {
             display: flex;
-            gap: 1rem;
-            margin-bottom: 2rem;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            gap: 0.5rem;
         }
 
-        .tab-btn {
-            padding: 1rem 1.5rem;
-            background: none;
-            border: none;
-            color: var(--text-secondary);
-            font-size: 1.1rem;
-            cursor: pointer;
-            border-bottom: 2px solid transparent;
-        }
-
-        .tab-btn.active {
-            color: var(--primary);
-            border-bottom-color: var(--primary);
-        }
-
-        .data-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        .data-table th,
-        .data-table td {
-            text-align: left;
-            padding: 1rem;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .data-table th {
-            color: var(--text-secondary);
-            font-weight: 600;
-        }
-
-        .tag {
-            padding: 0.25rem 0.75rem;
-            border-radius: 999px;
-            font-size: 0.85rem;
-            font-weight: 500;
-        }
-
-        .tag-success {
-            background: rgba(34, 197, 94, 0.2);
-            color: #22c55e;
-        }
-
-        .tag-warning {
-            background: rgba(234, 179, 8, 0.2);
-            color: #eab308;
-        }
-
-        .tag-error {
-            background: rgba(239, 68, 68, 0.2);
-            color: #ef4444;
+        .btn-icon {
+            padding: 0.5rem 0.75rem;
+            min-width: auto;
         }
     </style>
 </head>
 
 <body>
     <div class="container">
-        <header style="display: flex; justify-content: space-between; align-items: center; text-align: left;">
+        <header
+            style="display: flex; justify-content: space-between; align-items: center; text-align: left; margin-bottom: 2rem;">
             <div>
-                <h1 class="logo" style="font-size: 1.8rem; margin-bottom: 0;">🔧 Espace Juriste</h1>
-                <p class="tagline" style="margin-bottom: 0;">Administration Simulegal</p>
+                <h1 class="logo" style="font-size: 1.8rem; margin-bottom: 0;">🔧 Admin Dashboard</h1>
+                <p class="tagline" style="margin-bottom: 0;">Vue d'ensemble de Simulegal</p>
             </div>
             <div style="display: flex; gap: 0.5rem;">
                 <a href="/app" class="btn btn-secondary">Retour App</a>
@@ -195,19 +294,57 @@
             </div>
         </header>
 
-        <!-- Stats -->
-        <div class="stats-grid" id="stats"></div>
+        <!-- Stats Grid -->
+        <div class="stats-grid" id="stats">
+            <div class="stat-card">
+                <div class="stat-value" id="stat-total">-</div>
+                <div class="stat-label">📊 Total Simulations</div>
+            </div>
+            <div class="stat-card highlight">
+                <div class="stat-value" id="stat-paid">-</div>
+                <div class="stat-label">🎯 Payées</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="stat-conversion">-</div>
+                <div class="stat-label">📈 Conversion</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value revenue" id="stat-revenue">-</div>
+                <div class="stat-label">💰 Revenus</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="stat-users">-</div>
+                <div class="stat-label">👥 Utilisateurs</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="stat-week">-</div>
+                <div class="stat-label">📅 Cette semaine</div>
+            </div>
+        </div>
+
+        <!-- Charts -->
+        <div class="charts-row">
+            <div class="chart-card">
+                <h4>📈 Simulations (7 derniers jours)</h4>
+                <canvas id="chart-daily" height="200"></canvas>
+            </div>
+            <div class="chart-card">
+                <h4>🏆 Top Procédures</h4>
+                <canvas id="chart-procedures" height="200"></canvas>
+            </div>
+        </div>
 
         <!-- Tabs -->
         <div class="tabs">
-            <button class="tab-btn active" onclick="switchTab('simulations')">Dossiers Clients (Simulations)</button>
-            <button class="tab-btn" onclick="switchTab('procedures')">Configuration Procédures</button>
+            <button class="tab-btn active" onclick="switchTab('simulations')">📋 Dossiers Clients</button>
+            <button class="tab-btn" onclick="switchTab('users')">👥 Utilisateurs</button>
+            <button class="tab-btn" onclick="switchTab('procedures')">⚙️ Procédures</button>
         </div>
 
         <!-- VIEW: Simulations -->
         <div id="view-simulations">
             <div class="admin-header">
-                <h2>Liste des derniers dossiers</h2>
+                <h2>Liste des dossiers</h2>
                 <button class="btn btn-secondary" onclick="loadSimulations()">🔄 Actualiser</button>
             </div>
             <div class="card">
@@ -216,7 +353,7 @@
                         <tr>
                             <th>ID</th>
                             <th>Date</th>
-                            <th>Résultat</th>
+                            <th>Procédure</th>
                             <th>Score</th>
                             <th>Paiement</th>
                             <th>Actions</th>
@@ -224,7 +361,34 @@
                     </thead>
                     <tbody id="simulations-list">
                         <tr>
-                            <td colspan="6" style="text-align:center;">Chargement...</td>
+                            <td colspan="6" style="text-align:center; padding: 2rem;">Chargement...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- VIEW: Users -->
+        <div id="view-users" style="display: none;">
+            <div class="admin-header">
+                <h2>Liste des utilisateurs</h2>
+                <button class="btn btn-secondary" onclick="loadUsers()">🔄 Actualiser</button>
+            </div>
+            <div class="card">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Email</th>
+                            <th>Nom</th>
+                            <th>Rôle</th>
+                            <th>Simulations</th>
+                            <th>Inscrit le</th>
+                        </tr>
+                    </thead>
+                    <tbody id="users-list">
+                        <tr>
+                            <td colspan="6" style="text-align:center; padding: 2rem;">Chargement...</td>
                         </tr>
                     </tbody>
                 </table>
@@ -234,10 +398,29 @@
         <!-- VIEW: Procedures -->
         <div id="view-procedures" style="display: none;">
             <div class="admin-header">
-                <h2>Procédures en base</h2>
+                <h2>Configuration des procédures</h2>
                 <button class="btn btn-primary" onclick="openModal()">+ Nouvelle procédure</button>
             </div>
             <div class="procedure-list" id="procedure-list"></div>
+        </div>
+        <div id="view-config" style="display: none;">
+            <div class="admin-header">
+                <h2>Configuration Système</h2>
+                <div style="display: flex; gap: 1rem;">
+                    <button class="btn btn-secondary" onclick="loadConfig()">Permutation Env/DB</button>
+                    <button class="btn btn-success" onclick="saveAllConfigs()">Sauvegarder tout</button>
+                </div>
+            </div>
+
+            <div class="stat-card" style="text-align: left; margin-bottom: 2rem;">
+                <p>Les configurations ci-dessous sont stockées en base de données et sont prioritaires sur les variables
+                    d'environnement (.env).</p>
+            </div>
+
+            <div id="config-list"
+                style="display: grid; grid-template-columns: repeat(auto-fill, minmax(400px, 1fr)); gap: 1.5rem;">
+                <!-- Config items injected by JS -->
+            </div>
         </div>
     </div>
 
@@ -248,33 +431,27 @@
                 <h3 id="modal-title">Nouvelle procédure</h3>
                 <button class="modal-close" onclick="closeModal()">×</button>
             </div>
-
             <form id="procedure-form">
                 <input type="hidden" id="edit-id">
-
                 <div class="form-group">
                     <label class="form-label">Nom de la procédure</label>
                     <input type="text" class="form-input" id="proc-name" required>
                 </div>
-
                 <div class="form-group">
                     <label class="form-label">Description</label>
                     <textarea class="form-input" id="proc-description" rows="2"></textarea>
                 </div>
-
                 <div class="form-group">
                     <label class="form-label">Documents requis (un par ligne)</label>
                     <textarea class="form-input" id="proc-documents" rows="3"
                         placeholder="Acte de mariage&#10;Justificatif de domicile"></textarea>
                 </div>
-
                 <div class="form-group">
                     <label class="form-label">Critères d'éligibilité</label>
                     <div class="criteria-list" id="criteria-list"></div>
                     <button type="button" class="btn btn-secondary" onclick="addCriterion()"
                         style="margin-top: 0.5rem;">+ Ajouter un critère</button>
                 </div>
-
                 <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
                     <button type="button" class="btn btn-secondary" onclick="closeModal()">Annuler</button>
                     <button type="submit" class="btn btn-success" style="flex: 1;">Enregistrer</button>
@@ -287,23 +464,185 @@
         const API_URL = window.location.origin;
         let procedures = [];
         let simulations = [];
+        let users = [];
         let criteriaCount = 0;
+        let chartDaily = null;
+        let chartProcedures = null;
 
         // Init
+        loadStats();
         loadSimulations();
         loadProcedures();
 
         function switchTab(tabName) {
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            document.querySelectorAll('button[onclick="switchTab(\'' + tabName + '\')"]').forEach(b => b.classList.add('active'));
+            event.target.classList.add('active');
 
-            if (tabName === 'simulations') {
-                document.getElementById('view-simulations').style.display = 'block';
-                document.getElementById('view-procedures').style.display = 'none';
-            } else {
-                document.getElementById('view-simulations').style.display = 'none';
-                document.getElementById('view-procedures').style.display = 'block';
+            document.getElementById('view-simulations').style.display = tabName === 'simulations' ? 'block' : 'none';
+            document.getElementById('view-users').style.display = tabName === 'users' ? 'block' : 'none';
+            document.getElementById('view-procedures').style.display = tabName === 'procedures' ? 'block' : 'none';
+            document.getElementById('view-config').style.display = tabName === 'config' ? 'block' : 'none';
+
+            if (tabName === 'users' && users.length === 0) loadUsers();
+            if (tabName === 'config') loadConfig();
+        }
+
+        async function loadConfig() {
+            const container = document.getElementById('config-list');
+            container.innerHTML = '<p>Chargement...</p>';
+
+            try {
+                const token = Auth.getToken();
+                const res = await fetch(`${API_URL}/api/admin/config`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const configs = await res.json();
+
+                container.innerHTML = configs.map(c => `
+                    <div class="chart-card">
+                        <h4 style="display:flex; justify-content:space-between; align-items:center;">
+                            ${c.key} 
+                            ${c.is_secret ? '🔒' : ''}
+                        </h4>
+                        <p style="color:var(--text-secondary); font-size:0.85rem; margin-bottom:1rem;">
+                            ${c.description || ''}
+                        </p>
+                        <div class="form-group">
+                            <input type="text" class="form-input config-input" 
+                                   data-key="${c.key}" 
+                                   value="${c.value || ''}" 
+                                   ${c.is_secret ? 'placeholder="********"' : ''}
+                                   onchange="updateConfig('${c.key}', this.value)">
+                        </div>
+                    </div>
+                `).join('');
+
+            } catch (e) {
+                console.error("Erreur config:", e);
+                container.innerHTML = '<p style="color:var(--danger)">Erreur de chargement</p>';
             }
+        }
+
+        async function updateConfig(key, value) {
+            try {
+                const token = Auth.getToken();
+                const res = await fetch(`${API_URL}/api/admin/config`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ key, value })
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    // Feedback visuel (optionnel)
+                } else {
+                    alert('Erreur lors de la sauvegarde');
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        async function saveAllConfigs() {
+            alert('Sauvegarde automatique à chaque modification.');
+        }
+
+        async function loadStats() {
+            try {
+                const token = Auth.getToken();
+                const res = await fetch(`${API_URL}/api/admin/stats`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const stats = await res.json();
+
+                // Update stat cards
+                document.getElementById('stat-total').textContent = stats.total_simulations;
+                document.getElementById('stat-paid').textContent = stats.paid_simulations;
+                document.getElementById('stat-conversion').textContent = stats.conversion_rate + '%';
+                document.getElementById('stat-revenue').textContent = stats.revenue.toFixed(2) + '€';
+                document.getElementById('stat-users').textContent = stats.total_users;
+                document.getElementById('stat-week').textContent = stats.this_week;
+
+                // Render charts
+                renderDailyChart(stats.daily_stats);
+                renderProceduresChart(stats.top_procedures);
+            } catch (e) {
+                console.error('Erreur chargement stats:', e);
+            }
+        }
+
+        function renderDailyChart(dailyStats) {
+            const ctx = document.getElementById('chart-daily').getContext('2d');
+
+            if (chartDaily) chartDaily.destroy();
+
+            chartDaily = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: dailyStats.map(d => d.label),
+                    datasets: [{
+                        label: 'Simulations',
+                        data: dailyStats.map(d => d.count),
+                        borderColor: '#6366f1',
+                        backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        pointBackgroundColor: '#6366f1',
+                        pointRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { color: '#94a3b8' },
+                            grid: { color: 'rgba(255,255,255,0.05)' }
+                        },
+                        x: {
+                            ticks: { color: '#94a3b8' },
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderProceduresChart(topProcedures) {
+            const ctx = document.getElementById('chart-procedures').getContext('2d');
+
+            if (chartProcedures) chartProcedures.destroy();
+
+            const colors = ['#6366f1', '#8b5cf6', '#a855f7', '#d946ef', '#ec4899'];
+
+            chartProcedures = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: topProcedures.map(p => p.name.substring(0, 20) + (p.name.length > 20 ? '...' : '')),
+                    datasets: [{
+                        data: topProcedures.map(p => p.count),
+                        backgroundColor: colors,
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { color: '#94a3b8', padding: 10, boxWidth: 12 }
+                        }
+                    }
+                }
+            });
         }
 
         async function loadSimulations() {
@@ -314,9 +653,21 @@
                 });
                 simulations = await res.json();
                 renderSimulations();
-                renderStats(); // Update stats with simulations count
             } catch (e) {
                 console.error('Erreur chargement simulations:', e);
+            }
+        }
+
+        async function loadUsers() {
+            try {
+                const token = Auth.getToken();
+                const res = await fetch(`${API_URL}/api/admin/users`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                users = await res.json();
+                renderUsers();
+            } catch (e) {
+                console.error('Erreur chargement utilisateurs:', e);
             }
         }
 
@@ -325,29 +676,9 @@
                 const res = await fetch(`${API_URL}/api/procedures`);
                 procedures = await res.json();
                 renderProcedures();
-                renderStats();
             } catch (e) {
                 console.error('Erreur:', e);
             }
-        }
-
-        function renderStats() {
-            const totalCriteria = procedures.reduce((sum, p) => sum + (p.base_criteria || []).length, 0);
-
-            document.getElementById('stats').innerHTML = `
-                <div class="stat-card">
-                  <div class="stat-value">${simulations.length}</div>
-                  <div class="stat-label">Dossiers Clients</div>
-                </div>
-                <div class="stat-card">
-                  <div class="stat-value">${procedures.length}</div>
-                  <div class="stat-label">Procédures configurées</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value">${simulations.filter(s => s.is_paid).length}</div>
-                    <div class="stat-label">Dossiers Payés</div>
-                </div>
-            `;
         }
 
         function renderSimulations() {
@@ -357,14 +688,14 @@
                 return;
             }
 
-            tbody.innerHTML = simulations.map(s => `
+            tbody.innerHTML = simulations.slice(0, 50).map(s => `
                 <tr>
                     <td>#${s.id}</td>
                     <td>${new Date(s.created_at).toLocaleDateString()} ${new Date(s.created_at).toLocaleTimeString()}</td>
-                    <td><strong>${s.procedure_name}</strong></td>
+                    <td><strong>${s.procedure_name || '-'}</strong></td>
                     <td>
-                        <span class="tag ${s.result_score > 50 ? 'tag-success' : 'tag-warning'}">
-                            ${s.result_score}%
+                        <span class="tag ${(s.result_score || 0) >= 70 ? 'tag-success' : 'tag-warning'}">
+                            ${s.result_score || 0}%
                         </span>
                     </td>
                     <td>
@@ -373,19 +704,54 @@
                     : '<span class="tag tag-warning">Non payé</span>'}
                     </td>
                     <td>
-                        <button class="btn btn-secondary btn-sm" onclick="downloadReport(${s.id})">
-                            📄 PDF
-                        </button>
+                        <button class="btn btn-secondary btn-sm" onclick="downloadReport(${s.id})">📄 PDF</button>
                     </td>
                 </tr>
             `).join('');
         }
 
+        function renderUsers() {
+            const tbody = document.getElementById('users-list');
+            if (users.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 2rem;">Aucun utilisateur.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = users.map(u => `
+                <tr>
+                    <td>#${u.id}</td>
+                    <td>${u.email}</td>
+                    <td>${u.full_name}</td>
+                    <td>
+                        <span class="tag ${u.role === 'admin' ? 'tag-admin' : 'tag-user'}">
+                            ${u.role === 'admin' ? '👑 Admin' : '👤 User'}
+                        </span>
+                    </td>
+                    <td>${u.simulations_count}</td>
+                    <td>${u.created_at ? new Date(u.created_at).toLocaleDateString() : '-'}</td>
+                </tr>
+            `).join('');
+        }
+
+        function renderProcedures() {
+            const container = document.getElementById('procedure-list');
+            container.innerHTML = procedures.map(p => `
+                <div class="procedure-item">
+                    <div>
+                        <strong>${p.name}</strong>
+                        <div style="color: var(--text-secondary); font-size: 0.85rem;">
+                            ${(p.base_criteria || []).length} critères • ${(p.exceptions || []).length} exceptions
+                        </div>
+                    </div>
+                    <div class="procedure-actions">
+                        <button class="btn btn-secondary btn-icon" onclick="editProcedure('${p.id}')" title="Modifier">✏️</button>
+                        <button class="btn btn-danger btn-icon" onclick="deleteProcedure('${p.id}')" title="Supprimer">🗑️</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
         async function downloadReport(id) {
-            // Usually requires payment, but admin might want to override? 
-            // The current backend endpoint checks is_paid. 
-            // We might need an admin bypass endpoint later, but for now let's try standard download.
-            // If it fails (403), we alert the admin.
             try {
                 const token = Auth.getToken();
                 const res = await fetch(`/api/reports/download/${id}`, {
@@ -393,7 +759,7 @@
                 });
 
                 if (res.status === 403) {
-                    alert("Ce dossier n'est pas payé. Le téléchargement est bloqué par le système.");
+                    alert("Ce dossier n'est pas payé. Le téléchargement est bloqué.");
                     return;
                 }
 
@@ -410,26 +776,7 @@
             }
         }
 
-        // --- Procedure Logic (Keep existing) ---
-
-        function renderProcedures() {
-            const container = document.getElementById('procedure-list');
-            container.innerHTML = procedures.map(p => `
-        <div class="procedure-item">
-          <div>
-            <strong>${p.name}</strong>
-            <div style="color: var(--text-secondary); font-size: 0.85rem;">
-              ${(p.base_criteria || []).length} critères • ${(p.exceptions || []).length} exceptions
-            </div>
-          </div>
-          <div class="procedure-actions">
-            <button class="btn btn-secondary btn-icon" onclick="editProcedure('${p.id}')" title="Modifier">✏️</button>
-            <button class="btn btn-danger btn-icon" onclick="deleteProcedure('${p.id}')" title="Supprimer">🗑️</button>
-          </div>
-        </div>
-      `).join('');
-        }
-
+        // Procedure Modal Logic
         function openModal(procedure = null) {
             document.getElementById('modal').classList.add('active');
             document.getElementById('criteria-list').innerHTML = '';
@@ -441,7 +788,6 @@
                 document.getElementById('proc-name').value = procedure.name;
                 document.getElementById('proc-description').value = procedure.description || '';
                 document.getElementById('proc-documents').value = (procedure.documents || []).join('\n');
-
                 (procedure.base_criteria || []).forEach(c => addCriterion(c));
             } else {
                 document.getElementById('modal-title').textContent = 'Nouvelle procédure';
@@ -460,19 +806,18 @@
         function addCriterion(data = {}) {
             const list = document.getElementById('criteria-list');
             const idx = criteriaCount++;
-
             list.innerHTML += `
-        <div class="criteria-item" id="criterion-${idx}">
-          <input type="text" placeholder="Label" value="${data.label || ''}" id="crit-label-${idx}">
-          <select id="crit-type-${idx}">
-            <option value="bool" ${data.type === 'bool' ? 'selected' : ''}>Oui/Non</option>
-            <option value="int" ${data.type === 'int' ? 'selected' : ''}>Nombre entier</option>
-            <option value="float" ${data.type === 'float' ? 'selected' : ''}>Nombre décimal</option>
-          </select>
-          <input type="number" placeholder="Seuil" value="${data.threshold || ''}" id="crit-threshold-${idx}" style="width: 80px;">
-          <button type="button" onclick="removeCriterion(${idx})" style="background: var(--danger); border: none; color: white; border-radius: 4px; padding: 0.5rem; cursor: pointer;">×</button>
-        </div>
-      `;
+                <div class="criteria-item" id="criterion-${idx}">
+                    <input type="text" placeholder="Label" value="${data.label || ''}" id="crit-label-${idx}">
+                    <select id="crit-type-${idx}">
+                        <option value="bool" ${data.type === 'bool' ? 'selected' : ''}>Oui/Non</option>
+                        <option value="int" ${data.type === 'int' ? 'selected' : ''}>Nombre entier</option>
+                        <option value="float" ${data.type === 'float' ? 'selected' : ''}>Nombre décimal</option>
+                    </select>
+                    <input type="number" placeholder="Seuil" value="${data.threshold || ''}" id="crit-threshold-${idx}" style="width: 80px;">
+                    <button type="button" onclick="removeCriterion(${idx})" style="background: var(--danger); border: none; color: white; border-radius: 4px; padding: 0.5rem; cursor: pointer;">×</button>
+                </div>
+            `;
         }
 
         function removeCriterion(idx) {
@@ -486,7 +831,6 @@
 
         async function deleteProcedure(id) {
             if (!confirm('Supprimer cette procédure ?')) return;
-
             try {
                 const token = Auth.getToken();
                 await fetch(`${API_URL}/api/admin/procedures/${id}`, {
@@ -544,10 +888,9 @@
                 closeModal();
                 loadProcedures();
             } catch (e) {
-                alert('Erreur lors de l\'enregistrement');
+                alert("Erreur lors de l'enregistrement");
             }
         });
-
     </script>
 </body>
 

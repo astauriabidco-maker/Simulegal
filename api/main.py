@@ -28,6 +28,11 @@ import api.auth as auth
 import api.payment as payment
 import api.chat as chat
 import api.user as user
+import api.notifications_api as notifications_api
+import api.sharing_api as sharing_api
+import api.admin_config as admin_config
+import api.services_api as services_api
+import api.case_management as case_management
 from core.engine import EligibilityEngine
 from core.models import UserSituation
 from core.logger import audit_logger
@@ -71,6 +76,12 @@ app.include_router(auth.router)
 app.include_router(payment.router)
 app.include_router(chat.router)
 app.include_router(user.router)
+app.include_router(notifications_api.router)
+app.include_router(sharing_api.router)
+app.include_router(admin_config.router)
+app.include_router(services_api.router)
+app.include_router(case_management.router)
+
 
 # Initialisation du moteur
 engine = EligibilityEngine(DATA_PATH)
@@ -78,10 +89,38 @@ engine = EligibilityEngine(DATA_PATH)
 
 # === ENDPOINTS PUBLICS ===
 
+# === FRONTEND SERVING ===
+
+# Montage des fichiers statiques (CSS, JS, Images)
+# Le frontend est dans le dossier 'frontend' à la racine du projet
+FRONTEND_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "frontend")
+app.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="static")
+
 @app.get("/")
 async def root():
-    """Page d'accueil de l'API."""
-    return {"message": "Bienvenue sur l'API Simulegal", "docs": "/docs"}
+    """Sert la page d'accueil (Landing)."""
+    return FileResponse(os.path.join(FRONTEND_DIR, "index.html"))
+
+@app.get("/login")
+async def login_page():
+    """Sert la page de connexion."""
+    return FileResponse(os.path.join(FRONTEND_DIR, "login.html"))
+
+@app.get("/app")
+async def dashboard_page():
+    """Sert le tableau de bord (nécessite auth côté client)."""
+    return FileResponse(os.path.join(FRONTEND_DIR, "dashboard.html"))
+
+@app.get("/admin")
+async def admin_page():
+    """Sert le tableau de bord admin."""
+    return FileResponse(os.path.join(FRONTEND_DIR, "admin.html"))
+
+@app.get("/chat")
+async def chat_page():
+    """Sert l'interface de chat."""
+    return FileResponse(os.path.join(FRONTEND_DIR, "chat.html"))
+
 
 
 @app.post("/api/evaluate", response_model=EvaluationResponse)
@@ -243,6 +282,100 @@ async def list_all_simulations(admin: User = Depends(auth.get_current_admin), db
     )
     sims = result.scalars().all()
     return sims
+
+
+@app.get("/api/admin/stats")
+async def get_admin_stats(admin: User = Depends(auth.get_current_admin), db: AsyncSession = Depends(get_db)):
+    """Statistiques avancées pour le dashboard admin."""
+    from sqlalchemy import func
+    from datetime import datetime, timedelta
+    
+    # Total simulations
+    total_sims = await db.scalar(select(func.count(Simulation.id))) or 0
+    
+    # Simulations payées
+    paid_sims = await db.scalar(select(func.count(Simulation.id)).where(Simulation.is_paid == True)) or 0
+    
+    # Utilisateurs total
+    total_users = await db.scalar(select(func.count(User.id))) or 0
+    
+    # Revenus estimés (prix unitaire * payés)
+    unit_price = float(os.getenv("REPORT_PRICE", "9.99"))
+    revenue = paid_sims * unit_price
+    
+    # Simulations cette semaine
+    week_ago = datetime.utcnow() - timedelta(days=7)
+    this_week = await db.scalar(
+        select(func.count(Simulation.id)).where(Simulation.created_at >= week_ago)
+    ) or 0
+    
+    # Top procédures
+    top_procedures_result = await db.execute(
+        select(Simulation.procedure_name, func.count(Simulation.id).label('count'))
+        .where(Simulation.procedure_name.isnot(None))
+        .group_by(Simulation.procedure_name)
+        .order_by(func.count(Simulation.id).desc())
+        .limit(5)
+    )
+    top_procedures = [{"name": r[0] or "Inconnue", "count": r[1]} for r in top_procedures_result.all()]
+    
+    # Simulations par jour (7 derniers jours)
+    daily_stats = []
+    for i in range(7):
+        day = datetime.utcnow() - timedelta(days=i)
+        start = day.replace(hour=0, minute=0, second=0, microsecond=0)
+        end = day.replace(hour=23, minute=59, second=59, microsecond=999999)
+        count = await db.scalar(
+            select(func.count(Simulation.id))
+            .where(Simulation.created_at.between(start, end))
+        ) or 0
+        daily_stats.append({
+            "date": day.strftime("%Y-%m-%d"),
+            "label": day.strftime("%d/%m"),
+            "count": count
+        })
+    
+    # Score moyen
+    avg_score = await db.scalar(
+        select(func.avg(Simulation.result_score)).where(Simulation.result_score > 0)
+    ) or 0
+    
+    return {
+        "total_simulations": total_sims,
+        "paid_simulations": paid_sims,
+        "total_users": total_users,
+        "conversion_rate": round((paid_sims / total_sims * 100), 1) if total_sims > 0 else 0,
+        "revenue": round(revenue, 2),
+        "this_week": this_week,
+        "avg_score": round(avg_score, 1),
+        "top_procedures": top_procedures,
+        "daily_stats": daily_stats[::-1]  # Ordre chronologique
+    }
+
+
+@app.get("/api/admin/users")
+async def get_admin_users(admin: User = Depends(auth.get_current_admin), db: AsyncSession = Depends(get_db)):
+    """Liste des utilisateurs pour l'admin."""
+    from sqlalchemy import func
+    from sqlalchemy.orm import selectinload
+    
+    # Récupérer les utilisateurs avec le nombre de simulations
+    result = await db.execute(
+        select(User)
+        .options(selectinload(User.simulations))
+        .order_by(User.created_at.desc())
+        .limit(100)
+    )
+    users = result.scalars().all()
+    
+    return [{
+        "id": u.id,
+        "email": u.email,
+        "role": u.role,
+        "full_name": u.full_name or "-",
+        "created_at": u.created_at.isoformat() if u.created_at else None,
+        "simulations_count": len(u.simulations) if u.simulations else 0
+    } for u in users]
 
 
 

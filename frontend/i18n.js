@@ -12,8 +12,75 @@ const translations = {
         nav_simulateur: "Simulateur",
         nav_how_it_works: "Comment ça marche",
         nav_features: "Avantages",
-        btn_commencer: "Commencer",
-        btn_chat: "🤖 Discuter avec notre IA",
+        nav_commencer: "Commencer",
+        btn_chat: "Discuter avec notre IA",
+        // --- LANDING PAGE ---
+        hero_title: "Votre titre de séjour, <br><span class='gradient-text'>analysé par IA.</span>",
+        hero_subtitle: "Obtenez une évaluation précise de votre éligibilité en moins de 3 minutes. Basé sur les 115 critères officiels du CESEDA.",
+        hero_cta: "Faire le test gratuit →",
+        trust_text: "BASÉ SUR LES TEXTES OFFICIELS & SOURCES GOUVERNEMENTALES",
+        feature_1_title: "Analyse Instantanée",
+        feature_1_desc: "Ne perdez plus des mois à attendre un rendez-vous. Notre IA analyse votre dossier en temps réel.",
+        feature_2_title: "100% Anonyme",
+        feature_2_desc: "Vos données ne quittent pas votre navigateur avant soumission. Confidentialité totale garantie.",
+        feature_3_title: "Checklist Précise",
+        feature_3_desc: "Recevez la liste exacte des pièces justificatives à fournir selon votre situation spécifique.",
+        how_title: "Comment ça marche ?",
+        how_step_1_title: "Répondez",
+        how_step_1_desc: "15 questions simples sur votre parcours.",
+        how_step_2_title: "Analysez",
+        how_step_2_desc: "Notre moteur croise 115 critères juridiques.",
+        how_step_3_title: "Obtenez",
+        how_step_3_desc: "Votre score d'éligibilité et démarches.",
+        footer_desc: "L'intelligence juridique simplifiée pour votre avenir en France.",
+        footer_nav: "Navigation",
+        footer_legal: "Légal",
+        footer_rights: "© 2026 SimuLegal. Tous droits réservés. Basé sur les textes du CESEDA.",
+
+        // --- AUTH / LOGIN ---
+        auth_tagline: "Espace Personnel & Administration",
+        tab_login: "Connexion",
+        tab_register: "Inscription",
+        lbl_email: "Email",
+        lbl_password: "Mot de passe",
+        lbl_fullname: "Nom complet",
+        btn_login: "Se connecter",
+        btn_register: "S'inscrire",
+
+        // --- DASHBOARD ---
+        dash_title: "Mon Espace",
+        dash_subtitle: "Gérez vos dossiers et suivez votre progression",
+        dash_history: "📜 Historique des simulations",
+        dash_empty: "Vous n'avez pas encore de simulation enregistrée.",
+        dash_loading: "Chargement de vos dossiers...",
+        dash_roadmap: "🗺️ Ma Roadmap de Régularisation",
+        dash_roadmap_empty: "Réalisez une simulation pour voir votre parcours.",
+        dash_tip_title: "💡 Conseil du jour",
+        dash_tip_desc: "Pensez à bien conserver vos fiches de paie et justificatifs de domicile. Ces documents sont systématiquement demandés quel que soit le titre.",
+        status_paid: "Payé",
+        status_unpaid: "Non payé",
+        btn_view: "Voir",
+        btn_pdf: "PDF",
+
+        // --- CHAT ---
+        chat_title: "Simulegal AI",
+        chat_subtitle: "Votre expert en droit des étrangers",
+        chat_online: "Assistant en ligne",
+        chat_welcome: "Bonjour ! Je suis l'assistant intelligent de Simulegal. Je vais vous aider à évaluer votre éligibilité en quelques questions.",
+        chat_q1: "Pour commencer, quelle est votre nationalité ?",
+        chat_placeholder: "Type your message here...",
+        chat_finished: "Analyse terminée ! Cliquez ci-dessous pour voir votre score d'éligibilité complet.",
+        btn_see_results: "Voir mes résultats",
+        badge_new: "✨ Nouveau : Moteur IA v2.0",
+        stat_analyses: "analyses",
+        chk_hosted: "Hébergement communautaire",
+        loading_text: "Analyse en cours...",
+        loading_done: "Analyse terminée !",
+        nav_home: "Accueil",
+        link_terms: "Conditions Générales",
+        link_privacy: "Protection des Données",
+        link_legal: "Mentions Légales",
+
         step_situation: "Situation",
         step_criteres: "Critères",
         step_resultats: "Résultats",
@@ -164,8 +231,75 @@ const translations = {
         nav_simulateur: "Simulator",
         nav_how_it_works: "How it works",
         nav_features: "Features",
-        btn_commencer: "Start",
-        btn_chat: "🤖 Chat with our AI",
+        nav_commencer: "Start",
+        btn_chat: "Chat with our IA",
+        // --- LANDING PAGE ---
+        hero_title: "Your residence permit, <br><span class='gradient-text'>analyzed by AI.</span>",
+        hero_subtitle: "Get a precise assessment of your eligibility in less than 3 minutes. Based on the 115 official CESEDA criteria.",
+        hero_cta: "Take the free test →",
+        trust_text: "BASED ON OFFICIAL TEXTS & GOVERNMENT SOURCES",
+        feature_1_title: "Instant Analysis",
+        feature_1_desc: "Don't waste months waiting for an appointment. Our AI analyzes your file in real time.",
+        feature_2_title: "100% Anonymous",
+        feature_2_desc: "Your data does not leave your browser before submission. Total privacy guaranteed.",
+        feature_3_title: "Precise Checklist",
+        feature_3_desc: "Receive the exact list of supporting documents to provide according to your specific situation.",
+        how_title: "How it works?",
+        how_step_1_title: "Answer",
+        how_step_1_desc: "15 simple questions about your journey.",
+        how_step_2_title: "Analyze",
+        how_step_2_desc: "Our engine cross-references 115 legal criteria.",
+        how_step_3_title: "Get",
+        how_step_3_desc: "Your eligibility score and next steps.",
+        footer_desc: "Simplified legal intelligence for your future in France.",
+        footer_nav: "Navigation",
+        footer_legal: "Legal",
+        footer_rights: "© 2026 SimuLegal. All rights reserved. Based on CESEDA texts.",
+
+        // --- AUTH / LOGIN ---
+        auth_tagline: "Personal Space & Administration",
+        tab_login: "Login",
+        tab_register: "Registration",
+        lbl_email: "Email",
+        lbl_password: "Password",
+        lbl_fullname: "Full Name",
+        btn_login: "Login",
+        btn_register: "Register",
+
+        // --- DASHBOARD ---
+        dash_title: "My Dashboard",
+        dash_subtitle: "Manage your files and track your progress",
+        dash_history: "📜 Simulation History",
+        dash_empty: "You don't have any saved simulations yet.",
+        dash_loading: "Loading your files...",
+        dash_roadmap: "🗺️ My Regularization Roadmap",
+        dash_roadmap_empty: "Run a simulation to see your path.",
+        dash_tip_title: "💡 Tip of the day",
+        dash_tip_desc: "Remember to keep your payslips and proof of address. These documents are systematically requested regardless of the permit.",
+        status_paid: "Paid",
+        status_unpaid: "Unpaid",
+        btn_view: "View",
+        btn_pdf: "PDF",
+
+        // --- CHAT ---
+        chat_title: "Simulegal AI",
+        chat_subtitle: "Your expert in foreign law",
+        chat_online: "Online Assistant",
+        chat_welcome: "Hello! I am the intelligent assistant of Simulegal. I will help you assess your eligibility in a few questions.",
+        chat_q1: "To start, what is your nationality?",
+        chat_placeholder: "Type your message here...",
+        chat_finished: "Analysis finished! Click below to see your full eligibility score.",
+        btn_see_results: "See my results",
+        badge_new: "✨ New: AI Engine v2.0",
+        stat_analyses: "analyses",
+        chk_hosted: "Community housing",
+        loading_text: "Analysis in progress...",
+        loading_done: "Analysis complete!",
+        nav_home: "Home",
+        link_terms: "Terms & Conditions",
+        link_privacy: "Data Protection",
+        link_legal: "Legal Notice",
+
         step_situation: "Situation",
         step_criteres: "Criteria",
         step_resultats: "Results",
@@ -347,6 +481,10 @@ const translations = {
 const I18n = {
     currentLang: localStorage.getItem('simulegal_lang') || 'fr',
 
+    init() {
+        this.apply();
+    },
+
     setLang(lang) {
         this.currentLang = lang;
         localStorage.setItem('simulegal_lang', lang);
@@ -366,7 +504,7 @@ const I18n = {
         // Traduire tous les éléments avec data-i18n
         document.querySelectorAll('[data-i18n]').forEach(el => {
             const key = el.getAttribute('data-i18n');
-            el.textContent = this.t(key);
+            el.innerHTML = this.t(key);
         });
 
         // Traduire les placeholders
@@ -374,7 +512,20 @@ const I18n = {
             const key = el.getAttribute('data-i18n-placeholder');
             el.placeholder = this.t(key);
         });
+
+        // Synchroniser le selecteur de langue si présent
+        const langSelect = document.getElementById('lang-select');
+        if (langSelect) {
+            langSelect.value = this.currentLang;
+        }
     }
 };
 
 window.I18n = I18n;
+
+// Initialisation automatique
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => I18n.init());
+} else {
+    I18n.init();
+}

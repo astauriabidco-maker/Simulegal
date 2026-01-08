@@ -10,8 +10,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/styles.css">
   <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
-  <script src="i18n.js"></script>
-  <script src="script.js"></script>
+  <script src="/static/i18n.js"></script>
 </head>
 
 <body x-data="simulegal">
@@ -34,7 +33,7 @@
           </select>
         </div>
         <button class="btn btn-sm btn-primary" @click="startSimulation()" x-show="step === 0"
-          data-i18n="btn_commencer">Commencer</button>
+          data-i18n="nav_commencer">Commencer</button>
         <button class="btn btn-sm btn-secondary" @click="goHome()" x-show="step > 0" data-i18n="nav_hello">Retour
           Accueil</button>
       </div>
@@ -57,7 +56,7 @@
         </div>
       </div>
       <p class="text-muted" style="margin-top: -1.5rem; font-size: 0.9rem;"
-        x-text="step === 3 ? 'Analyse terminée' : 'Étape ' + step + '/3 • Temps estimé : ' + (step === 1 ? '2 min' : '1 min')">
+        x-text="step === 3 ? $store.i18n.t('step_resultats') : ($store.i18n.t('step_situation').split(' ')[0] + ' ' + step + '/3 • ' + (step === 1 ? '2 min' : '1 min'))">
       </p>
     </div>
 
@@ -71,17 +70,19 @@
       <!-- Hero Split -->
       <div class="hero-split">
         <div class="hero-content">
-          <div class="badge-new">✨ Nouveau : Moteur IA v2.0</div>
-          <h1 class="hero-title-lg">Votre titre de séjour, <br><span class="gradient-text">analysé par IA.</span></h1>
-          <p class="hero-subtitle-lg">Obtenez une évaluation précise de votre éligibilité en moins de 3 minutes. Basé
+          <div class="badge-new" data-i18n="badge_new">✨ Nouveau : Moteur IA v2.0</div>
+          <h1 class="hero-title-lg" data-i18n="hero_title">Votre titre de séjour, <br><span
+              class="gradient-text">analysé par IA.</span></h1>
+          <p class="hero-subtitle-lg" data-i18n="hero_subtitle">Obtenez une évaluation précise de votre éligibilité en
+            moins de 3 minutes. Basé
             sur les 115 critères officiels du CESEDA.</p>
 
           <div class="hero-cta-group">
-            <button class="btn btn-primary btn-xl pulse-btn" @click="startSimulation()">
+            <button class="btn btn-primary btn-xl pulse-btn" @click="startSimulation()" data-i18n="hero_cta">
               Faire le test gratuit →
             </button>
             <div class="hero-stats">
-              <span>👥 10k+ analyses</span>
+              <span>👥 10k+ <span data-i18n="stat_analyses">analyses</span></span>
               <span>⭐ 4.9/5 satisfaction</span>
             </div>
           </div>
@@ -103,7 +104,7 @@
 
       <!-- Trust Strip -->
       <div class="trust-strip">
-        <p>BASÉ SUR LES TEXTES OFFICIELS & SOURCES GOUVERNEMENTALES</p>
+        <p data-i18n="trust_text">BASÉ SUR LES TEXTES OFFICIELS & SOURCES GOUVERNEMENTALES</p>
         <div class="trust-logos">
           <span>🏛️ Légifrance</span>
           <span>🇫🇷 Service-Public.fr</span>
@@ -114,46 +115,49 @@
 
       <!-- Features Grid -->
       <div class="section" id="features">
-        <h2 class="section-title">Pourquoi SimuLegal ?</h2>
+        <h2 class="section-title" data-i18n="nav_features">Pourquoi SimuLegal ?</h2>
         <div class="features-grid-premium">
           <div class="feature-card-premium">
             <div class="feature-icon-lg">🚀</div>
-            <h3>Analyse Instantanée</h3>
-            <p>Ne perdez plus des mois à attendre un rendez-vous. Notre IA analyse votre dossier en temps réel.</p>
+            <h3 data-i18n="feature_1_title">Analyse Instantanée</h3>
+            <p data-i18n="feature_1_desc">Ne perdez plus des mois à attendre un rendez-vous. Notre IA analyse votre
+              dossier en temps réel.</p>
           </div>
           <div class="feature-card-premium">
             <div class="feature-icon-lg">🔒</div>
-            <h3>100% Anonyme</h3>
-            <p>Vos données ne quittent pas votre navigateur avant soumission. Confidentialité totale garantie.</p>
+            <h3 data-i18n="feature_2_title">100% Anonyme</h3>
+            <p data-i18n="feature_2_desc">Vos données ne quittent pas votre navigateur avant soumission. Confidentialité
+              totale garantie.</p>
           </div>
           <div class="feature-card-premium">
             <div class="feature-icon-lg">📄</div>
-            <h3>Checklist Précise</h3>
-            <p>Recevez la liste exacte des pièces justificatives à fournir selon votre situation spécifique.</p>
+            <h3 data-i18n="feature_3_title">Checklist Précise</h3>
+            <p data-i18n="feature_3_desc">Recevez la liste exacte des pièces justificatives à fournir selon votre
+              situation spécifique.</p>
           </div>
         </div>
       </div>
 
       <!-- How it Works -->
       <div class="section bg-glass-subtle" id="how-it-works">
-        <h2 class="section-title">Comment ça marche ?</h2>
+        <h2 class="section-title" data-i18n="how_title">Comment ça marche ?</h2>
         <div class="steps-visual">
           <div class="step-card">
             <div class="step-num">1</div>
-            <h4>Répondez</h4>
-            <p>15 questions simples sur votre parcours.</p>
+            <h4 data-i18n="how_step_1_title">Répondez</h4>
+            <p data-i18n="how_step_1_desc">15 questions simples sur votre parcours.</p>
           </div>
           <div class="arrow-connector">→</div>
           <div class="step-card">
             <div class="step-num">2</div>
-            <h4>Analysez</h4>
-            <p>Notre moteur croise 115 critères juridiques.</p>
+            <h4 data-i18n="how_step_2_title">Analysez</h4>
+            <p data-i18n="how_step_2_desc">Notre moteur croise 115 critères juridiques.</p>
           </div>
           <div class="arrow-connector">→</div>
           <div class="step-card">
             <div class="step-num">3</div>
-            <h4>Obtenez</h4>
-            <p>Votre score d'éligibilité et démarches.</p>
+            <h4 data-i18n="how_step_3_title">Obtenez</h4>
+            <p data-i18n="how_step_3_desc">Votre score d'éligibilité et démarches.</p>
           </div>
         </div>
       </div>
@@ -603,7 +607,7 @@
                 <label class="checkbox-item"><input type="checkbox" x-model="formData.child_needs_care">
                   <span x-text="$store.i18n.t('chk_child_care')"></span></label>
                 <label class="checkbox-item"><input type="checkbox" x-model="formData.hosted_community_org">
-                  <span>Hébergement communautaire</span></label>
+                  <span data-i18n="chk_hosted">Hébergement communautaire</span></label>
               </div>
               <div class="form-group mt-2" x-show="formData.receives_pension_accident">
                 <label class="form-label" style="font-size: 0.8rem;">Taux d'incapacité (%)</label>
@@ -640,6 +644,97 @@
           </div>
         </div>
       </div>
+
+      <!-- Blocs Adaptatifs Dynamiques -->
+      <!-- Bloc Adaptatif: Chercheur -->
+      <div x-show="showResearcherQuestions" x-transition class="adaptive-block">
+        <h4 class="adaptive-title">🔬 Profil Chercheur Détecté</h4>
+        <div class="checkbox-group">
+          <label class="checkbox-item">
+            <input type="checkbox" x-model="formData.has_hosting_agreement">
+            <span>Convention d'accueil d'un organisme agréé</span>
+          </label>
+          <label class="checkbox-item">
+            <input type="checkbox" x-model="formData.job_rd_related">
+            <span>Emploi lié à un projet R&amp;D</span>
+          </label>
+          <label class="checkbox-item">
+            <input type="checkbox" x-model="formData.completed_research">
+            <span>Recherche/thèse terminée en France</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Bloc Adaptatif: Talent -->
+      <div x-show="showTalentQuestions" x-transition class="adaptive-block">
+        <h4 class="adaptive-title">⭐ Profil Talent Détecté</h4>
+        <div class="checkbox-group">
+          <label class="checkbox-item">
+            <input type="checkbox" x-model="formData.has_international_reputation">
+            <span>Renommée internationale (arts, sport, sciences)</span>
+          </label>
+          <label class="checkbox-item">
+            <input type="checkbox" x-model="formData.meets_remuneration_threshold">
+            <span>Rémunération ≥ 2x SMIC (≈ 3600€/mois)</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Bloc Adaptatif: Entrepreneur -->
+      <div x-show="showEntrepreneurAdvanced" x-transition class="adaptive-block">
+        <h4 class="adaptive-title">🚀 Projet Entrepreneurial</h4>
+        <div class="checkbox-group">
+          <label class="checkbox-item">
+            <input type="checkbox" x-model="formData.innovative_project_recognized">
+            <span>Projet reconnu innovant (BPI, incubateur)</span>
+          </label>
+          <label class="checkbox-item">
+            <input type="checkbox" x-model="formData.creates_jobs_4_years">
+            <span>Création d'emplois sur 4 ans</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Bloc Adaptatif: Autorisation de Travail -->
+      <div x-show="showWorkAuth" x-transition class="adaptive-block">
+        <h4 class="adaptive-title">💼 Autorisation de Travail</h4>
+        <div class="checkbox-group">
+          <label class="checkbox-item">
+            <input type="checkbox" x-model="formData.has_job_auth">
+            <span>Autorisation de travail valide</span>
+          </label>
+          <label class="checkbox-item">
+            <input type="checkbox" x-model="formData.employment_24_months_tension">
+            <span>Métier en tension (24 mois d'activité)</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Bloc Adaptatif: Santé Avancé -->
+      <div x-show="showHealthAdvanced" x-transition class="adaptive-block">
+        <h4 class="adaptive-title">🏥 Situation Médicale</h4>
+        <div class="checkbox-group">
+          <label class="checkbox-item">
+            <input type="checkbox" x-model="formData.no_care_origin_country">
+            <span>Soins non disponibles dans le pays d'origine</span>
+          </label>
+          <label class="checkbox-item">
+            <input type="checkbox" x-model="formData.parent_responsible">
+            <span>Parent accompagnant un enfant malade</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Bloc Adaptatif: Résident Longue Durée -->
+      <div x-show="showLongTermResident" x-transition class="adaptive-block">
+        <h4 class="adaptive-title">🏠 Résident de Longue Durée</h4>
+        <div class="checkbox-group">
+          <label class="checkbox-item">
+            <input type="checkbox" x-model="formData.had_researcher_card">
+            <span>Ancienne carte Chercheur/Scientifique</span>
+          </label>
+        </div>
+      </div>
     </div>
 
     <div class="conversational-nav" style="display: flex; gap: 1rem; margin-top: 2rem;">
@@ -657,7 +752,7 @@
   <!-- Loading -->
   <div id="loading" class="loading" :class="{ 'active': loading }">
     <div class="spinner"></div>
-    <p>Analyse en cours...</p>
+    <p x-text="step === 3 ? $store.i18n.t('loading_done') : $store.i18n.t('loading_text')">Analyse en cours...</p>
   </div>
 
   <!-- Étape 3: Résultats -->
@@ -680,28 +775,48 @@
     <div class="footer-content">
       <div class="footer-col">
         <strong style="font-size: 1.2rem; color: var(--primary);">SimuLegal</strong>
-        <p>L'intelligence juridique simplifiée pour votre avenir en France.</p>
+        <p data-i18n="footer_desc">L'intelligence juridique simplifiée pour votre avenir en France.</p>
       </div>
       <div class="footer-col">
-        <strong>Navigation</strong>
-        <a href="#" @click.prevent="goHome()">Accueil</a>
-        <a href="#" @click.prevent="startSimulation()">Simulateur</a>
+        <strong data-i18n="footer_nav">Navigation</strong>
+        <a href="#" @click.prevent="goHome()" data-i18n="nav_home">Accueil</a>
+        <a href="#" @click.prevent="startSimulation()" data-i18n="nav_simulateur">Simulateur</a>
         <a href="/chat">Chat IA</a>
       </div>
       <div class="footer-col">
-        <strong>Légal</strong>
-        <a href="#">Conditions Générales</a>
-        <a href="#">Protection des Données</a>
-        <a href="#">Mentions Légales</a>
+        <strong data-i18n="footer_legal">Légal</strong>
+        <a href="#" data-i18n="link_terms">Conditions Générales</a>
+        <a href="#" data-i18n="link_privacy">Protection des Données</a>
+        <a href="#" data-i18n="link_legal">Mentions Légales</a>
       </div>
     </div>
-    <div class="footer-bottom">
+    <div class="footer-bottom" data-i18n="footer_rights">
       © 2026 SimuLegal. Tous droits réservés. Basé sur les textes du CESEDA.
     </div>
+  </footer>
   </footer>
   </div>
 
   <script src="/static/auth.js"></script>
+  <!-- Share Modal -->
+  <div id="shareModal" class="modal-overlay"
+    style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; justify-content: center; align-items: center;">
+    <div class="modal-content"
+      style="background: var(--bg-card); padding: 2rem; border-radius: 12px; width: 90%; max-width: 400px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
+      <h3 id="shareModalTitle" style="margin-top: 0; margin-bottom: 1.5rem; text-align: center;">Partager</h3>
+
+      <div class="form-group">
+        <label id="shareInputLabel" class="form-label">Destination</label>
+        <input type="text" id="shareInput" class="form-input" style="background: rgba(0,0,0,0.2);">
+      </div>
+
+      <div style="display: flex; gap: 1rem; margin-top: 1.5rem; justify-content: flex-end;">
+        <button class="btn btn-secondary" onclick="closeShareModal()">Annuler</button>
+        <button class="btn btn-primary" onclick="submitShare()">Envoyer</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     document.addEventListener('alpine:init', () => {
       Alpine.data('simulegal', () => ({
@@ -802,7 +917,19 @@
           is_manager_expert: false,
           business_project_real: false,
           creates_jobs_4_years: false,
-          meets_remuneration_threshold: false
+          meets_remuneration_threshold: false,
+
+          // Nouveaux champs adaptatifs
+          has_job_auth: false,
+          job_rd_related: false,
+          has_hosting_agreement: false,
+          employment_24_months_tension: false,
+          has_international_reputation: false,
+          innovative_project_recognized: false,
+          no_care_origin_country: false,
+          parent_responsible: false,
+          had_researcher_card: false,
+          completed_research: false
         },
 
         // Computed properties (Adaptive UI)
@@ -816,6 +943,28 @@
         get showMarriage() { return ['married', 'pacs'].includes(this.formData.family_status); },
         get showLifePath() { return this.formData.user_goal === 'nationality' || parseInt(this.formData.res_years) >= 5; },
         get showResidenceWithFrench() { return this.formData.adopted_by_french || this.formData.recueilli_by_french; },
+
+        // Nouvelles conditions adaptatives
+        get showResearcherQuestions() {
+          const level = this.formData.education_level;
+          return ['phd', 'master_fr'].includes(level) && this.formData.research_activity;
+        },
+        get showTalentQuestions() {
+          const salary = parseFloat(this.formData.salary_monthly) || 0;
+          return salary >= 3000 || this.formData.is_artist || this.formData.is_legal_representative;
+        },
+        get showHealthAdvanced() {
+          return this.formData.health_issue || this.formData.child_needs_care;
+        },
+        get showWorkAuth() {
+          return ['cdi', 'cdd', 'interim'].includes(this.formData.job_contract);
+        },
+        get showEntrepreneurAdvanced() {
+          return this.formData.business_project_real;
+        },
+        get showLongTermResident() {
+          return parseInt(this.formData.res_years) >= 5;
+        },
 
         get subStepValid() {
           const f = this.formData;
@@ -996,6 +1145,18 @@
             creates_jobs_4_years: f.creates_jobs_4_years,
             meets_remuneration_threshold: f.meets_remuneration_threshold,
 
+            // Nouveaux champs adaptatifs
+            has_job_auth: f.has_job_auth,
+            job_rd_related: f.job_rd_related,
+            has_hosting_agreement: f.has_hosting_agreement,
+            employment_24_months_tension: f.employment_24_months_tension,
+            has_international_reputation: f.has_international_reputation,
+            innovative_project_recognized: f.innovative_project_recognized,
+            no_care_origin_country: f.no_care_origin_country,
+            parent_responsible: f.parent_responsible,
+            had_researcher_card: f.had_researcher_card,
+            completed_research: f.completed_research,
+
             // Smart Mapping (Derived)
             residence_france: totalResidence > 0,
             residence_5_years_since_11: (totalResidence >= 60),
@@ -1037,42 +1198,281 @@
 
           const results = data.results || [];
           if (results.length === 0) {
-            container.innerHTML = "<p>Aucun résultat trouvé.</p>";
+            container.innerHTML = `
+              <div class="card" style="text-align: center; padding: 3rem;">
+                <div style="font-size: 4rem; margin-bottom: 1rem;">🔍</div>
+                <h3>Aucune procédure trouvée</h3>
+                <p style="color: var(--text-secondary);">Nous n'avons pas pu identifier de procédure correspondant à votre situation.</p>
+              </div>
+            `;
             return;
           }
 
-          container.innerHTML = results.slice(0, 5).map(res => `
-                <div class="result-item ${res.score >= 100 ? 'eligible' : 'partial'}">
-                    <div class="result-header">
-                        <span class="result-name">${res.name}</span>
-                        <span class="result-score ${res.score >= 100 ? 'high' : (res.score > 50 ? 'medium' : 'low')}">${Math.round(res.score)}%</span>
-                    </div>
-                    ${res.missing_criteria.length > 0 ? `
-                        <div class="result-details">
-                            Manque: ${res.missing_criteria.slice(0, 3).join(', ')}...
-                        </div>
-                    ` : '<div class="result-details">Vous semblez éligible !</div>'}
-                    ${res.applied_exception ? `<div class="result-exception">Exception: ${res.applied_exception}</div>` : ''}
+          // Helper function pour déterminer le niveau de score
+          const getScoreLevel = (score) => {
+            if (score >= 100) return 'high';
+            if (score >= 50) return 'medium';
+            return 'low';
+          };
+
+          // Helper pour le badge
+          const getBadge = (score) => {
+            if (score >= 100) return { class: 'eligible', icon: '✅', text: 'Éligible' };
+            if (score >= 70) return { class: 'partial', icon: '⚠️', text: 'Proche' };
+            return { class: 'low', icon: '❌', text: 'Non éligible' };
+          };
+
+          container.innerHTML = results.slice(0, 5).map((res, index) => {
+            const score = Math.round(res.score);
+            const scoreLevel = getScoreLevel(res.score);
+            const badge = getBadge(res.score);
+            const hasMissingCriteria = res.missing_criteria && res.missing_criteria.length > 0;
+            const hasDocuments = res.documents && res.documents.length > 0 && !res.documents[0].includes('masqués');
+
+            return `
+              <div class="result-item ${res.score >= 100 ? 'eligible' : (res.score >= 50 ? 'partial' : 'low-score')}" style="animation: slideUp 0.5s ease-out ${index * 0.1}s backwards;">
+                <!-- Header avec score -->
+                <div class="result-card-header">
+                  <div class="result-info">
+                    <span class="result-badge ${badge.class}">${badge.icon} ${badge.text}</span>
+                    <h3 class="result-name">${res.name}</h3>
+                    ${res.applied_exception ? `
+                      <div class="result-exception">
+                        <span>🎯</span> Exception applicable: ${res.applied_exception.replace(/_/g, ' ')}
+                      </div>
+                    ` : ''}
+                  </div>
+                  <div class="result-score-container">
+                    <span class="result-score ${scoreLevel}">${score}%</span>
+                    <span class="result-score-label">Éligibilité</span>
+                  </div>
                 </div>
-                <!-- Action Button -->
-                <div class="result-actions" style="margin-top: 1rem; text-align: right;">
-                  ${res.score > 0 ? `
-                  <button class="btn btn-primary btn-sm" onclick="alert('Téléchargement de la checklist pour ${res.name}... (Demo)')">
-                    📄 Télécharger la fiche
-                  </button>
-                  <button class="btn btn-secondary btn-sm" onclick="window.open('https://www.service-public.fr', '_blank')">
+
+                <!-- Barre de progression -->
+                <div class="result-progress">
+                  <div class="result-progress-bar ${scoreLevel}" style="width: ${Math.min(score, 100)}%;"></div>
+                </div>
+
+                <!-- Corps -->
+                <div class="result-card-body">
+                  ${res.score >= 100 ? `
+                    <div class="eligibility-message">
+                      <span>🎉</span> Excellente nouvelle ! Vous remplissez tous les critères d'éligibilité pour cette procédure.
+                    </div>
+                  ` : ''}
+
+                  ${hasMissingCriteria ? `
+                    <div class="result-section">
+                      <div class="result-section-title">
+                        <span>❗</span> Critères manquants
+                      </div>
+                      <div class="missing-criteria-list">
+                        ${res.missing_criteria.slice(0, 5).map(c => `
+                          <span class="missing-criteria-item">
+                            <span>✕</span> ${c}
+                          </span>
+                        `).join('')}
+                        ${res.missing_criteria.length > 5 ? `<span class="missing-criteria-item">+${res.missing_criteria.length - 5} autres</span>` : ''}
+                      </div>
+                    </div>
+                  ` : ''}
+                </div>
+
+                <!-- Documents requis -->
+                ${hasDocuments ? `
+                  <div class="documents-section">
+                    <div class="result-section-title">
+                      <span>📋</span> Documents requis
+                    </div>
+                    <div class="documents-grid">
+                      ${res.documents.slice(0, 6).map(doc => `
+                        <div class="document-item">${doc}</div>
+                      `).join('')}
+                      ${res.documents.length > 6 ? `<div class="document-item" style="background: rgba(99, 102, 241, 0.2);">+${res.documents.length - 6} autres documents</div>` : ''}
+                    </div>
+                  </div>
+                ` : ''}
+
+                <!-- Actions -->
+                <div class="result-card-footer">
+                  <div class="share-actions" style="margin-right: auto; display: flex; gap: 0.5rem;">
+                    <button class="btn btn-outline-primary btn-sm" onclick="openShareModal('email', ${data.simulation_id})">
+                      📧 Email
+                    </button>
+                    <button class="btn btn-outline-success btn-sm" onclick="openShareModal('whatsapp', ${data.simulation_id})">
+                      📱 WhatsApp
+                    </button>
+                  </div>
+                  
+                  <button class="btn btn-secondary btn-sm" onclick="window.open('https://www.service-public.fr/particuliers/vosdroits/F2209', '_blank')">
                     🔗 En savoir plus
                   </button>
+                  ${data.simulation_id && res.score > 0 ? `
+                    <button class="btn btn-primary btn-sm" onclick="unlockReport(${data.simulation_id})">
+                      📄 Obtenir le rapport complet
+                    </button>
                   ` : ''}
                 </div>
               </div>
-          `).join('');
+            `;
+          }).join('');
+
+          // Ajouter la section Services Premium après les résultats
+          container.innerHTML += `
+            <div class="services-section">
+              <div class="result-section-title" style="justify-content: center; font-size: 1.5rem; margin-bottom: 1rem;">
+                 Aller plus loin
+              </div>
+              <p style="text-align: center; color: var(--text-secondary); max-width: 600px; margin: 0 auto;">
+                Maximisez vos chances de succès avec nos services d'accompagnement.
+              </p>
+              
+              <div class="services-grid">
+                <!-- Carte RDV -->
+                <div class="service-card">
+                  <div>
+                    <div class="service-icon">📅</div>
+                    <h3>Assistance RDV</h3>
+                    <div class="service-price">29.90€</div>
+                    <ul class="service-features">
+                      <li>Alerte créneaux en temps réel</li>
+                      <li>Vérification simple du dossier</li>
+                      <li>Support par email</li>
+                    </ul>
+                  </div>
+                  <button class="btn btn-primary" style="width: 100%;" 
+                          onclick="buyService(${data.simulation_id}, 'appointment')">
+                    Réserver un créneau
+                  </button>
+                </div>
+
+                <!-- Carte Avocat -->
+                <div class="service-card" style="border-color: var(--primary); background: linear-gradient(145deg, rgba(99, 102, 241, 0.1), rgba(30, 41, 59, 0.4));">
+                  <div>
+                    <div class="service-icon">👨‍⚖️</div>
+                    <h3 style="color: var(--primary);">Consultation Avocat</h3>
+                    <div class="service-price">59.90€</div>
+                    <ul class="service-features">
+                      <li>30 min de visio avec un expert</li>
+                      <li>Revue complète du dossier</li>
+                      <li>Attestation de conformité</li>
+                      <li>Réponse sous 24h</li>
+                    </ul>
+                  </div>
+                  <button class="btn btn-success" style="width: 100%;" 
+                          onclick="buyService(${data.simulation_id}, 'lawyer')">
+                    Parler à un avocat
+                  </button>
+                </div>
+              </div>
+            </div>
+          `;
         }
+
       }))
     })
 
+    // --- Sharing Logic ---
+    let currentShareType = 'email';
+    let currentSimulationId = null;
+
+    function openShareModal(type, simulationId) {
+      currentShareType = type;
+      currentSimulationId = simulationId;
+
+      const modal = document.getElementById('shareModal');
+      const title = document.getElementById('shareModalTitle');
+      const label = document.getElementById('shareInputLabel');
+      const input = document.getElementById('shareInput');
+
+      if (type === 'email') {
+        title.innerText = '📧 Recevoir par Email';
+        label.innerText = 'Votre adresse email';
+        input.type = 'email';
+        input.placeholder = 'exemple@email.com';
+      } else {
+        title.innerText = '📱 Recevoir par WhatsApp';
+        label.innerText = 'Votre numéro de téléphone (avec indicatif)';
+        input.type = 'tel';
+        input.placeholder = '+33 6 12 34 56 78';
+      }
+
+      modal.style.display = 'flex';
+      input.focus();
+    }
+
+    function closeShareModal() {
+      document.getElementById('shareModal').style.display = 'none';
+      document.getElementById('shareInput').value = '';
+    }
+
+    async function submitShare() {
+      const input = document.getElementById('shareInput');
+      const value = input.value.trim();
+
+      if (!value) {
+        alert('Veuillez remplir le champ.');
+        return;
+      }
+
+      const btn = document.querySelector('#shareModal .btn-primary');
+      const originalText = btn.innerText;
+      btn.innerText = 'Envoi...';
+      btn.disabled = true;
+
+      try {
+        const endpoint = currentShareType === 'email' ? '/api/share/email' : '/api/share/whatsapp';
+        const payload = {
+          simulation_id: currentSimulationId,
+          user_name: 'Utilisateur Simulegal' // Idéalement récupéré du form
+        };
+
+        if (currentShareType === 'email') {
+          payload.email = value;
+        } else {
+          payload.phone = value;
+        }
+
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+
+        if (res.ok && data.success) {
+          alert('✅ ' + data.message);
+          closeShareModal();
+        } else {
+          alert('❌ ' + (data.message || 'Erreur lors de l\'envoi'));
+        }
+
+      } catch (e) {
+        console.error(e);
+        alert('Erreur de connexion.');
+      } finally {
+        btn.innerText = originalText;
+        btn.disabled = false;
+      }
+    }
+
+    // Close modal on outside click
+    window.onclick = function (event) {
+      const modal = document.getElementById('shareModal');
+      if (event.target == modal) {
+        closeShareModal();
+      }
+    }
+
+    // Global functions
+    window.openShareModal = openShareModal;
+    window.closeShareModal = closeShareModal;
+    window.submitShare = submitShare;
+
     // Navbar Logic
     function updateNavbar() {
+
       try {
         const authNav = document.getElementById('auth-nav');
         const user = Auth?.getUser();
@@ -1083,9 +1483,9 @@
                     <div class="user-display">
                         <a href="/dashboard" class="nav-link" style="color: var(--primary); font-weight: 600;" data-i18n="nav_dashboard">Mon Espace</a>
                         <div class="avatar-placeholder">${user.full_name.charAt(0).toUpperCase()}</div>
-                        <span>${user.full_name.split(' ')[0]}</span>
+                        <span><span data-i18n="nav_hello"></span>, ${user.full_name.split(' ')[0]}</span>
                         <a href="#" class="nav-link" onclick="Auth.logout()" data-i18n="nav_logout">Déconnexion</a>
-                        ${user.role === 'admin' ? '<a href="/admin" class="nav-link"><b>Admin</b></a>' : ''}
+                        ${user.role === 'admin' ? '<a href="/admin" class="nav-link" data-i18n="nav_admin"><b>Admin</b></a>' : ''}
                     </div>
                 `;
           } else {
@@ -1105,6 +1505,35 @@
       console.error('Init error:', e);
     }
     // Global functions for Payment/Unlock (called from innerHTML)
+    async function buyService(simulationId, serviceType) {
+      if (!simulationId) return;
+
+      const btn = event.target;
+      const originalText = btn.innerText;
+      btn.innerText = "Chargement...";
+      btn.disabled = true;
+
+      try {
+        const res = await fetch(`${API_URL}/api/payment/create-checkout/${simulationId}?service_type=${serviceType}`, {
+          method: 'POST'
+        });
+        const data = await res.json();
+
+        if (data.checkout_url) {
+          window.location.href = data.checkout_url;
+        } else {
+          alert("Erreur lors de la création de la session de paiement.");
+          btn.innerText = originalText;
+          btn.disabled = false;
+        }
+      } catch (e) {
+        console.error(e);
+        alert("Erreur de connexion au service de paiement.");
+        btn.innerText = originalText;
+        btn.disabled = false;
+      }
+    }
+
     async function unlockReport(simulationId) {
       try {
         const res = await fetch(`${API_URL}/api/payment/create-checkout/${simulationId}`, {
@@ -1150,22 +1579,59 @@
       const urlParams = new URLSearchParams(window.location.search);
       const simId = urlParams.get('simulation_id') || urlParams.get('sim_id');
       const isSuccess = urlParams.get('success') === 'true';
+      const serviceType = urlParams.get('service_type') || 'report'; // Nouveau parameter
 
       if (isSuccess && simId) {
-        const step3 = document.getElementById('step3');
-        if (step3) {
-          step3.innerHTML = `
-                     <div class="card" style="text-align: center;">
-                        <div style="font-size: 3rem;">🎉</div>
-                        <h2>Merci pour votre commande !</h2>
-                        <p>Votre dossier complet est débloqué.</p>
-                        <a href="/api/reports/download/${simId}" target="_blank" class="btn btn-primary btn-block" style="margin-top: 1rem;">
-                            📄 Télécharger mon Rapport PDF Complet
-                        </a>
-                        <button class="btn btn-secondary" onclick="window.location.href='/app'" style="margin-top: 1rem;">Retour à l'accueil</button>
-                     </div>
-                `;
-        }
+        // Appeler le backend pour valider et activer le service
+        fetch(`${API_URL}/api/payment/verify-session/${urlParams.get('session_id')}?simulation_id=${simId}&service_type=${serviceType}`)
+          .then(res => res.json())
+          .then(data => {
+            if (data.status === 'paid' || data.status.includes('paid')) {
+              const step3 = document.getElementById('step3');
+              if (step3) {
+                // Affichage personnalisé selon le service
+                let content = '';
+                if (serviceType === 'report') {
+                  content = `
+                             <div class="card" style="text-align: center;">
+                                <div style="font-size: 3rem;">🎉</div>
+                                <h2>Merci pour votre commande !</h2>
+                                <p>Votre dossier complet est débloqué.</p>
+                                <a href="/api/reports/download/${simId}" target="_blank" class="btn btn-primary btn-block" style="margin-top: 1rem;">
+                                    📄 Télécharger mon Rapport PDF Complet
+                                </a>
+                                <button class="btn btn-secondary" onclick="window.location.href='/app'" style="margin-top: 1rem;">Retour à l'accueil</button>
+                             </div>`;
+                } else if (serviceType === 'appointment') {
+                  content = `
+                             <div class="card" style="text-align: center;">
+                                <div style="font-size: 3rem;">📅</div>
+                                <h2>Rendez-vous confirmé !</h2>
+                                <p>Nous avons bien reçu votre demande d'assistance pour la prise de RDV.</p>
+                                <p>Un conseiller Simulegal vous contactera sous 24h par email/WhatsApp pour configurer votre alerte.</p>
+                                <button class="btn btn-primary" onclick="window.location.href='/app'" style="margin-top: 1rem;">Retour au tableau de bord</button>
+                             </div>`;
+                } else if (serviceType === 'lawyer') {
+                  content = `
+                             <div class="card" style="text-align: center;">
+                                <div style="font-size: 3rem;">👨‍⚖️</div>
+                                <h2>Consultation Réservée !</h2>
+                                <p>Votre demande de consultation avocat est validée.</p>
+                                <p>Vous allez recevoir un lien Calendly par email pour choisir votre créneau.</p>
+                                <button class="btn btn-primary" onclick="window.location.href='/app'" style="margin-top: 1rem;">Retour au tableau de bord</button>
+                             </div>`;
+                }
+
+                step3.innerHTML = content;
+                // Force l'affichage du step 3 si on redirige ici directement
+                const appInstance = Alpine.raw(Alpine.evaluate(document.querySelector('[x-data]'), 'this'));
+                if (appInstance) {
+                  appInstance.step = 3;
+                  appInstance.loading = false;
+                }
+              }
+            }
+          });
       }
     });
 

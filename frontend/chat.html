@@ -7,6 +7,8 @@
     <title>Simulegal AI - Assistant Éligibilité</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/styles.css">
+    <script src="/static/auth.js"></script>
+    <script src="/static/i18n.js"></script>
     <style>
         .chat-container {
             max-width: 800px;
@@ -108,43 +110,61 @@
             border-radius: 50%;
             box-shadow: 0 0 10px var(--success);
         }
+
+        .chat-actions {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .chat-actions .btn {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .message strong {
+            color: var(--primary);
+            font-weight: 600;
+        }
     </style>
 </head>
 
 <body>
     <div class="container">
         <nav class="navbar" id="navbar">
-            <a href="/app" class="nav-link">Retour Formulaire</a>
+            <a href="/app" class="nav-link" data-i18n="btn_new_sim">Retour Formulaire</a>
         </nav>
         <header style="padding: 1rem 0;">
-            <h1 class="logo">Simulegal AI</h1>
-            <p class="tagline">Votre expert en droit des étrangers</p>
+            <h1 class="logo" data-i18n="chat_title">Simulegal AI</h1>
+            <p class="tagline" data-i18n="chat_subtitle">Votre expert en droit des étrangers</p>
         </header>
 
         <div class="chat-container">
             <div class="chat-header">
                 <div class="chat-status">
                     <div class="status-dot"></div>
-                    Assistant en ligne
+                    <span data-i18n="chat_online">Assistant en ligne</span>
                 </div>
                 <div id="chat-progress" style="font-size: 0.8rem; color: var(--text-secondary);">Analyse : 0%</div>
             </div>
 
             <div class="chat-messages" id="chat-messages">
-                <div class="message bot">Bonjour ! Je suis l'assistant intelligent de Simulegal. Je vais vous aider à
+                <div class="message bot" data-i18n="chat_welcome">Bonjour ! Je suis l'assistant intelligent de
+                    Simulegal. Je vais vous aider à
                     évaluer votre éligibilité en quelques questions.</div>
-                <div class="message bot">Pour commencer, quelle est votre nationalité ?</div>
+                <div class="message bot" data-i18n="chat_q1">Pour commencer, quelle est votre nationalité ?</div>
             </div>
 
             <div class="chat-input-area">
                 <input type="text" id="user-input" class="chat-input" placeholder="Tapez votre réponse ici..."
-                    autocomplete="off">
-                <button id="send-btn" class="btn btn-primary">Envoyer</button>
+                    data-i18n-placeholder="chat_placeholder" autocomplete="off">
+                <button id="send-btn" class="btn btn-primary" data-i18n="btn_submit">Envoyer</button>
             </div>
         </div>
     </div>
 
-    <script src="/static/auth.js"></script>
+
     <script>
         const API_URL = window.location.origin;
         let simulationId = null;
@@ -159,6 +179,8 @@
             // Afficher message utilisateur
             appendMessage(text, 'user');
             inputField.value = '';
+            inputField.disabled = true;
+            sendBtn.disabled = true;
 
             try {
                 const response = await fetch(`${API_URL}/api/chat/message`, {
@@ -173,44 +195,111 @@
                 const data = await response.json();
                 simulationId = data.simulation_id;
 
-                // Simuler un léger délai de reflexion
-                setTimeout(() => {
+                // Simuler un léger délai de réflexion
+                setTimeout(async () => {
                     appendMessage(data.reply, 'bot');
                     updateProgress(data.current_data);
 
                     if (data.is_finished) {
-                        // Proposer le bouton de résultats
-                        setTimeout(() => {
-                            appendMessage(`Analyse terminée ! Cliquez ci-dessous pour voir votre score d'éligibilité complet.`, 'bot');
+                        // Récupérer les conseils personnalisés
+                        inputField.disabled = true;
+                        sendBtn.disabled = true;
+
+                        appendMessage("⏳ Analyse de votre profil en cours...", 'bot');
+
+                        try {
+                            const adviceResp = await fetch(`${API_URL}/api/chat/advice/${simulationId}`);
+                            const adviceData = await adviceResp.json();
+
+                            // Afficher les conseils personnalisés
+                            setTimeout(() => {
+                                appendMessage(adviceData.advice, 'bot', true);
+
+                                // Afficher la procédure recommandée
+                                if (adviceData.top_procedure) {
+                                    const proc = adviceData.top_procedure;
+                                    const scoreClass = proc.score >= 100 ? 'high' : (proc.score >= 70 ? 'medium' : 'low');
+                                    appendMessage(`🎯 Procédure recommandée : ${proc.name}`, 'bot');
+
+                                    // Afficher les documents si éligible
+                                    if (proc.score >= 70 && proc.documents && proc.documents.length > 0) {
+                                        const docsMsg = "📄 Documents à préparer :\n• " + proc.documents.slice(0, 5).join("\n• ");
+                                        appendMessage(docsMsg, 'bot');
+                                    }
+                                }
+
+                                // Boutons d'action
+                                const actionsDiv = document.createElement('div');
+                                actionsDiv.className = 'chat-actions';
+                                actionsDiv.innerHTML = `
+                                    <button class="btn btn-primary" onclick="window.location.href='/app?sim_id=${simulationId}&chat_done=true'">
+                                        📊 Voir l'analyse complète
+                                    </button>
+                                    <button class="btn btn-secondary" onclick="window.location.reload()">
+                                        🔄 Nouvelle conversation
+                                    </button>
+                                `;
+                                messagesContainer.appendChild(actionsDiv);
+                                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                            }, 1000);
+
+                        } catch (adviceErr) {
+                            console.error('Erreur conseils:', adviceErr);
+                            appendMessage("Les conseils détaillés sont disponibles dans l'analyse complète.", 'bot');
+
                             const btn = document.createElement('button');
                             btn.className = 'btn btn-primary btn-block';
                             btn.style.marginTop = '1rem';
                             btn.textContent = 'Voir mes résultats';
                             btn.onclick = () => window.location.href = `/app?sim_id=${simulationId}&chat_done=true`;
                             messagesContainer.appendChild(btn);
-                            messagesContainer.scrollTop = messagesContainer.scrollHeight;
-                        }, 1000);
+                        }
+                    } else {
+                        inputField.disabled = false;
+                        sendBtn.disabled = false;
+                        inputField.focus();
                     }
                 }, 500);
 
             } catch (e) {
+                console.error('Erreur chat:', e);
                 appendMessage("Désolé, j'ai rencontré une erreur technique. Réessayons.", 'bot');
+                inputField.disabled = false;
+                sendBtn.disabled = false;
             }
         }
 
-        function appendMessage(text, side) {
+        function appendMessage(text, side, isMarkdown = false) {
             const msg = document.createElement('div');
             msg.className = `message ${side}`;
-            msg.textContent = text;
+
+            if (isMarkdown && side === 'bot') {
+                // Conversion simple du markdown
+                let html = text
+                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                    .replace(/\n/g, '<br>')
+                    .replace(/• /g, '&nbsp;&nbsp;• ');
+                msg.innerHTML = html;
+            } else {
+                // Gestion des retours à la ligne
+                msg.innerHTML = text.replace(/\n/g, '<br>');
+            }
+
             messagesContainer.appendChild(msg);
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
 
         function updateProgress(data) {
-            // Estimation simple du remplissage du profil
-            const fields = ["nationality", "residence_duration_months", "is_married", "salary_annual"];
+            // Estimation enrichie du remplissage du profil
+            const fields = [
+                "nationality", "residence_duration_months", "is_married",
+                "salary_monthly", "job_contract", "has_master_france",
+                "parent_of_french_child", "regular_situation"
+            ];
             let filled = 0;
-            fields.forEach(f => { if (data[f] !== undefined && data[f] !== null) filled++; });
+            fields.forEach(f => {
+                if (data[f] !== undefined && data[f] !== null && data[f] !== '') filled++;
+            });
             const percent = Math.round((filled / fields.length) * 100);
             document.getElementById('chat-progress').textContent = `Analyse : ${percent}%`;
         }
@@ -218,6 +307,7 @@
         sendBtn.onclick = sendMessage;
         inputField.onkeypress = (e) => { if (e.key === 'Enter') sendMessage(); };
     </script>
+
 </body>
 
 </html>

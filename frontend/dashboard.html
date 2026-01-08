@@ -7,6 +7,9 @@
     <title>Simulegal - Mon Espace</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/styles.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="/static/auth.js"></script>
+    <script src="/static/i18n.js"></script>
     <style>
         .dashboard-grid {
             display: grid;
@@ -29,259 +32,911 @@
             margin-bottom: 1.5rem;
         }
 
-        .sim-list {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
+        /* Notification Bell */
+        .notification-bell {
+            position: relative;
+            cursor: pointer;
+            font-size: 1.5rem;
+            padding: 0.5rem;
+            transition: transform 0.2s;
         }
 
-        .sim-item {
+        .notification-bell:hover {
+            transform: scale(1.1);
+        }
+
+        .notification-badge {
+            position: absolute;
+            top: 0;
+            right: 0;
+            background: var(--danger);
+            color: white;
+            font-size: 0.7rem;
+            font-weight: 600;
+            padding: 0.15rem 0.4rem;
+            border-radius: 10px;
+            min-width: 18px;
+            text-align: center;
+        }
+
+        /* Notifications Dropdown */
+        .notifications-dropdown {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            width: 360px;
+            max-height: 480px;
+            background: rgba(15, 23, 42, 0.98);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+            overflow: hidden;
+            z-index: 1000;
+        }
+
+        .notifications-header {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 1rem;
-            background: rgba(255, 255, 255, 0.03);
-            border-radius: var(--radius-sm);
-            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .notifications-header h4 {
+            margin: 0;
+            color: var(--text-primary);
+        }
+
+        .notifications-header button {
+            background: none;
+            border: none;
+            color: var(--primary);
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+
+        .notifications-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .notification-item {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            gap: 1rem;
+            transition: background 0.2s;
+            cursor: pointer;
+        }
+
+        .notification-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .notification-item.unread {
+            background: rgba(99, 102, 241, 0.1);
+            border-left: 3px solid var(--primary);
+        }
+
+        .notification-icon {
+            font-size: 1.5rem;
+            flex-shrink: 0;
+        }
+
+        .notification-content {
+            flex: 1;
+        }
+
+        .notification-content strong {
+            color: var(--text-primary);
+            font-size: 0.95rem;
+        }
+
+        .notification-content p {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            margin: 0.25rem 0 0;
+            line-height: 1.4;
+        }
+
+        .notification-content small {
+            color: var(--text-muted);
+            font-size: 0.75rem;
+        }
+
+        .notification-empty {
+            padding: 3rem;
+            text-align: center;
+            color: var(--text-muted);
+        }
+
+        .timeline-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+            padding: 1rem 0;
+        }
+
+        .timeline-step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            z-index: 2;
+            padding: 0 1rem;
+        }
+
+        .step-icon {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: var(--bg-card);
+            border: 2px solid var(--text-muted);
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
             transition: all 0.3s;
         }
 
-        .sim-item:hover {
-            background: rgba(255, 255, 255, 0.06);
-            transform: translateX(5px);
+        .timeline-step.active .step-icon {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+            box-shadow: 0 0 10px var(--primary);
         }
 
-        .sim-info h4 {
-            margin: 0;
-            color: var(--text-primary);
+        .timeline-step.completed .step-icon {
+            background: var(--success);
+            border-color: var(--success);
+            color: white;
+            content: "✓";
         }
 
-        .sim-info p {
-            margin: 0;
+        .step-label {
             font-size: 0.8rem;
-            color: var(--text-secondary);
+            color: var(--text-muted);
         }
 
-        .status-badge {
-            padding: 0.25rem 0.6rem;
-            border-radius: 100px;
-            font-size: 0.75rem;
-            font-weight: 600;
+        .timeline-step.active .step-label {
+            color: var(--primary);
+            font-weight: bold;
         }
 
-        .status-paid {
-            background: rgba(16, 185, 129, 0.1);
+        .timeline-step.completed .step-label {
             color: var(--success);
         }
 
-        .status-unpaid {
-            background: rgba(245, 158, 11, 0.1);
-            color: var(--warning);
-        }
-
-        /* Timeline Styles */
-        .timeline {
+        .timeline-line {
+            flex-grow: 1;
+            height: 2px;
+            background: var(--text-muted);
+            opacity: 0.3;
+            margin: 0 -10px;
             position: relative;
-            padding-left: 30px;
-        }
-
-        .timeline::before {
-            content: '';
-            position: absolute;
-            left: 10px;
-            top: 0;
-            bottom: 0;
-            width: 3px;
-            background: linear-gradient(to bottom, var(--primary), var(--success));
-            border-radius: 3px;
-        }
-
-        .timeline-item {
-            position: relative;
-            padding-bottom: 1.5rem;
-        }
-
-        .timeline-item:last-child {
-            padding-bottom: 0;
-        }
-
-        .timeline-dot {
-            position: absolute;
-            left: -26px;
-            top: 4px;
-            width: 16px;
-            height: 16px;
-            border-radius: 50%;
-            border: 3px solid var(--bg-primary);
+            top: -12px;
             z-index: 1;
         }
 
-        .timeline-dot.current {
-            background: var(--primary);
-            box-shadow: 0 0 12px var(--primary);
-        }
-
-        .timeline-dot.completed {
-            background: var(--success);
-        }
-
-        .timeline-dot.pending {
-            background: rgba(255, 255, 255, 0.2);
-            border-color: rgba(255, 255, 255, 0.3);
-        }
-
-        .timeline-content {
-            background: rgba(255, 255, 255, 0.03);
-            padding: 1rem;
-            border-radius: var(--radius-sm);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-        }
-
-        .timeline-label {
-            display: inline-block;
-            background: var(--primary);
-            color: white;
-            padding: 0.2rem 0.6rem;
-            border-radius: 100px;
-            font-size: 0.7rem;
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-        }
-
-        .timeline-label.completed {
-            background: var(--success);
-        }
-
-        .timeline-title {
-            font-weight: 600;
-            margin-bottom: 0.3rem;
-            color: var(--text-primary);
-        }
-
-        .timeline-desc {
-            font-size: 0.85rem;
-            color: var(--text-secondary);
+        .navbar-right {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            position: relative;
         }
     </style>
 </head>
 
-<body>
+<body x-data="dashboard()">
     <div class="container">
-        <nav class="navbar" id="navbar">
-            <a href="/app" class="nav-link">Nouvelle Simulation</a>
-            <a href="#" class="nav-link" onclick="Auth.logout()">Déconnexion</a>
+        <nav class="navbar" style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <a href="/app" class="nav-link" data-i18n="nav_home">Accueil</a>
+                <a href="/chat" class="nav-link" data-i18n="btn_chat">Chat IA</a>
+            </div>
+            <div class="navbar-right">
+                <!-- Notification Bell -->
+                <div style="position: relative;">
+                    <div class="notification-bell" @click="toggleNotifications()">
+                        🔔
+                        <span class="notification-badge" x-show="unreadCount > 0" x-text="unreadCount"></span>
+                    </div>
+
+                    <!-- Dropdown -->
+                    <div class="notifications-dropdown" x-show="showNotifications" x-transition
+                        @click.outside="showNotifications = false">
+                        <div class="notifications-header">
+                            <h4>🔔 Notifications</h4>
+                            <button @click="markAllAsRead()" x-show="unreadCount > 0">Tout marquer comme lu</button>
+                        </div>
+                        <div class="notifications-list">
+                            <template x-if="notifications.length === 0">
+                                <div class="notification-empty">
+                                    <p>✨ Aucune notification</p>
+                                </div>
+                            </template>
+                            <template x-for="notif in notifications" :key="notif.id">
+                                <div class="notification-item" :class="{ 'unread': !notif.is_read }"
+                                    @click="openNotification(notif)">
+                                    <div class="notification-icon" x-text="getIcon(notif.type)"></div>
+                                    <div class="notification-content">
+                                        <strong x-text="notif.title"></strong>
+                                        <p x-text="notif.message"></p>
+                                        <small x-text="formatDate(notif.created_at)"></small>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+
+                <a href="#" class="nav-link" onclick="Auth.logout()" data-i18n="nav_logout">Déconnexion</a>
+            </div>
         </nav>
 
-        <header style="padding: 1rem 0;">
-            <h1 class="logo">Mon Espace</h1>
-            <p class="tagline">Gérez vos dossiers et suivez votre progression</p>
+        <header style="padding: 2rem 0;">
+            <h1 class="logo" data-i18n="dash_title">Mon Espace</h1>
+            <p class="tagline" data-i18n="dash_subtitle">Gérez vos dossiers et suivez votre progression</p>
         </header>
 
         <div class="dashboard-grid">
-            <!-- Historique -->
-            <section>
-                <h2 style="margin-bottom: 1.5rem;">📜 Historique des simulations</h2>
-                <div id="simulations-container" class="sim-list">
-                    <p>Chargement de vos dossiers...</p>
+            <div class="main-content">
+                <!-- VUE D'ENSEMBLE -->
+                <div x-show="currentTab === 'overview'" x-transition:enter="transition ease-out duration-300"
+                    x-transition:enter-start="opacity-0 translate-y-2"
+                    x-transition:enter-end="opacity-100 translate-y-0">
+                    <div class="card">
+                        <h3 data-i18n="dash_history">📜 Historique des simulations</h3>
+                        <div id="loading-sims" style="padding: 2rem; text-align: center;" data-i18n="dash_loading">
+                            Chargement de vos dossiers...
+                        </div>
+                        <div id="simulations-list"></div>
+                    </div>
                 </div>
-            </section>
 
-            <!-- Timeline & Conseils -->
-            <aside>
+                <!-- MES SIMULATIONS (Même contenu que Overview pour l'instant ou filtré) -->
+                <div x-show="currentTab === 'simulations'" style="display: none;">
+                    <div class="card">
+                        <h3>Mes dossiers complets</h3>
+                        <p class="text-secondary">Retrouvez ici vos simulations détaillées.</p>
+                        <!-- On réutilise la liste chargée pour l'instant -->
+                        <div id="simulations-list-full"></div>
+                    </div>
+                </div>
+
+                <!-- MON DOSSIER -->
+                <div x-show="currentTab === 'cases'" style="display: none;" x-transition>
+                    <div class="card">
+                        <div style="display: flex; justify-content: space-between;">
+                            <h3>🗂️ Mon Dossier</h3>
+                            <span class="tag" :class="getCaseStatusClass(caseFile?.status)"
+                                x-text="getCaseStatusLabel(caseFile?.status)"></span>
+                        </div>
+
+                        <!-- Si pas de dossier (pas payé) -->
+                        <div x-show="!caseFile" style="text-align: center; padding: 2rem;">
+                            <div style="font-size: 3rem;">🔒</div>
+                            <p>Vous n'avez pas de dossier actif. Effectuez une simulation et débloquez votre rapport
+                                pour commencer.</p>
+                            <button class="btn btn-primary" onclick="window.location.href='/app'">Nouvelle
+                                Simulation</button>
+                        </div>
+
+                        <!-- Dossier Actif -->
+                        <div x-show="caseFile">
+
+                            <!-- Timeline -->
+                            <div class="timeline-container mt-4 mb-6">
+                                <div class="timeline-step"
+                                    :class="{ 'active': isStepActive('collecting'), 'completed': isStepCompleted('collecting') }">
+                                    <div class="step-icon">1</div>
+                                    <div class="step-label">Constitution</div>
+                                </div>
+                                <div class="timeline-line"></div>
+                                <div class="timeline-step"
+                                    :class="{ 'active': isStepActive('review_pending'), 'completed': isStepCompleted('review_pending') }">
+                                    <div class="step-icon">2</div>
+                                    <div class="step-label">Étude Expert</div>
+                                </div>
+                                <div class="timeline-line"></div>
+                                <div class="timeline-step"
+                                    :class="{ 'active': isStepActive('validated'), 'completed': isStepCompleted('validated') }">
+                                    <div class="step-icon">3</div>
+                                    <div class="step-label">Validation</div>
+                                </div>
+                                <div class="timeline-line"></div>
+                                <div class="timeline-step"
+                                    :class="{ 'active': isStepActive('submitted'), 'completed': isStepCompleted('submitted') }">
+                                    <div class="step-icon">4</div>
+                                    <div class="step-label">Dépôt</div>
+                                </div>
+                            </div>
+
+                            <!-- Etape 1: Constitution -->
+                            <div x-show="caseFile?.status === 'collecting'">
+                                <h4 class="mb-2">📥 Constitution du dossier</h4>
+                                <p class="text-secondary mb-4">Veuillez transmettre vos pièces justificatives pour
+                                    analyse.</p>
+
+                                <div class="bg-gray-800 p-4 rounded mb-4">
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <strong>Préférence de transmission</strong>
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <button class="btn btn-outline-primary active">📤 Téléverser
+                                            (Recommandé)</button>
+                                        <button class="btn btn-outline-secondary"
+                                            onclick="alert('Module Prise de RDV Remise en main propre')">🤝 Porter en
+                                            agence</button>
+                                    </div>
+                                </div>
+
+                                <div class="upload-list mb-4">
+                                    <!-- Liste Mockée de documents attendus -->
+                                    <div
+                                        class="doc-item p-3 border border-gray-700 rounded mb-2 flex justify-between items-center">
+                                        <span>🆔 Passeport (Toutes les pages)</span>
+                                        <input type="file" @change="uploadDoc($event, 'Passeport')">
+                                    </div>
+                                    <div
+                                        class="doc-item p-3 border border-gray-700 rounded mb-2 flex justify-between items-center">
+                                        <span>🏠 Justificatif de domicile (-3 mois)</span>
+                                        <input type="file" @change="uploadDoc($event, 'Justif Domicile')">
+                                    </div>
+                                    <div
+                                        class="doc-item p-3 border border-gray-700 rounded mb-2 flex justify-between items-center">
+                                        <span>💶 3 dernières fiches de paie</span>
+                                        <input type="file" @change="uploadDoc($event, 'Fiches de paie')">
+                                    </div>
+                                </div>
+
+                                <div class="text-center">
+                                    <button class="btn btn-success btn-lg w-full" @click="submitForReview()">Envoyer
+                                        pour étude 🚀</button>
+                                    <p class="text-xs text-secondary mt-2">Votre dossier sera verrouillé pendant
+                                        l'analyse.</p>
+                                </div>
+                            </div>
+
+                            <!-- Etape 2: Etude en cours -->
+                            <div x-show="caseFile?.status === 'review_pending'">
+                                <div class="text-center p-5">
+                                    <div style="font-size: 3rem;">🧐</div>
+                                    <h3>Analyse en cours</h3>
+                                    <p>Nos experts étudient vos pièces. Vous recevrez une notification sous 48h.</p>
+                                </div>
+                            </div>
+
+                            <!-- Etape 3: Validé / Pret pour depot -->
+                            <div x-show="caseFile?.status === 'validated'">
+                                <div class="text-center p-5">
+                                    <div style="font-size: 3rem;">✅</div>
+                                    <h3>Dossier Validé !</h3>
+                                    <p>Votre dossier est complet et conforme.</p>
+
+                                    <hr class="my-4 border-gray-700">
+
+                                    <h4>🚀 Prochaine étape : Le Dépôt</h4>
+
+                                    <!-- Logique conditionnelle selon type -->
+                                    <div x-show="caseFile?.submission_type === 'digital'">
+                                        <p class="text-success mb-2">Votre demande se fait en ligne (ANEF).</p>
+                                        <a href="https://administration-etrangers-en-france.interieur.gouv.fr/particuliers/#/"
+                                            target="_blank" class="btn btn-primary btn-lg">Accéder au portail ANEF</a>
+                                        <p class="mt-2 text-sm">Utilisez les pièces validées ci-dessous.</p>
+                                    </div>
+
+                                    <div x-show="caseFile?.submission_type === 'physical'">
+                                        <p class="text-warning mb-2">Dépôt physique requis en préfecture.</p>
+                                        <button class="btn btn-primary btn-lg"
+                                            @click="currentTab = 'appointments'">Prendre RDV Préfecture</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Liste des documents uploadés -->
+                            <div class="mt-6 border-t border-gray-700 pt-4" x-show="caseFile?.documents.length > 0">
+                                <h5>📎 Pièces reçues</h5>
+                                <div class="grid grid-cols-1 gap-2 mt-2">
+                                    <template x-for="doc in caseFile?.documents" :key="doc.id">
+                                        <div class="text-sm text-secondary">✅ <span x-text="doc.name"></span> (Reçu le
+                                            <span x-text="new Date(doc.uploaded_at).toLocaleDateString()"></span>)
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ASSISTANCE RDV -->
+                <div x-show="currentTab === 'appointments'" style="display: none;" x-transition>
+                    <div class="card">
+                        <div style="display: flex; justify-content: space-between;">
+                            <h3>📅 Assistance RDV Préfecture</h3>
+                            <span class="tag tag-success" x-show="hasAppointmentService">Service Actif</span>
+                        </div>
+
+                        <!-- Si service NON acheté -->
+                        <div x-show="!hasAppointmentService" style="text-align: center; padding: 2rem;">
+                            <div style="font-size: 3rem;">🔒</div>
+                            <p>Ce service est réservé aux membres Premium.</p>
+                            <button class="btn btn-primary" onclick="window.location.href='/app'">Découvrir
+                                l'offre</button>
+                        </div>
+
+                        <!-- Si service acheté -->
+                        <div x-show="hasAppointmentService">
+                            <div class="mt-4">
+                                <!-- Liste des demandes -->
+                                <template x-if="appointments.length === 0">
+                                    <div
+                                        style="background: rgba(255,255,255,0.05); padding: 1.5rem; border-radius: 8px;">
+                                        <h4>🚀 Nouvelle recherche</h4>
+                                        <p class="text-secondary mb-4">Configurez votre alerte pour trouver un créneau
+                                            rapidement.</p>
+
+                                        <form @submit.prevent="createAppointmentRequest">
+                                            <div class="form-group mb-4">
+                                                <label>Préfecture cible</label>
+                                                <select x-model="newAppointment.prefecture" class="form-control"
+                                                    style="width: 100%; padding: 0.8rem; background: rgba(0,0,0,0.3); border: 1px solid var(--border); color: white; border-radius: 8px;">
+                                                    <option value="">Choisir une préfecture...</option>
+                                                    <option value="paris">Paris (75)</option>
+                                                    <option value="nanterre">Nanterre (92)</option>
+                                                    <option value="bobigny">Bobigny (93)</option>
+                                                    <option value="creteil">Créteil (94)</option>
+                                                </select>
+                                            </div>
+                                            <div class="form-group mb-4">
+                                                <label>Notes complémentaires (Disponibilités, type de titre...)</label>
+                                                <textarea x-model="newAppointment.notes" class="form-control" rows="3"
+                                                    style="width: 100%; padding: 0.8rem; background: rgba(0,0,0,0.3); border: 1px solid var(--border); color: white; border-radius: 8px;"></textarea>
+                                            </div>
+                                            <button type="submit" class="btn btn-primary">Lancer la recherche</button>
+                                        </form>
+                                    </div>
+                                </template>
+
+                                <template x-for="appt in appointments" :key="appt.id">
+                                    <div class="card"
+                                        style="background: rgba(99, 102, 241, 0.1); border: 1px solid var(--primary); margin-top: 1rem;">
+                                        <div
+                                            style="display: flex; justify-content: space-between; align-items: center;">
+                                            <div>
+                                                <strong>📍 Préfecture de <span x-text="appt.prefecture"></span></strong>
+                                                <div class="text-secondary text-sm">Créée le <span
+                                                        x-text="new Date(appt.created_at).toLocaleDateString()"></span>
+                                                </div>
+                                            </div>
+                                            <span class="tag" :class="{
+                                                'tag-warning': appt.status === 'searching',
+                                                'tag-success': appt.status === 'found' || appt.status === 'booked'
+                                            }" x-text="getStatusLabel(appt.status)"></span>
+                                        </div>
+                                        <div class="mt-2" style="font-size: 0.9rem;">
+                                            <p x-show="appt.status === 'searching'">🔍 Notre robot scanne les créneaux
+                                                toutes les 5 minutes...</p>
+                                            <p x-show="appt.status === 'found'">✅ Créneau trouvé ! Vérifiez vos emails.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AVOCAT -->
+                <div x-show="currentTab === 'lawyer'" style="display: none;" x-transition>
+                    <div class="card">
+                        <div style="display: flex; justify-content: space-between;">
+                            <h3>👨‍⚖️ Consultation Avocat</h3>
+                            <span class="tag tag-success" x-show="hasLawyerService">Service Actif</span>
+                        </div>
+
+                        <div x-show="!hasLawyerService" style="text-align: center; padding: 2rem;">
+                            <div style="font-size: 3rem;">🔒</div>
+                            <p>Accès réservé aux clients Consultation.</p>
+                            <button class="btn btn-primary" onclick="window.location.href='/app'">Réserver une
+                                séance</button>
+                        </div>
+
+                        <div x-show="hasLawyerService">
+                            <!-- Calendrier de réservation (Simple) -->
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+                                <div>
+                                    <h4>📅 Réserver un créneau</h4>
+                                    <p class="text-secondary mb-4">Prochaines disponibilités :</p>
+                                    <div class="slots-grid"
+                                        style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem;">
+                                        <template x-for="slot in availableSlots" :key="slot">
+                                            <button @click="bookSlot(slot)" class="btn btn-outline-primary btn-sm"
+                                                x-text="formatSlot(slot)"></button>
+                                        </template>
+                                        <div x-show="availableSlots.length === 0" class="text-secondary">Aucun créneau
+                                            disponible.</div>
+                                    </div>
+                                </div>
+
+                                <div style="border-left: 1px solid var(--border); padding-left: 1.5rem;">
+                                    <h4>Vos Rendez-vous</h4>
+                                    <template x-if="consultations.length === 0">
+                                        <p class="text-secondary">Aucun RDV planifié.</p>
+                                    </template>
+                                    <template x-for="consult in consultations" :key="consult.id">
+                                        <div class="mt-2 p-3 rounded bg-gray-800 border border-gray-700">
+                                            <div class="font-bold text-primary"
+                                                x-text="new Date(consult.date_time).toLocaleString()"></div>
+                                            <div x-text="consult.lawyer_name"></div>
+                                            <a :href="consult.meeting_link" target="_blank"
+                                                class="text-sm underline text-blue-400 mt-1 block">Rejoindre la
+                                                visio</a>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sidebar">
                 <div class="stat-card">
-                    <h3 style="margin-bottom: 1rem;">🗺️ Ma Roadmap de Régularisation</h3>
-                    <div id="timeline-container">
-                        <p style="font-size: 0.9rem; color: var(--text-secondary);">Réalisez une simulation pour voir
-                            votre parcours.</p>
+                    <h3 data-i18n="dash_roadmap">🗺️ Ma Roadmap</h3>
+                    <div id="roadmap-content" style="color: var(--text-secondary); font-size: 0.9rem;"
+                        data-i18n="dash_roadmap_empty">
+                        Réalisez une simulation pour voir votre parcours.
                     </div>
                 </div>
 
                 <div class="stat-card">
-                    <h3 style="margin-bottom: 1rem;">💡 Conseil du jour</h3>
-                    <p style="font-size: 0.9rem; line-height: 1.6;">
-                        Pensez à bien conserver vos fiches de paie et justificatifs de domicile. Ces documents sont
-                        systématiquement demandés quel que soit le titre.
+                    <h3 data-i18n="dash_tip_title">💡 Conseil du jour</h3>
+                    <p style="color: var(--text-secondary); font-size: 0.9rem;" data-i18n="dash_tip_desc">
+                        Pensez à bien conserver vos fiches de paie et justificatifs de domicile.
                     </p>
                 </div>
-            </aside>
+            </div>
         </div>
     </div>
 
-    <script src="/static/auth.js"></script>
     <script>
-        async function loadDashboard() {
-            if (!Auth.getToken()) {
-                window.location.href = '/login';
-                return;
-            }
+        function dashboard() {
+            return {
+                currentTab: 'overview',
+                showNotifications: false,
+                notifications: [],
+                unreadCount: 0,
 
-            try {
-                // Charger les simulations
-                const simRes = await fetch('/api/user/simulations', {
-                    headers: { 'Authorization': `Bearer ${Auth.getToken()}` }
-                });
-                const sims = await simRes.json();
-                renderSimulations(sims);
+                // Services Data
+                hasAppointmentService: false,
+                hasLawyerService: false,
+                appointments: [],
+                consultations: [],
+                availableSlots: [],
+                newAppointment: { prefecture: '', notes: '' },
 
-                // Charger la timeline
-                const progRes = await fetch('/api/user/progress', {
-                    headers: { 'Authorization': `Bearer ${Auth.getToken()}` }
-                });
-                const prog = await progRes.json();
-                renderTimeline(prog);
+                async init() {
+                    if (!Auth.getToken()) {
+                        window.location.href = '/login';
+                        return;
+                    }
 
-            } catch (e) {
-                console.error(e);
-            }
-        }
+                    await this.loadNotifications();
+                    await this.loadSimulations();
+                    await this.loadServicesData(); // Load native services
+                },
 
-        function renderSimulations(sims) {
-            const container = document.getElementById('simulations-container');
-            if (sims.length === 0) {
-                container.innerHTML = '<p>Vous n\'avez pas encore de simulation enregistrée.</p>';
-                return;
-            }
+                async loadServicesData() {
+                    try {
+                        // 1. Check purchases (via simulations list currently loaded, or cleaner endpoint)
+                        // On réutilise la liste des simulations déjà chargée par loadSimulations si possible, 
+                        // mais loadSimulations est asynchrone et ne stocke pas tout dans 'this'.
+                        // On va refetcher ou mieux, on va appeler les endpoints services qui renverront 403 si pas acheté ?
+                        // Non, l'endpoint GET appointments renvoie liste vide si pas de demande, mais ne dit pas si "droit" ok.
+                        // On va itérer sur les simulations pour voir les droits.
 
-            container.innerHTML = sims.map(s => `
-                <div class="sim-item">
-                    <div class="sim-info">
-                        <h4>${s.procedure || 'Analyse en cours'}</h4>
-                        <p>${new Date(s.date).toLocaleDateString('fr-FR')} • Score: ${Math.round(s.score)}%</p>
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 1rem;">
-                        <span class="status-badge ${s.is_paid ? 'status-paid' : 'status-unpaid'}">
-                            ${s.is_paid ? 'Payé' : 'Non payé'}
-                        </span>
-                        ${s.is_paid
-                            ? `<a href="/api/reports/download/${s.id}" target="_blank" class="btn btn-secondary btn-sm">PDF</a>`
-                            : `<button onclick="window.location.href='/app?sim_id=${s.id}'" class="btn btn-primary btn-sm">Voir</button>`
+                        const token = Auth.getToken();
+
+                        // Load Appointments
+                        const apptRes = await fetch('/api/services/appointments', { headers: { 'Authorization': `Bearer ${token}` } });
+                        if (apptRes.ok) this.appointments = await apptRes.json();
+
+                        // Load Consultations
+                        const consultRes = await fetch('/api/services/consultations', { headers: { 'Authorization': `Bearer ${token}` } });
+                        if (consultRes.ok) this.consultations = await consultRes.json();
+
+                        // Load Slots
+                        const slotsRes = await fetch('/api/services/lawyer/slots');
+                        if (slotsRes.ok) {
+                            const data = await slotsRes.json();
+                            this.availableSlots = data.slots;
                         }
-                    </div>
-                </div>
-            `).join('');
-        }
 
-        function renderTimeline(prog) {
-            if (!prog.has_data) return;
+                        // Check rights (simple client-side check based on fetched simulations)
+                        // TODO: Idealement le backend renvoie un profil user complet avec les flags services.
+                        // Pour l'instant on déduit des simulations.
+                        const response = await fetch('/api/simulations', { headers: { 'Authorization': `Bearer ${token}` } });
+                        const sims = await response.json();
+                        this.hasAppointmentService = sims.some(s => s.has_appointment_service);
+                        this.hasLawyerService = sims.some(s => s.has_lawyer_service);
 
-            const container = document.getElementById('timeline-container');
-            container.innerHTML = `
-                <div class="timeline">
-                    ${prog.timeline.map(step => `
-                        <div class="timeline-item">
-                            <div class="timeline-dot ${step.status}"></div>
-                            <div class="timeline-content">
-                                <span class="timeline-label ${step.status === 'completed' ? 'completed' : ''}">${step.label}</span>
-                                <div class="timeline-title">${step.title}</div>
-                                <div class="timeline-desc">${step.description}</div>
+                    } catch (e) {
+                        console.error("Error loading services", e);
+                    }
+                },
+
+                // Case Management
+                async loadCaseData() {
+                    try {
+                        const res = await fetch('/api/case/my-case', { headers: { 'Authorization': `Bearer ${Auth.getToken()}` } });
+                        if (res.ok) {
+                            this.caseFile = await res.json();
+                        }
+                    } catch (e) { console.error("Error loading case", e); }
+                },
+
+                async uploadDoc(event, docName) {
+                    const file = event.target.files[0];
+                    if (!file) return;
+
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    formData.append('doc_name', docName);
+                    formData.append('case_id', this.caseFile.id);
+
+                    try {
+                        const res = await fetch('/api/case/upload', {
+                            method: 'POST',
+                            headers: { 'Authorization': `Bearer ${Auth.getToken()}` },
+                            body: formData
+                        });
+                        if (res.ok) {
+                            alert("Document envoyé ! (" + docName + ")");
+                            this.loadCaseData(); // Refresh list to see update if implemented
+                        }
+                    } catch (e) { console.error(e); alert("Erreur upload"); }
+                },
+
+                async submitForReview() {
+                    if (!confirm("Envoyer le dossier pour étude ? Vous ne pourrez plus le modifier.")) return;
+                    try {
+                        const res = await fetch(`/api/case/${this.caseFile.id}/submit-review`, {
+                            method: 'POST',
+                            headers: { 'Authorization': `Bearer ${Auth.getToken()}` },
+                        });
+                        if (res.ok) {
+                            this.loadCaseData();
+                            alert("Dossier envoyé à l'expert !");
+                        }
+                    } catch (e) { console.error(e); }
+                },
+
+                getCaseStatusLabel(status) {
+                    const map = {
+                        'collecting': 'En constitution',
+                        'review_pending': 'En étude',
+                        'validated': 'Validé',
+                        'submitted': 'Déposé'
+                    };
+                    return map[status] || status;
+                },
+
+                getCaseStatusClass(status) {
+                    if (status === 'validated') return 'tag-success';
+                    if (status === 'review_pending') return 'tag-warning';
+                    return 'tag-secondary';
+                },
+
+                isStepActive(step) {
+                    if (!this.caseFile) return false;
+                    return this.caseFile.status === step;
+                },
+
+                isStepCompleted(step) {
+                    const order = ['collecting', 'review_pending', 'validated', 'submitted'];
+                    const currentIdx = order.indexOf(this.caseFile?.status);
+                    const stepIdx = order.indexOf(step);
+                    return currentIdx > stepIdx;
+                },
+
+                async createAppointmentRequest() {
+                    if (!this.newAppointment.prefecture) return alert("Veuillez choisir une préfecture");
+
+                    try {
+                        const res = await fetch('/api/services/appointments', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${Auth.getToken()}`
+                            },
+                            body: JSON.stringify(this.newAppointment)
+                        });
+
+                        if (res.ok) {
+                            const newAppt = await res.json();
+                            this.appointments.push(newAppt);
+                            this.newAppointment = { prefecture: '', notes: '' };
+                            alert("Demande de recherche lancée !");
+                        } else {
+                            alert("Erreur lors de la création.");
+                        }
+                    } catch (e) {
+                        console.error(e);
+                    }
+                },
+
+                async bookSlot(slot) {
+                    if (!confirm("Confirmer la réservation pour " + this.formatSlot(slot) + " ?")) return;
+
+                    try {
+                        const res = await fetch('/api/services/consultations', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${Auth.getToken()}`
+                            },
+                            body: JSON.stringify({ date_time: slot })
+                        });
+
+                        if (res.ok) {
+                            const newConsult = await res.json();
+                            this.consultations.push(newConsult);
+                            // Remove slot locally
+                            this.availableSlots = this.availableSlots.filter(s => s !== slot);
+                            alert("Consultation confirmée !");
+                        }
+                    } catch (e) {
+                        console.error(e);
+                        alert("Erreur réservation.");
+                    }
+                },
+
+                formatSlot(isoString) {
+                    const d = new Date(isoString);
+                    return d.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                },
+
+                getStatusLabel(status) {
+                    const map = {
+                        'pending': 'En attente',
+                        'searching': 'Recherche en cours',
+                        'found': 'Créneau trouvé',
+                        'booked': 'Réservé'
+                    };
+                    return map[status] || status;
+                },
+
+                async loadNotifications() {
+                    try {
+                        // Charger les notifications
+                        const response = await fetch('/api/notifications/', {
+                            headers: { 'Authorization': `Bearer ${Auth.getToken()}` }
+                        });
+                        if (response.ok) {
+                            this.notifications = await response.json();
+                        }
+
+                        // Charger le compteur
+                        const countResponse = await fetch('/api/notifications/unread-count', {
+                            headers: { 'Authorization': `Bearer ${Auth.getToken()}` }
+                        });
+                        if (countResponse.ok) {
+                            const data = await countResponse.json();
+                            this.unreadCount = data.count;
+                        }
+                    } catch (e) {
+                        console.error('Erreur chargement notifications:', e);
+                    }
+                },
+
+                toggleNotifications() {
+                    this.showNotifications = !this.showNotifications;
+                },
+
+                async markAllAsRead() {
+                    try {
+                        await fetch('/api/notifications/read-all', {
+                            method: 'POST',
+                            headers: { 'Authorization': `Bearer ${Auth.getToken()}` }
+                        });
+                        this.notifications.forEach(n => n.is_read = true);
+                        this.unreadCount = 0;
+                    } catch (e) {
+                        console.error('Erreur:', e);
+                    }
+                },
+
+                async openNotification(notif) {
+                    // Marquer comme lu
+                    if (!notif.is_read) {
+                        await fetch(`/api/notifications/${notif.id}/read`, {
+                            method: 'POST',
+                            headers: { 'Authorization': `Bearer ${Auth.getToken()}` }
+                        });
+                        notif.is_read = true;
+                        this.unreadCount = Math.max(0, this.unreadCount - 1);
+                    }
+
+                    // Naviguer si lien
+                    if (notif.link) {
+                        window.location.href = notif.link;
+                    }
+
+                    this.showNotifications = false;
+                },
+
+                getIcon(type) {
+                    const icons = {
+                        'success': '✅',
+                        'warning': '⚠️',
+                        'info': '📋',
+                        'simulation_complete': '🎯',
+                        'reminder': '⏰'
+                    };
+                    return icons[type] || '📣';
+                },
+
+                formatDate(dateStr) {
+                    const date = new Date(dateStr);
+                    const now = new Date();
+                    const diff = Math.floor((now - date) / 1000);
+
+                    if (diff < 60) return "À l'instant";
+                    if (diff < 3600) return `Il y a ${Math.floor(diff / 60)} min`;
+                    if (diff < 86400) return `Il y a ${Math.floor(diff / 3600)} h`;
+                    return date.toLocaleDateString('fr-FR');
+                },
+
+                async loadSimulations() {
+                    try {
+                        const response = await fetch('/api/simulations', {
+                            headers: { 'Authorization': `Bearer ${Auth.getToken()}` }
+                        });
+                        const simulations = await response.json();
+                        this.renderSimulations(simulations);
+                    } catch (e) {
+                        console.error(e);
+                        document.getElementById('loading-sims').textContent = "Erreur lors du chargement.";
+                    }
+                },
+
+                renderSimulations(sims) {
+                    const container = document.getElementById('simulations-list');
+                    const loading = document.getElementById('loading-sims');
+
+                    if (loading) loading.style.display = 'none';
+
+                    if (sims.length === 0) {
+                        container.innerHTML = `<p style="padding: 2rem; text-align: center;" data-i18n="dash_empty">Vous n'avez pas encore de simulation.</p>`;
+                        if (window.I18n) window.I18n.apply();
+                        return;
+                    }
+
+                    container.innerHTML = sims.map(s => `
+                        <div class="simulation-item card" style="margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <strong style="color: var(--primary);">${s.procedure_name || 'Simulation'}</strong>
+                                <div style="font-size: 0.8rem; color: var(--text-secondary);">
+                                    ${new Date(s.created_at).toLocaleDateString()} • Score: ${s.result_score || 0}%
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                <span class="tag ${s.is_paid ? 'tag-success' : 'tag-warning'}">
+                                    ${s.is_paid ? 'Payé' : 'Non payé'}
+                                </span>
+                                <button class="btn btn-secondary btn-sm" onclick="window.location.href='/app?sim_id=${s.id}'">Voir</button>
+                                ${s.is_paid ? `<button class="btn btn-primary btn-sm">PDF</button>` : ''}
                             </div>
                         </div>
-                    `).join('')}
-                </div>
-            `;
-        }
+                    `).join('');
 
-        window.onload = loadDashboard;
+                    if (window.I18n) window.I18n.apply();
+                }
+            }
+        }
     </script>
 </body>
 
