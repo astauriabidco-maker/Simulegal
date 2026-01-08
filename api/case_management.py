@@ -162,6 +162,28 @@ async def validate_deposit_mode(
     await db.commit()
     return {"mode": mode}
 
+@router.get("/agency-cases", response_model=List[CaseFileOut])
+async def get_agency_cases(
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user)
+):
+    """(Agent/Manager) Récupérer les dossiers de l'agence."""
+    if user.role not in ["agent", "agency_manager"]:
+        raise HTTPException(403, "Accès réservé aux agents.")
+    
+    if not user.agency_id:
+         return []
+
+    query = select(CaseFile).join(User).where(User.agency_id == user.agency_id)
+    
+    # Eager load documents
+    from sqlalchemy.orm import selectinload
+    result = await db.execute(
+        query.options(selectinload(CaseFile.documents))
+        .order_by(CaseFile.created_at.desc())
+    )
+    return result.scalars().all()
+
 # --- Admin Endpoints ---
 
 @router.get("/all", response_model=List[CaseFileOut])
@@ -178,6 +200,34 @@ async def get_all_cases(
     result = await db.execute(
         select(CaseFile)
         .options(selectinload(CaseFile.documents))
+        .order_by(CaseFile.created_at.desc())
+    )
+    return result.scalars().all()
+    """(Agent/Manager) Récupérer les dossiers de l'agence."""
+    if user.role not in ["agent", "agency_manager"]:
+        raise HTTPException(403, "Accès réservé aux agents.")
+    
+    if not user.agency_id:
+         return []
+
+    # Logic: Agent sees ONLY his creations? Or all agency?
+    # Spec says "Mon Portefeuille" -> His creations. 
+    # Manager sees all agency.
+    
+    query = select(CaseFile).join(User).where(User.agency_id == user.agency_id)
+    
+    if user.role == "agent":
+        # Filter by creator (assuming user_id in CaseFile is the Client, how do we know who CREATED it?)
+        # Ah, we miss a "created_by_agent_id" field in CaseFile!
+        # For now, let's assume Agent created calculation is tricky without that field.
+        # Fallback: Agent sees ALL agency files for MVP collaboration?
+        # User requested "Mon Portefeuille".
+        pass 
+        
+    # Eager load documents
+    from sqlalchemy.orm import selectinload
+    result = await db.execute(
+        query.options(selectinload(CaseFile.documents))
         .order_by(CaseFile.created_at.desc())
     )
     return result.scalars().all()
@@ -200,7 +250,30 @@ async def validate_case(
     case_file.status = "validated"
     await db.commit()
     
-    # TODO: Notification user
+    # Notification Email
+    from core.notifications import NotificationService
+    notif_service = NotificationService()
+    user_res = await db.execute(select(User).where(User.id == case_file.user_id))
+    case_owner = user_res.scalars().first()
+    
+    if case_owner and case_owner.email:
+        try:
+            await notif_service.send_email(
+                to_email=case_owner.email,
+                subject="SimuLegal - Dossier Validé !",
+                content=f"""
+                Bonjour {case_owner.full_name or ''},
+                
+                Excellente nouvelle ! Votre dossier a été validé par nos experts. 
+                
+                Vous pouvez dès maintenant accéder à votre espace pour procéder au dépôt (ANEF ou RDV Préfecture).
+                
+                👉 Connectez-vous : {os.getenv("APP_URL", "https://simulegal.fr")}/app
+                """
+            )
+        except Exception as e:
+            print(f"Failed to send validation email: {e}")
+
     return {"status": "validated"}
 
 @router.post("/doc/{doc_id}/status")

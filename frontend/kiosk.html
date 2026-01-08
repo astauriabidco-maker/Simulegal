@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Simulegal - Borne Libre-Service</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <style>
+        * {
+            touch-action: manipulation;
+        }
+
+        body {
+            background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0f172a 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem;
+            overflow: hidden;
+        }
+
+        .kiosk-container {
+            text-align: center;
+            max-width: 600px;
+            width: 100%;
+        }
+
+        .kiosk-logo {
+            font-size: 4rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #60a5fa, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 1rem;
+        }
+
+        .kiosk-subtitle {
+            font-size: 1.5rem;
+            color: rgba(255, 255, 255, 0.7);
+            margin-bottom: 3rem;
+        }
+
+        .kiosk-start-btn {
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            border: none;
+            color: white;
+            font-size: 2rem;
+            font-weight: 700;
+            padding: 2rem 4rem;
+            border-radius: 2rem;
+            cursor: pointer;
+            box-shadow: 0 10px 40px rgba(59, 130, 246, 0.4);
+            transition: all 0.3s ease;
+            animation: pulse 2s infinite;
+        }
+
+        .kiosk-start-btn:hover,
+        .kiosk-start-btn:active {
+            transform: scale(1.05);
+            box-shadow: 0 15px 50px rgba(59, 130, 246, 0.6);
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                box-shadow: 0 10px 40px rgba(59, 130, 246, 0.4);
+            }
+
+            50% {
+                box-shadow: 0 10px 60px rgba(139, 92, 246, 0.6);
+            }
+        }
+
+        .kiosk-footer {
+            position: fixed;
+            bottom: 2rem;
+            left: 0;
+            right: 0;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 0.875rem;
+        }
+
+        .kiosk-lang {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        .kiosk-lang button {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .kiosk-lang button:hover,
+        .kiosk-lang button.active {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.4);
+        }
+
+        /* Inactivity overlay */
+        .inactivity-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .inactivity-overlay h2 {
+            font-size: 2rem;
+            color: white;
+            margin-bottom: 1rem;
+        }
+
+        .inactivity-overlay p {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 1.25rem;
+        }
+    </style>
+</head>
+
+<body x-data="kioskApp()">
+
+    <!-- Inactivity Screen -->
+    <div class="inactivity-overlay" x-show="showInactivityWarning" x-transition>
+        <h2>⏰ Session expirée</h2>
+        <p>Touchez l'écran pour recommencer</p>
+    </div>
+
+    <!-- Main Kiosk Screen -->
+    <div class="kiosk-container" @click="resetInactivityTimer()">
+        <div class="kiosk-logo">SimuLegal</div>
+        <p class="kiosk-subtitle">Vérifiez votre éligibilité au titre de séjour</p>
+
+        <button class="kiosk-start-btn" @click="startSimulation()">
+            🚀 DÉMARRER
+        </button>
+
+        <div class="kiosk-lang">
+            <button @click="setLang('fr')" :class="{ active: lang === 'fr' }">🇫🇷 Français</button>
+            <button @click="setLang('en')" :class="{ active: lang === 'en' }">🇬🇧 English</button>
+            <button @click="setLang('ar')" :class="{ active: lang === 'ar' }">🇸🇦 العربية</button>
+        </div>
+    </div>
+
+    <div class="kiosk-footer">
+        Borne Libre-Service • Propulsé par Simulegal
+    </div>
+
+    <script>
+        const INACTIVITY_TIMEOUT = 120000; // 2 minutes
+
+        function kioskApp() {
+            return {
+                lang: 'fr',
+                showInactivityWarning: false,
+                inactivityTimer: null,
+
+                init() {
+                    this.resetInactivityTimer();
+                    // Listen for any interaction
+                    document.addEventListener('touchstart', () => this.resetInactivityTimer());
+                    document.addEventListener('mousemove', () => this.resetInactivityTimer());
+                    document.addEventListener('keydown', () => this.resetInactivityTimer());
+                },
+
+                resetInactivityTimer() {
+                    this.showInactivityWarning = false;
+                    clearTimeout(this.inactivityTimer);
+                    this.inactivityTimer = setTimeout(() => {
+                        this.showInactivityWarning = true;
+                        // Full reset after warning
+                        setTimeout(() => {
+                            if (this.showInactivityWarning) {
+                                window.location.reload();
+                            }
+                        }, 10000); // 10s after warning
+                    }, INACTIVITY_TIMEOUT);
+                },
+
+                setLang(lang) {
+                    this.lang = lang;
+                    localStorage.setItem('simulegal_lang', lang);
+                    if (window.I18n) window.I18n.setLang(lang);
+                },
+
+                startSimulation() {
+                    // Open simulation in kiosk mode (no login required, guest session)
+                    sessionStorage.setItem('simulegal_kiosk_mode', 'true');
+                    window.location.href = '/?mode=kiosk&lang=' + this.lang;
+                }
+            }
+        }
+    </script>
+</body>
+
+</html>

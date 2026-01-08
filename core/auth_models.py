@@ -19,11 +19,35 @@ class User(Base):
     notifications_sms = Column(Boolean, default=False)
     phone_number = Column(String, nullable=True)
     
+    # B2B / Franchise
+    agency_id = Column(Integer, ForeignKey("agencies.id"), nullable=True)
+    
     simulations = relationship("Simulation", back_populates="user")
     appointments = relationship("AppointmentRequest", back_populates="user")
     consultations = relationship("Consultation", back_populates="user")
     cases = relationship("CaseFile", back_populates="user")
     notifications = relationship("Notification", back_populates="user", order_by="desc(Notification.created_at)")
+    
+    agency = relationship("Agency", back_populates="agents", foreign_keys=[agency_id])
+
+class Agency(Base):
+    """Agence ou Franchise Simulegal."""
+    __tablename__ = "agencies"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, unique=True, index=True)
+    type = Column(String, default="franchise_full") # internal, franchise_full, franchise_corner
+    commission_rate = Column(Float, default=0.10) # 10% par défaut
+    
+    address = Column(String, nullable=True)
+    city = Column(String, nullable=True)
+    
+    manager_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    agents = relationship("User", back_populates="agency", foreign_keys="User.agency_id")
+    # manager = relationship("User", foreign_keys=[manager_id]) # Circular dependency risk, handle carefully if needed or just use ID
 
 class Simulation(Base):
     """Sauvegarde d'une simulation d'éligibilité."""

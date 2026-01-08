@@ -159,7 +159,9 @@ SimuLegal - Votre assistant juridique en immigration
             
     except Exception as e:
         # Mode dégradé : retourner un lien de partage WhatsApp direct
-        whatsapp_link = f"https://wa.me/{request.phone.replace('+', '')}?text={message.replace(' ', '%20').replace('\n', '%0A')}"
+        # Mode dégradé : retourner un lien de partage WhatsApp direct
+        encoded_message = message.replace(' ', '%20').replace('\n', '%0A')
+        whatsapp_link = f"https://wa.me/{request.phone.replace('+', '')}?text={encoded_message}"
         return ShareResponse(
             success=True,
             message=f"Twilio non configuré. Lien alternatif: {whatsapp_link[:50]}..."

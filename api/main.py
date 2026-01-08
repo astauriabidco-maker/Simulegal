@@ -33,6 +33,7 @@ import api.sharing_api as sharing_api
 import api.admin_config as admin_config
 import api.services_api as services_api
 import api.case_management as case_management
+import api.agency_api as agency_api
 from core.engine import EligibilityEngine
 from core.models import UserSituation
 from core.logger import audit_logger
@@ -80,7 +81,9 @@ app.include_router(notifications_api.router)
 app.include_router(sharing_api.router)
 app.include_router(admin_config.router)
 app.include_router(services_api.router)
+app.include_router(services_api.router)
 app.include_router(case_management.router)
+app.include_router(agency_api.router)
 
 
 # Initialisation du moteur
@@ -115,6 +118,16 @@ async def dashboard_page():
 async def admin_page():
     """Sert le tableau de bord admin."""
     return FileResponse(os.path.join(FRONTEND_DIR, "admin.html"))
+
+@app.get("/agent")
+async def agent_page():
+    """Sert le portail Agent/Franchise."""
+    return FileResponse(os.path.join(FRONTEND_DIR, "agent.html"))
+
+@app.get("/kiosk")
+async def kiosk_page():
+    """Sert l'interface Borne Tactile (Kiosk)."""
+    return FileResponse(os.path.join(FRONTEND_DIR, "kiosk.html"))
 
 @app.get("/chat")
 async def chat_page():

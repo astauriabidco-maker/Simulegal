@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Simulegal - Espace Agent</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <script src="/static/auth.js"></script>
+    <script>
+        // Guard: Only agents allowed
+        const user = Auth.getUser();
+        if (!user || (user.role !== 'agent' && user.role !== 'agency_manager')) {
+            window.location.href = '/login';
+        }
+    </script>
+    <style>
+        .agent-header {
+            background: rgba(15, 23, 42, 0.9);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .crm-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--bg-glass);
+            border-radius: var(--radius);
+            overflow: hidden;
+        }
+
+        .crm-table th,
+        .crm-table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .crm-table th {
+            background: rgba(255, 255, 255, 0.05);
+            font-weight: 600;
+        }
+    </style>
+</head>
+
+<body x-data="agentDashboard()">
+
+    <header class="agent-header">
+        <div class="flex items-center gap-4">
+            <h2 class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-400">
+                Simulegal Pro
+            </h2>
+            <span class="tag tag-admin" x-text="user.role === 'agency_manager' ? 'Manager' : 'Agent'"></span>
+            <span class="text-sm text-secondary" x-text="'Agence: ' + (agency?.name || '...')"></span>
+        </div>
+        <div class="flex items-center gap-4">
+            <span>Bonjour, <span x-text="user.full_name"></span></span>
+            <button class="btn btn-sm btn-outline-danger" onclick="Auth.logout()">Déconnexion</button>
+        </div>
+    </header>
+
+    <div class="container py-8">
+
+        <!-- Actions & Stats -->
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-2xl font-bold">Mon Portefeuille</h1>
+            <button class="btn btn-primary" @click="startNewClient()">
+                + Nouveau Client
+            </button>
+        </div>
+
+        <div class="stats-row">
+            <div class="stat-card">
+                <div class="text-secondary text-sm">Dossiers ce mois</div>
+                <div class="text-3xl font-bold mt-1" x-text="stats.monthCount || 0">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="text-secondary text-sm">CA Généré</div>
+                <div class="text-3xl font-bold mt-1 text-green-400" x-text="(stats.revenue || 0) + ' €'">0 €</div>
+            </div>
+            <div class="stat-card">
+                <div class="text-secondary text-sm">Commission (Est.)</div>
+                <div class="text-3xl font-bold mt-1 text-indigo-400" x-text="(stats.commission || 0) + ' €'">0 €</div>
+            </div>
+        </div>
+
+        <!-- CRM Table -->
+        <div class="card p-0 overflow-hidden">
+            <table class="crm-table">
+                <thead>
+                    <tr>
+                        <th>Client</th>
+                        <th>Procédure</th>
+                        <th>Statut</th>
+                        <th>Date Création</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <template x-for="caseFile in cases" :key="caseFile.id">
+                        <tr class="hover:bg-white/5 transition">
+                            <td class="font-medium">
+                                <span x-text="'Client #' + caseFile.id"></span>
+                                <!-- Ideally fetch user name -->
+                            </td>
+                            <td x-text="caseFile.submission_type || 'Non défini'"></td>
+                            <td>
+                                <span class="tag" :class="getStatusClass(caseFile.status)"
+                                    x-text="getStatusLabel(caseFile.status)"></span>
+                            </td>
+                            <td x-text="new Date(caseFile.created_at).toLocaleDateString()"></td>
+                            <td>
+                                <button class="btn btn-sm btn-secondary"
+                                    @click="manageClient(caseFile.id)">Gérer</button>
+                            </td>
+                        </tr>
+                    </template>
+                    <tr x-show="cases.length === 0">
+                        <td colspan="5" class="text-center py-8 text-secondary">Aucun dossier client trouvé.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+
+    <script>
+        function agentDashboard() {
+            return {
+                user: Auth.getUser(),
+                agency: null,
+                cases: [],
+                stats: { monthCount: 0, revenue: 0, commission: 0 },
+
+                async init() {
+                    // Load Agency Info & Stats
+                    try {
+                        const res = await fetch('/api/agencies/my-stats', {
+                            headers: { 'Authorization': `Bearer ${Auth.getToken()}` }
+                        });
+                        if (res.ok) {
+                            const data = await res.json();
+                            this.agency = { name: data.agency_name, commission_rate: data.commission_rate };
+                            this.stats = {
+                                monthCount: data.month_cases,
+                                revenue: data.revenue,
+                                commission: data.commission
+                            };
+                        }
+                    } catch (e) { console.error('Stats error:', e); }
+
+                    await this.loadClients();
+                },
+
+                async loadClients() {
+                    // TODO: Implement /api/case/agent/list endpoint
+                    // For now, we simulate empty
+                    try {
+                        const res = await fetch('/api/case/agency-cases', {
+                            headers: { 'Authorization': `Bearer ${Auth.getToken()}` }
+                        });
+                        // NOTE: Currently /all is admin only. We need to tweak it or create new endpoint.
+                        // Assuming new endpoint for next step.
+                        if (res.ok) {
+                            this.cases = await res.json();
+                        }
+                    } catch (e) { console.error(e); }
+                },
+
+                getStatusClass(status) {
+                    if (status === 'validated') return 'tag-success';
+                    if (status === 'review_pending') return 'tag-warning';
+                    return 'tag-secondary';
+                },
+
+                getStatusLabel(status) {
+                    const map = {
+                        'collecting': 'Constitution',
+                        'review_pending': 'Transmis Siège',
+                        'validated': 'Validé HQ',
+                        'submitted': 'Déposé'
+                    };
+                    return map[status] || status;
+                },
+
+                startNewClient() {
+                    // Magic Link: Start simulation as agent
+                    // We can save "agent_mode=true" in sessionStorage
+                    sessionStorage.setItem('simulegal_agent_mode', 'true');
+                    window.open('/?mode=agent', '_blank'); // Open in new tab so agent keeps dashboard open
+                },
+
+                manageClient(caseId) {
+                    // Impersonate or view details
+                    alert("A venir: Vue détaillée du dossier " + caseId);
+                }
+            }
+        }
+    </script>
+</body>
+
+</html>
