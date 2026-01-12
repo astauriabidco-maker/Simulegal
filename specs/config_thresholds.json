@@ -1,0 +1,42 @@
+{
+  "financial_thresholds": {
+    "currency": "EUR",
+    "salary_annual_gross": {
+      "passeport_talent_salarie_qualifie": 43243.00,
+      "passeport_talent_carte_bleue_eu": 53836.50,
+      "passeport_talent_mission": 38918.88,
+      "passeport_talent_mandataire_social": 64864.80,
+      "visiteur_ressources_annuelles": 17115.69
+    },
+    "salary_monthly_gross": {
+      "smic": 1766.92,
+      "entrepreneur_viabilite": 1801.80,
+      "algerien_etudiant_ressources": 615.00,
+      "ict_detache_ressources": 1801.80
+    },
+    "investments": {
+      "creation_entreprise_fonds": 30000.00,
+      "investisseur_eco_fonds": 300000.00
+    },
+    "references": {
+      "smic_mensuel_reference": "SMIC_temps_plein_2024",
+      "note": "Les montants doivent être mis à jour au 1er janvier."
+    }
+  },
+  "duration_thresholds": {
+    "unit": "years",
+    "residence_in_france": {
+      "naturalisation_standard": 5,
+      "naturalisation_etudes_sup": 2,
+      "resident_longue_duree_ue": 5,
+      "regroupement_familial_resident": 3,
+      "ascendant_de_francais": 25,
+      "enfant_ne_en_france_continuous": 5
+    },
+    "marriage_duration": {
+      "pour_carte_resident_conjoint_francais": 3,
+      "pour_carte_resident_conjoint_francais_tunisien": 1,
+      "pour_nationalite_mariage": 4
+    }
+  }
+}
