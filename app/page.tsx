@@ -6,14 +6,17 @@ import LandingPage from '@/components/LandingPage';
 
 export default function Home() {
   const [showSimulator, setShowSimulator] = useState(false);
+  const [selectedService, setSelectedService] = useState<string | undefined>(undefined);
 
   const handleStartSimulator = (serviceId?: string) => {
-    // Note: We could use serviceId to pre-configure the simulator state here if needed
     console.log(`Starting simulator for service: ${serviceId || 'Generic'}`);
+    setSelectedService(serviceId);
     setShowSimulator(true);
   };
 
   if (showSimulator) {
+    // Determine which service was selected (stored in state or passed through)
+    // For now, we assume handleStartSimulator sets it (needs a state to stick)
     return (
       <main className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 py-12">
         <div className="max-w-4xl mx-auto px-4 mb-8 flex justify-between items-center">
@@ -28,7 +31,7 @@ export default function Home() {
             Retour à l'accueil
           </button>
         </div>
-        <SimulatorWrapper />
+        <SimulatorWrapper serviceId={selectedService} />
       </main>
     );
   }

@@ -6,7 +6,16 @@ import IdentityTimelineStep from '@/components/steps/IdentityTimelineStep';
 import MigratoryHistoryStep from '@/components/steps/MigratoryHistoryStep';
 import ActivityResourcesStep from '@/components/steps/ActivityResourcesStep';
 import FamilyVulnerabilityStep from '@/components/steps/FamilyVulnerabilityStep';
+import FamilyReunificationStep from './steps/FamilyReunificationStep';
+import DrivingLicenseStep from '@/components/steps/DrivingLicenseStep';
+import RdvPrefectureStep from '@/components/steps/RdvPrefectureStep';
+import LegalConsultationStep from '@/components/steps/LegalConsultationStep';
+import FrenchCourseStep from '@/components/steps/FrenchCourseStep';
+import CivicExamStep from '@/components/steps/CivicExamStep';
+import CallbackStep from '@/components/steps/CallbackStep';
 import ResultsView from '@/components/ResultsView';
+import { LEGAL_QUESTIONS } from '@/data/modules/legal';
+import { Scale, ArrowRight } from 'lucide-react';
 
 const INITIAL_STATE: UserProfile = {
     identity: {
@@ -71,15 +80,60 @@ const INITIAL_STATE: UserProfile = {
     project: {
         target_goal: 'BOTH',
     },
+    driving: {
+        status: undefined,
+        license_country: undefined,
+        residence_start_date: '',
+    },
+    rdv_prefecture: {
+        prefecture_dept: '',
+        rdv_reason: undefined,
+        current_status: undefined,
+    },
+    rdv_juriste: {
+        subject: undefined,
+        mode: undefined,
+    },
+    french: {
+        goal: undefined,
+        current_level: undefined,
+        location_zip: undefined,
+    },
+    civic_exam: {
+        civic_goal: undefined,
+        knowledge_level: undefined,
+        location_zip: undefined,
+    },
+    callback: {
+        callback_subject: undefined,
+        callback_urgency: undefined,
+        location_zip: undefined,
+    }
 };
 
-export default function SimulatorWrapper() {
+interface SimulatorWrapperProps {
+    serviceId?: string;
+}
+
+export default function SimulatorWrapper({ serviceId }: SimulatorWrapperProps) {
     const [step, setStep] = useState(1);
     const [userProfile, setUserProfile] = useState<UserProfile>(INITIAL_STATE);
 
+    const isFamilyReunification = serviceId === 'family_reunification';
+    const isDrivingExchange = serviceId === 'permis_conduire';
+    const isRdvPrefecture = serviceId === 'rdv_prefecture';
+    const isLegalConsultation = serviceId === 'rdv_juriste';
+    const isFrenchCourse = serviceId === 'french_course';
+    const isCivicExam = serviceId === 'examen_civique';
+    const isCallback = serviceId === 'rappel_echeances';
+
+    // Standard: Identity(1), History(2), Activity(3), Family(4), Results(5)
+    // Family/Driving/RDV/Juriste/French/Civic/Callback: Questionnaire(1), Results(2)
+    const totalStepsCap = (isFamilyReunification || isDrivingExchange || isRdvPrefecture || isLegalConsultation || isFrenchCourse || isCivicExam || isCallback) ? 1 : 4;
+
     const updateProfile = (section: keyof UserProfile, data: any) => {
         setUserProfile((prev) => {
-            const updatedSection = { ...prev[section], ...data };
+            let updatedSection = { ...prev[section], ...data };
 
             // Salary & Duration Synchronization
             if (section === 'work') {
@@ -87,10 +141,6 @@ export default function SimulatorWrapper() {
                     updatedSection.annual_gross_salary = (data.salary_monthly_gross || 0) * 12;
                 } else if ('annual_gross_salary' in data) {
                     updatedSection.salary_monthly_gross = Math.round((data.annual_gross_salary || 0) / 12);
-                }
-
-                if (data.contract_type === 'CDI') {
-                    updatedSection.contract_duration_months = 99; // Represents indeterminate/long duration
                 }
             }
 
@@ -106,6 +156,30 @@ export default function SimulatorWrapper() {
                 updatedSection.years_continuous_residence = Math.max(0, diffYears);
             }
 
+            if (section === 'driving') {
+                updatedSection = { ...prev.driving, ...data };
+            }
+
+            if (section === 'rdv_prefecture') {
+                updatedSection = { ...prev.rdv_prefecture, ...data };
+            }
+
+            if (section === 'rdv_juriste') {
+                updatedSection = { ...prev.rdv_juriste, ...data };
+            }
+
+            if (section === 'french') {
+                updatedSection = { ...prev.french, ...data };
+            }
+
+            if (section === 'civic_exam') {
+                updatedSection = { ...prev.civic_exam, ...data };
+            }
+
+            if (section === 'callback') {
+                updatedSection = { ...prev.callback, ...data };
+            }
+
             let nextProfile = { ...prev, [section]: updatedSection };
 
             if (nextProfile.admin.current_visa_type === 'NONE') {
@@ -114,27 +188,17 @@ export default function SimulatorWrapper() {
                     has_valid_visa_or_permit: false,
                     entry_mode: 'STANDARD'
                 };
-
-                if (nextProfile.identity.nationality_group === 'EU') {
-                    nextProfile.identity = { ...nextProfile.identity, nationality_group: 'NON_EU' };
-                }
             } else {
-                // Automation: If a visa type is selected, assume it's valid by default for the simulation
-                // unless it's a specific "EXPIRED" stat (though not yet in enum)
                 nextProfile.admin.has_valid_visa_or_permit = true;
-            }
-
-            if (section === 'work' && 'main_situation' in data) {
-                updatedSection.is_entrepreneur = data.main_situation === 'ENTREPRENEUR';
             }
 
             if (section === 'work' || section === 'financial') {
                 const salary = nextProfile.work.salary_monthly_gross || 0;
-                const otherResources = nextProfile.financial.resources_monthly_average || 0;
-                const totalMonthly = salary + otherResources;
+                const totalMonthly = salary;
                 const SMIC = 1766.92;
                 nextProfile.financial = {
                     ...nextProfile.financial,
+                    resources_monthly_average: totalMonthly,
                     resources_stable_sufficient: totalMonthly >= SMIC,
                     resources_annual_total: totalMonthly * 12
                 };
@@ -149,20 +213,87 @@ export default function SimulatorWrapper() {
 
     const isStepValid = (currentStep: number) => {
         const data = userProfile;
+
+        // Family isolated mode
+        if (isFamilyReunification) {
+            if (currentStep === 1) {
+                const { sponsor_nationality, presence_duration, has_handicap_allowance, housing_status, income_source } = data.family;
+                const hasBasic = !!sponsor_nationality && !!presence_duration && has_handicap_allowance !== undefined && !!housing_status;
+                if (!hasBasic) return false;
+                if (has_handicap_allowance === false) {
+                    return (data.work.salary_monthly_gross || 0) > 0 && !!income_source;
+                }
+                return true;
+            }
+            return true;
+        }
+
+        if (isDrivingExchange) {
+            if (currentStep === 1) {
+                const { status, license_country, residence_start_date } = data.driving;
+                if (!status || !license_country) return false;
+                if (status === 'STUDENT') return true;
+                return !!residence_start_date && /^\d{2}\/\d{4}$/.test(residence_start_date);
+            }
+            return true;
+        }
+
+        if (isRdvPrefecture) {
+            if (currentStep === 1) {
+                const { prefecture_dept, rdv_reason } = data.rdv_prefecture;
+                return !!prefecture_dept && /^\d{5}$/.test(prefecture_dept) && !!rdv_reason && rdv_reason !== 'renouvellement_anef';
+            }
+            return true;
+        }
+
+        if (isLegalConsultation) {
+            if (currentStep === 1) {
+                const { subject, mode } = data.rdv_juriste;
+                return !!subject && !!mode;
+            }
+            return true;
+        }
+
+        if (isFrenchCourse) {
+            if (currentStep === 1) {
+                const { goal, current_level, location_zip } = data.french;
+                return !!goal && !!current_level && !!location_zip && /^\d{5}$/.test(location_zip);
+            }
+            return true;
+        }
+
+        if (isCivicExam) {
+            if (currentStep === 1) {
+                const { civic_goal, knowledge_level, location_zip } = data.civic_exam;
+                return !!civic_goal && !!knowledge_level && !!location_zip && /^\d{5}$/.test(location_zip);
+            }
+            return true;
+        }
+
+        if (isCallback) {
+            if (currentStep === 1) {
+                const { callback_subject, callback_urgency, location_zip } = data.callback;
+                return !!callback_subject && !!callback_urgency && !!location_zip && /^\d{5}$/.test(location_zip);
+            }
+            return true;
+        }
+
+        if (isFrenchCourse) {
+            if (currentStep === 1) {
+                const { goal, current_level, location_zip } = data.french;
+                return !!goal && !!current_level && !!location_zip && /^\d{5}$/.test(location_zip);
+            }
+            return true;
+        }
+
+        // Standard Mode
         switch (currentStep) {
             case 1:
-                return (
-                    !!data.identity.nationality_group &&
-                    data.identity.age > 0 &&
-                    !!data.project.target_goal
-                );
+                return !!data.identity.nationality_group && data.identity.age > 0 && !!data.project.target_goal;
             case 2:
-                return (
-                    !!data.timeline.entry_date &&
-                    !!data.admin.current_visa_type &&
+                return !!data.timeline.entry_date && (!!data.admin.current_visa_type &&
                     data.civic.clean_criminal_record !== undefined &&
-                    data.civic.no_expulsion_order !== undefined
-                );
+                    data.civic.no_expulsion_order !== undefined);
             case 3:
                 const { main_situation, contract_type, salary_monthly_gross } = data.work;
                 if (!main_situation) return false;
@@ -174,7 +305,7 @@ export default function SimulatorWrapper() {
                 }
                 return true;
             case 4:
-                return !!data.family.spouse_nationality; // Always 'NONE' or 'FRENCH' etc.
+                return !!data.family.spouse_nationality;
             default:
                 return true;
         }
@@ -182,6 +313,193 @@ export default function SimulatorWrapper() {
 
     const renderStep = () => {
         const canNext = isStepValid(step);
+
+        if (isFamilyReunification) {
+            switch (step) {
+                case 1:
+                    return <FamilyReunificationStep
+                        userProfile={userProfile}
+                        updateProfile={(updates: Partial<UserProfile>) => {
+                            if (updates.family) updateProfile('family', updates.family);
+                            if (updates.work) updateProfile('work', updates.work);
+                        }}
+                        onNext={nextStep}
+                    />;
+                case 2:
+                    return <ResultsView userProfile={userProfile} onReset={() => setStep(1)} serviceId={serviceId} />;
+                default:
+                    return null;
+            }
+        }
+
+        if (isDrivingExchange) {
+            switch (step) {
+                case 1:
+                    return <DrivingLicenseStep
+                        userProfile={userProfile}
+                        updateProfile={(updates: Partial<UserProfile>) => {
+                            if (updates.driving) updateProfile('driving', updates.driving);
+                        }}
+                        onNext={nextStep}
+                    />;
+                case 2:
+                    return <ResultsView userProfile={userProfile} onReset={() => setStep(1)} serviceId={serviceId} />;
+                default:
+                    return null;
+            }
+        }
+
+        if (isRdvPrefecture) {
+            switch (step) {
+                case 1:
+                    return <RdvPrefectureStep
+                        userProfile={userProfile}
+                        updateProfile={(updates: Partial<UserProfile>) => {
+                            if (updates.rdv_prefecture) updateProfile('rdv_prefecture', updates.rdv_prefecture);
+                        }}
+                        onNext={nextStep}
+                    />;
+                case 2:
+                    return <ResultsView userProfile={userProfile} onReset={() => setStep(1)} serviceId={serviceId} />;
+                default:
+                    return null;
+            }
+        }
+
+        if (isLegalConsultation) {
+            const openPaymentFlow = (amount: number) => {
+                // @ts-ignore
+                if (window.openAuthAndPaymentFlow) {
+                    // @ts-ignore
+                    window.openAuthAndPaymentFlow(amount / 100);
+                } else {
+                    alert(`Simulation : Paiement de ${amount / 100}€ pour Consultation Juridique`);
+                }
+            };
+
+            switch (step) {
+                case 1:
+                    return <LegalConsultationStep
+                        userProfile={userProfile}
+                        updateProfile={(updates: Partial<UserProfile>) => {
+                            if (updates.rdv_juriste) updateProfile('rdv_juriste', updates.rdv_juriste);
+                        }}
+                        onNext={nextStep}
+                    />;
+                case 2:
+                    const type = userProfile.rdv_juriste.mode;
+                    const isRemote = type === 'remote';
+
+                    return (
+                        <div className="p-12 bg-white rounded-3xl animate-in fade-in slide-in-from-bottom-4 duration-700">
+                            <div className="text-center mb-10">
+                                <div className={`mx-auto w-20 h-20 flex items-center justify-center rounded-3xl mb-6 shadow-xl ${isRemote ? 'bg-blue-600 text-white' : 'bg-indigo-600 text-white'}`}>
+                                    <Scale size={40} />
+                                </div>
+                                <h2 className="text-4xl font-black text-slate-900 tracking-tight mb-4">
+                                    {isRemote ? "Consultation Juridique Express" : "Consultation Premium en Cabinet"}
+                                </h2>
+                                <p className="text-xl text-slate-500 font-medium max-w-2xl mx-auto leading-relaxed">
+                                    {isRemote
+                                        ? "Analyse de situation et stratégie par un expert dédié. Parfait pour valider un point précis."
+                                        : "Étude approfondie de vos pièces et définition de la stratégie procédurale en face à face."}
+                                </p>
+                            </div>
+
+                            <div className="bg-slate-50 p-8 rounded-[2rem] border border-slate-100 mb-10 shadow-inner">
+                                <div className="flex justify-between items-center mb-4">
+                                    <span className="text-xl font-bold text-slate-700">Tarif forfaitaire</span>
+                                    <span className="text-4xl font-black text-emerald-600">
+                                        {isRemote ? "69,00 €" : "99,00 €"}
+                                    </span>
+                                </div>
+                                <div className="text-base text-slate-400 font-medium">Inclus : TVA, Honoraires expert agréé, Compte-rendu par email.</div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10">
+                                <div className="flex items-center gap-3 p-4 bg-emerald-50 rounded-2xl text-emerald-700 font-bold border border-emerald-100">
+                                    <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                                    Expert disponible sous 24h
+                                </div>
+                                <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-2xl text-blue-700 font-bold border border-blue-100">
+                                    <div className="w-2 h-2 rounded-full bg-blue-500" />
+                                    Annulation gratuite (48h)
+                                </div>
+                            </div>
+
+                            <button
+                                onClick={() => openPaymentFlow(isRemote ? 6900 : 9900)}
+                                className="w-full py-6 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-2xl font-black rounded-2xl transition-all shadow-2xl shadow-indigo-200 flex items-center justify-center gap-3 group"
+                            >
+                                <span>Réserver maintenant</span>
+                                <ArrowRight size={28} className="group-hover:translate-x-1 transition-transform" />
+                            </button>
+
+                            <button
+                                onClick={() => setStep(1)}
+                                className="w-full mt-6 py-4 text-slate-400 font-bold hover:text-slate-600 transition-colors"
+                            >
+                                Revenir au questionnaire
+                            </button>
+                        </div>
+                    );
+                default:
+                    return null;
+            }
+        }
+
+        if (isFrenchCourse) {
+            switch (step) {
+                case 1:
+                    return <FrenchCourseStep
+                        userProfile={userProfile}
+                        updateProfile={(updates: Partial<UserProfile>) => {
+                            if (updates.french) updateProfile('french', updates.french);
+                        }}
+                        onNext={nextStep}
+                    />;
+                case 2:
+                    return <ResultsView userProfile={userProfile} onReset={() => setStep(1)} serviceId={serviceId} />;
+                default:
+                    return null;
+            }
+        }
+
+        if (isCivicExam) {
+            switch (step) {
+                case 1:
+                    return <CivicExamStep
+                        userProfile={userProfile}
+                        updateProfile={(updates: Partial<UserProfile>) => {
+                            if (updates.civic_exam) updateProfile('civic_exam', updates.civic_exam);
+                        }}
+                        onNext={nextStep}
+                    />;
+                case 2:
+                    return <ResultsView userProfile={userProfile} onReset={() => setStep(1)} serviceId={serviceId} />;
+                default:
+                    return null;
+            }
+        }
+
+        if (isCallback) {
+            switch (step) {
+                case 1:
+                    return <CallbackStep
+                        userProfile={userProfile}
+                        updateProfile={(updates: Partial<UserProfile>) => {
+                            if (updates.callback) updateProfile('callback', updates.callback);
+                        }}
+                        onNext={nextStep}
+                    />;
+                case 2:
+                    return <ResultsView userProfile={userProfile} onReset={() => setStep(1)} serviceId={serviceId} />;
+                default:
+                    return null;
+            }
+        }
+
+        // Standard Mode
         switch (step) {
             case 1:
                 return <IdentityTimelineStep data={userProfile} update={updateProfile} onNext={nextStep} canNext={canNext} />;
@@ -192,26 +510,43 @@ export default function SimulatorWrapper() {
             case 4:
                 return <FamilyVulnerabilityStep data={userProfile} update={updateProfile} onNext={nextStep} onBack={prevStep} canNext={canNext} />;
             case 5:
-                return <ResultsView userProfile={userProfile} onReset={() => setStep(1)} />;
+                return <ResultsView userProfile={userProfile} onReset={() => setStep(1)} serviceId={serviceId} />;
             default:
                 return null;
         }
     };
 
-    const progress = (step / 5) * 100;
+    const currentTotalSteps = (isFamilyReunification || isDrivingExchange || isRdvPrefecture || isLegalConsultation || isFrenchCourse || isCivicExam || isCallback) ? 2 : 5;
+    const progress = (step / currentTotalSteps) * 100;
 
     return (
-        <div className="w-full max-w-2xl mx-auto p-4 md:p-8">
-            {step < 5 && (
+        <div className="w-full max-w-4xl mx-auto p-4 md:p-8">
+            {step < currentTotalSteps && (
                 <div className="mb-10">
                     <div className="flex justify-between items-end mb-3">
                         <span className="text-sm font-semibold text-slate-600">
-                            Étape {step}/4 : <span className="text-slate-400 font-medium">
-                                {step === 1 && "Identité & Origine"}
-                                {step === 2 && "Parcours Migratoire"}
-                                {step === 3 && "Activité & Ressources"}
-                                {step === 4 && "Famille & Vulnérabilité"}
-                            </span>
+                            {isFamilyReunification ? (
+                                <>Étape 1/1 : <span className="text-slate-400 font-medium">Questionnaire d'éligibilité</span></>
+                            ) : isDrivingExchange ? (
+                                <>Étape 1/1 : <span className="text-slate-400 font-medium">Questionnaire Permis</span></>
+                            ) : isRdvPrefecture ? (
+                                <>Étape 1/1 : <span className="text-slate-400 font-medium">Formulaire de Commande</span></>
+                            ) : isLegalConsultation ? (
+                                <>Étape 1/1 : <span className="text-slate-400 font-medium">Qualification de Consultation</span></>
+                            ) : isFrenchCourse ? (
+                                <>Étape 1/1 : <span className="text-slate-400 font-medium">Localiser un centre</span></>
+                            ) : isCivicExam ? (
+                                <>Étape 1/1 : <span className="text-slate-400 font-medium">Localiser un formateur</span></>
+                            ) : isCallback ? (
+                                <>Étape 1/1 : <span className="text-slate-400 font-medium">Qualifier mon appel</span></>
+                            ) : (
+                                <>Étape {step}/4 : <span className="text-slate-400 font-medium">
+                                    {step === 1 && "Identité & Origine"}
+                                    {step === 2 && "Parcours Migratoire"}
+                                    {step === 3 && "Activité & Ressources"}
+                                    {step === 4 && "Famille & Vulnérabilité"}
+                                </span></>
+                            )}
                         </span>
                         <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">{Math.round(progress)}%</span>
                     </div>
@@ -224,7 +559,7 @@ export default function SimulatorWrapper() {
                 </div>
             )}
 
-            <div className="bg-white rounded-3xl shadow-2xl shadow-slate-200/60 border border-slate-100 min-h-[500px] flex flex-col overflow-hidden">
+            <div className="bg-white rounded-[3rem] shadow-2xl shadow-slate-200/60 border border-slate-100 min-h-[500px] flex flex-col overflow-hidden">
                 {renderStep()}
             </div>
 

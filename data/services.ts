@@ -46,49 +46,55 @@ export const SERVICES_CATALOG: Service[] = [
         title: 'Cours de français A2/B1/B2',
         description: 'Cours adaptés pour vos examens et votre intégration en France.',
         pole: 'INTEGRATION',
-        isSimulatable: false,
-        iconName: 'Languages'
+        isSimulatable: true,
+        iconName: 'Languages',
+        badge: 'LOCAL'
     },
     {
-        id: 'integration_support',
-        title: 'Support Intégration',
-        description: 'Aide à l\'installation et à la compréhension de la culture française.',
+        id: 'examen_civique',
+        title: 'Examen Civique',
+        description: 'Entraînement intensif au QCM des valeurs républicaines (Obligatoire 2026).',
         pole: 'INTEGRATION',
-        isSimulatable: false,
-        iconName: 'GraduationCap'
+        isSimulatable: true,
+        iconName: 'GraduationCap',
+        badge: 'LOCAL'
     },
     {
-        id: 'administrative_help',
-        title: 'Aide Administrative',
-        description: 'Support pour vos démarches quotidiennes (CAF, Ameli, impôts).',
+        id: 'rappel_echeances',
+        title: 'Je veux être rappelé.e',
+        description: 'Service de rappel pour ne jamais rater vos échéances de renouvellement.',
         pole: 'INTEGRATION',
-        isSimulatable: false,
-        iconName: 'BookOpen'
+        isSimulatable: true,
+        iconName: 'BookOpen',
+        badge: 'LOCAL'
     },
 
     // PÔLE EXPERTISE
     {
-        id: 'driving_license',
+        id: 'permis_conduire',
         title: 'Changement Permis Conduire',
         description: 'Aide à l\'obtention ou à l\'échange de votre permis de conduire étranger.',
         pole: 'EXPERTISE',
-        isSimulatable: false,
-        iconName: 'Car'
+        isSimulatable: true,
+        iconName: 'Car',
+        badge: 'SIMUL'
     },
     {
-        id: 'prefecture_assistance',
+        id: 'rdv_prefecture',
         title: 'Assistance RDV préfecture',
         description: 'Aide à la prise de rendez-vous et préparation du passage en préfecture.',
         pole: 'EXPERTISE',
-        isSimulatable: false,
-        iconName: 'Calendar'
+        isSimulatable: true,
+        iconName: 'Calendar',
+        badge: 'SIMUL'
     },
     {
-        id: 'oqtf_appeal',
-        title: 'Recours OQTF',
-        description: 'Assistance juridique d\'urgence en cas d\'obligation de quitter le territoire.',
+        id: 'rdv_juriste',
+        title: 'Rendez-vous Juriste',
+        description: 'Conseil juridique personnalisé avec un expert en droit des étrangers.',
         pole: 'EXPERTISE',
-        isSimulatable: false,
-        iconName: 'Gavel'
+        isSimulatable: true,
+        iconName: 'Gavel',
+        badge: 'SIMUL'
     }
 ];

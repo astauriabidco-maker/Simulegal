@@ -33,6 +33,12 @@ export interface UserProfile {
     is_ascendant_of_french?: boolean;
     spouse_kept_nationality?: boolean;
     spouse_has_passport_talent?: boolean;
+    // Family Reunification specific fields
+    presence_duration?: 'LESS_12' | '12_18' | 'MORE_18';
+    has_handicap_allowance?: boolean;
+    housing_status?: 'OWNED_RENTED' | 'SEARCHING' | 'UNKNOWN';
+    income_source?: 'SALARY' | 'PENSION' | 'RSA_ALOWANCE' | 'OTHER';
+    sponsor_nationality?: 'ALGERIAN' | 'OTHER';
   };
   work: {
     contract_type: 'CDI' | 'CDD' | 'SEASONAL' | 'NONE' | 'PROMESSE';
@@ -94,7 +100,36 @@ export interface UserProfile {
   };
   project: {
     target_goal?: 'NATURALIZATION' | 'RESIDENCE_PERMIT' | 'BOTH';
-  }
+  };
+  driving: {
+    status?: 'STUDENT' | 'TOURIST' | 'WORKER_VP' | 'EU_NATIONAL';
+    license_country?: 'MAGHREB' | 'ACCORD' | 'NO_ACCORD' | 'USA_CANADA';
+    residence_start_date?: string; // MM/YYYY
+  };
+  rdv_prefecture: {
+    prefecture_dept?: string;
+    rdv_reason?: 'retrait_titre' | 'premiere_demande_papier' | 'commission_medicale' | 'renouvellement_hors_ligne' | 'naturalisation' | 'echange_permis' | 'renouvellement_anef';
+    current_status?: 'anef_group' | 'physique_group';
+  };
+  rdv_juriste: {
+    subject?: 'oqtf_contentieux' | 'refus_recours' | 'conseil_dossier' | 'verification_dossier' | 'autre';
+    mode?: 'remote' | 'physical';
+  };
+  french: {
+    goal?: 'NATURALIZATION' | 'RESIDENCE' | 'PROFESSIONAL';
+    current_level?: 'A1' | 'A2_B1' | 'B2';
+    location_zip?: string;
+  };
+  civic_exam: {
+    civic_goal?: 'RESIDENCE' | 'NATURALIZATION' | 'RETAKE';
+    knowledge_level?: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
+    location_zip?: string;
+  };
+  callback: {
+    callback_subject?: 'INFO' | 'BLOCKED' | 'URGENT_LEGAL' | 'FOLLOW_UP';
+    callback_urgency?: 'ASAP' | 'TODAY' | 'PLANNED';
+    location_zip?: string;
+  };
 }
 
 export interface RuleCondition {
