@@ -150,10 +150,8 @@ export default function ResultsView({ userProfile, onReset, serviceId }: Results
     };
 
     const handleCheckout = (amount: number, label: string) => {
-        // @ts-ignore
-        if (window.openAuthAndPaymentFlow) {
-            // @ts-ignore
-            window.openAuthAndPaymentFlow(amount);
+        if (typeof window !== 'undefined' && window.openAuthAndPaymentFlow) {
+            window.openAuthAndPaymentFlow(serviceId || 'generic', amount * 100, label);
         } else {
             alert(`Simulation : Commande de "${label}" pour ${amount}€`);
         }
@@ -528,8 +526,11 @@ export default function ResultsView({ userProfile, onReset, serviceId }: Results
                                             </div>
 
                                             <div className="flex flex-wrap gap-6 pt-4">
-                                                <button className="px-10 py-5 bg-slate-900 text-white font-black rounded-2xl hover:bg-slate-800 transition-all shadow-xl">
-                                                    Détails de la procédure
+                                                <button
+                                                    onClick={() => handleCheckout(290, "Accompagnement Titre de Séjour")}
+                                                    className="px-10 py-5 bg-indigo-600 text-white font-black rounded-2xl hover:bg-slate-900 transition-all shadow-xl"
+                                                >
+                                                    Commander mon accompagnement
                                                 </button>
                                                 <button className="px-10 py-5 bg-white text-slate-600 font-bold rounded-2xl border-2 border-slate-100 hover:border-slate-200 transition-all">
                                                     Liste des pièces
