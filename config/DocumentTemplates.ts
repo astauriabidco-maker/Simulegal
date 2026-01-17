@@ -681,12 +681,81 @@ export const SERVICE_TEMPLATES: Record<string, string[]> = {
         'WORK_AUTHORIZATION'
     ],
 
+    // ========================================
+    // PROCÉDURES SPÉCIFIQUE (ALGÉRIENS / CRA)
+    // ========================================
+    'cra_algerien_resident_10ans': [
+        ...TITRE_SEJOUR_BASE,
+        'TITRE_SEJOUR_ACTUEL',
+        'FRENCH_B1'
+    ],
+    'cra_algerien_conjoint_francais': [
+        ...VPF_BASE,
+        'MARRIAGE_CERTIFICATE',
+        'SPOUSE_ID',
+        'COMMUNITY_PROOF'
+    ],
+    'cra_algerien_activite_liberale': [
+        ...TITRE_SEJOUR_BASE,
+        'INVESTMENT_PROOF',
+        'TAX_NOTICE'
+    ],
+
+    // ========================================
+    // CITOYENS UE / MEMBRES FAMILLE
+    // ========================================
+    'cs_citoyen_ue_inactif_ou_actif': [
+        'PASSPORT',
+        'RESIDENCE_PROOF',
+        'HEALTH_INSURANCE',
+        'FINANCIAL_RESOURCES'
+    ],
+    'cs_membre_famille_ue': [
+        'PASSPORT',
+        'BIRTH_CERTIFICATE',
+        'MARRIAGE_CERTIFICATE',
+        'RESIDENCE_PROOF',
+        'UE_CITIZEN_ID'
+    ],
+    'cs_ict_detache': [
+        'PASSPORT',
+        'WORK_CONTRACT_CDI',
+        'DETACHMENT_CERT',
+        'RESIDENCE_PROOF'
+    ],
+
+    // ========================================
+    // ADMISSION EXCEPTIONNELLE (AES)
+    // ========================================
+    'aes_metiers_tension': [
+        'PASSPORT',
+        'RESIDENCE_PROOF',
+        'PAYSLIPS_LAST_8',
+        'WORK_CONTRACT_CDI',
+        'WORK_AUTHORIZATION'
+    ],
+
+    // ========================================
+    // NATURALISATION ANTICIPÉE
+    // ========================================
+    'nat_droit_du_sol_anticipe_13_16': [
+        'PASSPORT',
+        'BIRTH_CERTIFICATE',
+        'RESIDENCE_PROOF_5Y',
+        'ENROLLMENT_PROOF',
+        'PARENTAL_AUTH'
+    ],
+    'nat_decret_standard': [
+        ...NATURALISATION_BASE
+    ],
+
     // Par défaut (services généraux)
     'default': [
         'PASSPORT',
         'RESIDENCE_PROOF'
     ]
 };
+
 
 
 

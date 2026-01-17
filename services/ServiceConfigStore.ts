@@ -218,6 +218,62 @@ export const AVAILABLE_SERVICES: ServiceMetadata[] = [
         description: 'Séjour pour soins médicaux d\'un enfant',
         category: 'IMMIGRATION'
     },
+    // ========== CERTIFICAT RÉSIDENCE ALGÉRIEN (CRA) ==========
+    {
+        id: 'cra_algerien_resident_10ans',
+        name: '🇩🇿 Algérien - Résident 10 ans',
+        description: 'Certificat de résidence pour ressortissants algériens',
+        category: 'IMMIGRATION'
+    },
+    {
+        id: 'cra_algerien_conjoint_francais',
+        name: '🇩🇿 Algérien - Conjoint Français',
+        description: 'VPF spécifique accord franco-algérien',
+        category: 'IMMIGRATION'
+    },
+    {
+        id: 'cra_algerien_activite_liberale',
+        name: '🇩🇿 Algérien - Profession Libérale',
+        description: 'Création d\'activité pour ressortissants algériens',
+        category: 'IMMIGRATION'
+    },
+
+    // ========== CITOYENS EUROPÉENS ==========
+    {
+        id: 'cs_citoyen_ue_inactif_ou_actif',
+        name: '🇪🇺 Citoyen UE - Séjour',
+        description: 'Attestation d\'enregistrement citoyen UE',
+        category: 'IMMIGRATION'
+    },
+    {
+        id: 'cs_membre_famille_ue',
+        name: '🇪🇺 Membre Famille UE',
+        description: 'Carte de séjour membre de famille d\'un citoyen UE',
+        category: 'IMMIGRATION'
+    },
+
+    // ========== ADMISSION EXCEPTIONNELLE (AES) ==========
+    {
+        id: 'aes_metiers_tension',
+        name: '⚡ AES - Métiers en tension',
+        description: 'Régularisation par le travail (circulaire Valls)',
+        category: 'IMMIGRATION'
+    },
+
+    // ========== NATURALISATION - AUTRES ==========
+    {
+        id: 'nat_droit_du_sol_anticipe_13_16',
+        name: '🎂 Nat. Droit du Sol (Anticipée)',
+        description: 'Pour les 13-16 ans nés en France',
+        category: 'IMMIGRATION'
+    },
+    {
+        id: 'nat_decret_standard',
+        name: '🇫🇷 Naturalisation par Décret',
+        description: 'Procédure standard de naturalisation',
+        category: 'IMMIGRATION'
+    },
+
     {
         id: 'default',
         name: '⚙️ Configuration par Défaut',
@@ -225,6 +281,7 @@ export const AVAILABLE_SERVICES: ServiceMetadata[] = [
         category: 'OTHER'
     }
 ];
+
 
 
 // Clés de stockage
