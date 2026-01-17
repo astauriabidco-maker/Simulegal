@@ -17,55 +17,35 @@ import {
     Link2,
     X,
     Maximize2,
-    Share2
+    Share2,
+    Search,
+    Filter,
+    ChevronDown,
+    Activity
 } from 'lucide-react';
 import EligibilityStore from '../../services/EligibilityStore';
 import { RuleCondition } from '../../types';
 
 const CRITERIA = [
-    { id: 'identity.age', label: 'Âge', group: 'Général' },
-    { id: 'identity.nationality_group', label: 'Nationalité', group: 'Général' },
-    { id: 'timeline.years_continuous_residence', label: 'Résidence', group: 'Parcours' },
-    { id: 'work.annual_gross_salary', label: 'Salaire', group: 'Finances' },
-    { id: 'family.marriage_duration_years', label: 'Mariage', group: 'Famille' },
-    { id: 'integration.french_level', label: 'Français', group: 'Intégration' },
-    { id: 'education.diploma_level', label: 'Diplôme', group: 'Études' },
-    { id: 'civic.clean_criminal_record', label: 'Casier', group: 'Sécurité' }
+    { id: 'identity.age', label: 'Âge', group: 'Général', color: 'bg-blue-500' },
+    { id: 'identity.nationality_group', label: 'Nat.', group: 'Général', color: 'bg-indigo-500' },
+    { id: 'timeline.years_continuous_residence', label: 'Résidence', group: 'Parcours', color: 'bg-emerald-500' },
+    { id: 'work.annual_gross_salary', label: 'Salaire', group: 'Finances', color: 'bg-amber-500' },
+    { id: 'family.marriage_duration_years', label: 'Mariage', group: 'Famille', color: 'bg-pink-500' },
+    { id: 'integration.french_level', label: 'Français', group: 'Intégration', color: 'bg-purple-500' },
+    { id: 'education.diploma_level', label: 'Diplôme', group: 'Études', color: 'bg-cyan-500' },
+    { id: 'civic.clean_criminal_record', label: 'Sécurité', group: 'Sécurité', color: 'bg-red-500' }
 ];
-
-interface MatrixLink {
-    procedureId: string;
-    criterionId: string;
-    isLinked: boolean;
-    isSuggested?: boolean;
-    reason?: string;
-}
 
 export default function LegalMatrixModule() {
     const [procedures] = useState(EligibilityStore.getRules('sejour'));
-    const [showAll, setShowAll] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [hoveredRow, setHoveredRow] = useState<string | null>(null);
+    const [hoveredCol, setHoveredCol] = useState<string | null>(null);
     const [showGraph, setShowGraph] = useState(false);
-    const [suggestions, setSuggestions] = useState<MatrixLink[]>([
-        {
-            procedureId: 'passeport_talent_salarie_qualifie',
-            criterionId: 'work.annual_gross_salary',
-            isLinked: true,
-            isSuggested: true,
-            reason: "Le nouveau décret 2026 renforce le lien entre éligibilité et salaire brut annuel."
-        },
-        {
-            procedureId: 'carte_resident_longue_duree_ue',
-            criterionId: 'integration.french_level',
-            isLinked: true,
-            isSuggested: true,
-            reason: "L'IA détecte une possible exigence de niveau B1 non encore encodée dans vos règles JSON."
-        }
-    ]);
-
-    const [acceptedSuggestions, setAcceptedSuggestions] = useState<string[]>([]);
     const [selectedProcedureId, setSelectedProcedureId] = useState<string | null>(null);
 
-    // Fonction récursive pour extraire toutes les variables d'une condition
+    // Extraction des variables
     const extractVariables = (condition: RuleCondition): Set<string> => {
         const vars = new Set<string>();
         if (!condition) return vars;
@@ -75,18 +55,24 @@ export default function LegalMatrixModule() {
         return vars;
     };
 
-    // Calcul de la matrice réelle
     const matrixMetadata = useMemo(() => {
         return procedures.map(proc => ({
             id: proc.id,
             name: proc.name,
-            variables: extractVariables(proc.conditions)
+            variables: extractVariables(proc.conditions),
+            category: proc.id.includes('resident') ? 'Résidence' :
+                proc.id.includes('famille') ? 'Famille' :
+                    proc.id.includes('talent') ? 'Travail' : 'Autres'
         }));
     }, [procedures]);
 
-    const displayProcedures = showAll ? matrixMetadata : matrixMetadata.slice(0, 12);
+    const filteredProcedures = useMemo(() => {
+        return matrixMetadata.filter(p =>
+            p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            p.id.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+    }, [matrixMetadata, searchQuery]);
 
-    // Calcul des similarités
     const similarities = useMemo(() => {
         if (!selectedProcedureId) return [];
         const currentProc = matrixMetadata.find(m => m.id === selectedProcedureId);
@@ -96,295 +82,286 @@ export default function LegalMatrixModule() {
             .filter(m => m.id !== selectedProcedureId)
             .map(m => {
                 const common = new Set([...currentProc.variables].filter(x => m.variables.has(x)));
+                const score = Math.round((common.size / Math.max(currentProc.variables.size, 1)) * 100);
                 return {
                     id: m.id,
                     name: m.name,
                     commonCount: common.size,
-                    commonVars: Array.from(common)
+                    commonVars: Array.from(common),
+                    score
                 };
             })
             .filter(sim => sim.commonCount > 0)
-            .sort((a, b) => b.commonCount - a.commonCount)
+            .sort((a, b) => b.score - a.score)
             .slice(0, 5);
     }, [selectedProcedureId, matrixMetadata]);
 
-    const handleAccept = (suggestion: MatrixLink) => {
-        setAcceptedSuggestions([...acceptedSuggestions, `${suggestion.procedureId}-${suggestion.criterionId}`]);
-    };
-
-    const renderGraphOverlay = () => (
-        <div className="fixed inset-0 z-[100] bg-slate-900/90 backdrop-blur-xl flex items-center justify-center p-8 animate-in fade-in duration-300">
-            <div className="bg-white w-full max-w-6xl h-full max-h-[800px] rounded-[3rem] shadow-2xl relative overflow-hidden flex flex-col">
-                <button
-                    onClick={() => setShowGraph(false)}
-                    className="absolute top-8 right-8 w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center text-slate-500 hover:bg-red-100 hover:text-red-500 transition-all z-20"
-                >
-                    <X size={24} />
-                </button>
-
-                <div className="p-10 border-b border-slate-100">
-                    <h3 className="text-3xl font-black text-slate-900 flex items-center gap-4 uppercase tracking-tighter">
-                        <Workflow className="text-indigo-600" size={32} /> Graphe de Dépendance Juridique
-                    </h3>
-                    <p className="text-slate-500 font-medium mt-2">Représentation visuelle des interconnexions entre les procédures via leurs critères communs (Vue IA).</p>
-                </div>
-
-                <div className="flex-1 relative bg-slate-50 p-10 overflow-hidden">
-                    {/* Simulation de Graphe avec SVG et Divs */}
-                    <div className="absolute inset-0 flex items-center justify-center">
-                        <svg className="absolute inset-0 w-full h-full opacity-20">
-                            <defs>
-                                <linearGradient id="line-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-                                    <stop offset="0%" stopColor="#4f46e5" />
-                                    <stop offset="100%" stopColor="#10b981" />
-                                </linearGradient>
-                            </defs>
-                            <circle cx="50%" cy="50%" r="300" fill="none" stroke="url(#line-grad)" strokeWidth="1" strokeDasharray="10 10" />
-                            <path d="M 50% 50% L 30% 30%" stroke="#4f46e5" strokeWidth="2" strokeDasharray="5 5" className="animate-pulse" />
-                            <path d="M 50% 50% L 70% 30%" stroke="#4f46e5" strokeWidth="2" strokeDasharray="5 5" className="animate-pulse" />
-                            <path d="M 50% 50% L 50% 80%" stroke="#4f46e5" strokeWidth="2" strokeDasharray="5 5" className="animate-pulse" />
-                        </svg>
-
-                        <div className="relative z-10 grid grid-cols-3 gap-32">
-                            <div className="col-start-2 place-self-center">
-                                <div className="p-6 bg-indigo-600 text-white rounded-[2rem] shadow-2xl shadow-indigo-200 border-4 border-white scale-110">
-                                    <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Focus</p>
-                                    <p className="font-black text-center max-w-[150px] leading-tight">
-                                        {selectedProcedureId ? matrixMetadata.find(m => m.id === selectedProcedureId)?.name : 'Sélectionnez une procédure'}
-                                    </p>
-                                </div>
-                            </div>
-
-                            {similarities.map((sim, idx) => {
-                                const angles = [210, 330, 90, 45, 135];
-                                const angle = angles[idx % angles.length];
-                                const rad = (angle * Math.PI) / 180;
-                                const x = Math.cos(rad) * 250;
-                                const y = Math.sin(rad) * 250;
-
-                                return (
-                                    <div
-                                        key={sim.id}
-                                        style={{ transform: `translate(${x}px, ${y}px)` }}
-                                        className="absolute p-4 bg-white border-2 border-slate-100 rounded-2xl shadow-lg hover:border-indigo-500 transition-all cursor-pointer group"
-                                    >
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <span className="w-5 h-5 bg-indigo-100 text-indigo-600 rounded-lg flex items-center justify-center text-[10px] font-black">
-                                                {sim.commonCount}
-                                            </span>
-                                            <span className="text-[8px] font-black uppercase tracking-widest text-slate-400">Liens</span>
-                                        </div>
-                                        <p className="font-black text-slate-800 text-[10px] max-w-[120px] leading-tight uppercase group-hover:text-indigo-600">{sim.name}</p>
-                                    </div>
-                                );
-                            })}
-                        </div>
+    return (
+        <div className="flex flex-col h-full bg-slate-50 animate-in fade-in duration-500">
+            {/* Toolbar Supérieure */}
+            <div className="bg-white border-b border-slate-200 p-6 flex items-center justify-between gap-6 shadow-sm z-20">
+                <div className="flex items-center gap-4 flex-1 max-w-2xl">
+                    <div className="relative flex-1 group">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-hover:text-indigo-600 transition-colors" size={20} />
+                        <input
+                            type="text"
+                            placeholder="Rechercher une procédure (ex: Nationalité, Talent...)"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full pl-12 pr-6 py-4 bg-slate-100 rounded-[1.5rem] border-transparent focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 transition-all font-black"
+                        />
                     </div>
-
-                    {/* Légende Graphe */}
-                    <div className="absolute bottom-10 left-10 bg-white/80 backdrop-blur-md p-6 rounded-3xl border border-white shadow-xl space-y-3">
-                        <div className="flex items-center gap-3">
-                            <div className="w-3 h-3 bg-indigo-600 rounded-full" />
-                            <span className="text-xs font-black text-slate-700 uppercase tracking-tighter">Procédures Sœurs</span>
-                        </div>
-                        <div className="flex items-center gap-3">
-                            <div className="w-3 h-3 border-2 border-indigo-200 border-dashed rounded-full" />
-                            <span className="text-xs font-black text-slate-700 uppercase tracking-tighter">Corrélation Critère</span>
-                        </div>
+                    <div className="flex items-center gap-2 px-6 py-4 bg-slate-100 rounded-[1.5rem] text-slate-500 font-bold border border-transparent">
+                        <Filter size={18} />
+                        <span>Tous les critères</span>
+                        <ChevronDown size={16} />
                     </div>
                 </div>
 
-                <div className="p-8 bg-slate-900 text-white flex justify-between items-center">
-                    <div className="flex items-center gap-4">
-                        <Maximize2 size={24} className="text-indigo-400" />
-                        <p className="text-sm font-medium">L'affichage montre les dépendances structurelles entre les règles du simulateur.</p>
+                <div className="flex items-center gap-3">
+                    <div className="text-right hidden md:block">
+                        <p className="text-[10px] font-black uppercase text-slate-400">Analyse Structurelle</p>
+                        <p className="text-xs font-black text-indigo-600 leading-none">37 procédures chargées</p>
                     </div>
-                    <button className="px-6 py-3 bg-indigo-600 rounded-xl font-black flex items-center gap-2 hover:bg-indigo-700 transition-all">
-                        <Share2 size={18} /> Exporter le Graphe
+                    <button
+                        onClick={() => setShowGraph(true)}
+                        disabled={!selectedProcedureId}
+                        className={`px-8 py-4 rounded-2xl font-black flex items-center gap-2 transition-all shadow-xl active:scale-95 ${selectedProcedureId
+                                ? 'bg-slate-900 text-white shadow-slate-200'
+                                : 'bg-slate-100 text-slate-300 cursor-not-allowed shadow-none'
+                            }`}
+                    >
+                        <Workflow size={20} /> Graphe
                     </button>
                 </div>
             </div>
-        </div>
-    );
 
-    return (
-        <div className="h-full flex flex-col bg-slate-50 overflow-hidden relative">
-            {showGraph && renderGraphOverlay()}
+            <div className="flex-1 flex overflow-hidden">
+                {/* LA MATRICE UX */}
+                <div className="flex-1 overflow-auto relative p-6">
+                    <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-xl shadow-slate-200/50 overflow-hidden flex flex-col min-h-full">
+                        <div className="overflow-auto flex-1 scrollbar-hide">
+                            <table className="w-full border-separate border-spacing-0">
+                                <thead className="sticky top-0 z-40">
+                                    <tr>
+                                        <th className="p-8 text-left bg-slate-800 text-white border-b border-white/10 sticky left-0 z-50 rounded-tl-3xl min-w-[320px]">
+                                            <div className="flex items-center gap-3">
+                                                <Grid3X3 size={24} className="text-indigo-400" />
+                                                <div>
+                                                    <p className="text-xs font-black uppercase tracking-widest opacity-60 leading-none">Intelligence</p>
+                                                    <h3 className="text-xl font-black uppercase tracking-tighter leading-none mt-1">Matrice Procédures</h3>
+                                                </div>
+                                            </div>
+                                        </th>
+                                        {CRITERIA.map(c => (
+                                            <th
+                                                key={c.id}
+                                                onMouseEnter={() => setHoveredCol(c.id)}
+                                                onMouseLeave={() => setHoveredCol(null)}
+                                                className={`p-6 text-center border-b border-slate-100 transition-all min-w-[120px] ${hoveredCol === c.id ? 'bg-indigo-600 text-white' : 'bg-slate-50 text-slate-900'
+                                                    }`}
+                                            >
+                                                <div className="space-y-1">
+                                                    <span className={`block w-2 h-2 rounded-full mx-auto ${c.color} ${hoveredCol === c.id ? 'ring-4 ring-white/30' : ''}`} />
+                                                    <span className="block text-[11px] font-black uppercase tracking-tighter">{c.label}</span>
+                                                    <span className={`block text-[9px] font-mono opacity-40 lowercase ${hoveredCol === c.id ? 'text-white' : ''}`}>
+                                                        {c.id.split('.')[0]}
+                                                    </span>
+                                                </div>
+                                            </th>
+                                        ))}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {filteredProcedures.map((proc, idx) => (
+                                        <tr
+                                            key={proc.id}
+                                            onMouseEnter={() => setHoveredRow(proc.id)}
+                                            onMouseLeave={() => setHoveredRow(null)}
+                                            onClick={() => setSelectedProcedureId(proc.id)}
+                                            className={`group transition-all cursor-pointer ${selectedProcedureId === proc.id ? 'bg-indigo-50' :
+                                                    hoveredRow === proc.id ? 'bg-slate-50' : 'bg-white'
+                                                }`}
+                                        >
+                                            <td className={`p-6 sticky left-0 z-30 border-r border-slate-50 transition-all ${selectedProcedureId === proc.id ? 'bg-indigo-100/50' :
+                                                    hoveredRow === proc.id ? 'bg-slate-100/80 shadow-r-xl' : 'bg-white'
+                                                }`}>
+                                                <div className="flex items-center gap-4">
+                                                    <span className={`w-1 h-8 rounded-full transition-all ${proc.category === 'Résidence' ? 'bg-emerald-500' :
+                                                            proc.category === 'Famille' ? 'bg-pink-500' :
+                                                                proc.category === 'Travail' ? 'bg-indigo-500' : 'bg-slate-300'
+                                                        } ${hoveredRow === proc.id ? 'scale-y-125' : 'scale-y-100'}`} />
+                                                    <div>
+                                                        <p className={`font-black uppercase tracking-tighter text-sm transition-all ${selectedProcedureId === proc.id ? 'text-indigo-600' : 'text-slate-800'
+                                                            }`}>
+                                                            {proc.name}
+                                                        </p>
+                                                        <p className="text-[10px] font-mono text-slate-400">{proc.id}</p>
+                                                    </div>
+                                                </div>
+                                            </td>
 
-            {/* Header IA Pro */}
-            <div className="p-6">
-                <div className="bg-indigo-900 rounded-[2.5rem] p-8 text-white flex flex-col md:flex-row items-center gap-8 relative overflow-hidden shadow-2xl shadow-indigo-500/10">
-                    <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-500 rounded-full blur-[120px] opacity-20 -mr-48 -mt-48"></div>
+                                            {CRITERIA.map(c => {
+                                                const isActive = proc.variables.has(c.id);
+                                                const isCrossed = hoveredRow === proc.id || hoveredCol === c.id;
 
-                    <div className="w-20 h-20 bg-white/10 rounded-3xl flex items-center justify-center backdrop-blur-xl border border-white/20">
-                        <BrainCircuit size={40} className="text-indigo-300" />
-                    </div>
-
-                    <div className="flex-1 space-y-2 text-center md:text-left">
-                        <div className="flex items-center gap-2 justify-center md:justify-start">
-                            <span className="px-2 py-0.5 bg-indigo-500 text-[10px] font-black uppercase tracking-widest rounded-md">Smart Auditor Engine</span>
-                            <span className="flex items-center gap-1 text-[10px] text-emerald-400 font-bold uppercase tracking-widest">
-                                <Zap size={10} /> Analyse structurelle active
-                            </span>
+                                                return (
+                                                    <td
+                                                        key={c.id}
+                                                        onMouseEnter={() => setHoveredCol(c.id)}
+                                                        className={`p-4 transition-all text-center relative ${isCrossed ? (isActive ? 'bg-indigo-100/40' : 'bg-slate-50/50') : ''
+                                                            }`}
+                                                    >
+                                                        <div className="flex justify-center items-center">
+                                                            {isActive ? (
+                                                                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all shadow-sm ${selectedProcedureId === proc.id ? 'bg-indigo-600 text-white rotate-0' :
+                                                                        isCrossed ? 'bg-indigo-500 text-white scale-110 shadow-indigo-200' : 'bg-indigo-50 text-indigo-400 group-hover:scale-90 group-hover:opacity-50'
+                                                                    }`}>
+                                                                    <CheckCircle size={18} />
+                                                                </div>
+                                                            ) : (
+                                                                <div className={`w-1.5 h-1.5 rounded-full transition-all ${isCrossed ? 'bg-slate-300 scale-150' : 'bg-slate-100 opacity-50'}`} />
+                                                            )}
+                                                        </div>
+                                                        {isActive && selectedProcedureId === proc.id && (
+                                                            <div className="absolute top-0 right-0 w-2 h-2 bg-emerald-400 rounded-full animate-ping" />
+                                                        )}
+                                                    </td>
+                                                );
+                                            })}
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
                         </div>
-                        <h2 className="text-3xl font-black tracking-tight uppercase">Matrice de Corrélation Avancée</h2>
-                        <p className="text-indigo-200 font-medium max-w-2xl">
-                            Visualisez les connexions entre critères et règles, et découvrez comment les procédures sont liées entre elles par des conditions communes.
-                        </p>
                     </div>
                 </div>
-            </div>
 
-            <div className="flex-1 overflow-auto px-6 pb-6">
-                <div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
-                    {/* MATRICE PRINCIPALE */}
-                    <div className="xl:col-span-3 space-y-4">
-                        <div className="flex items-center justify-between">
-                            <h3 className="text-xl font-black text-slate-900 flex items-center gap-2 uppercase tracking-tighter">
-                                <Grid3X3 size={20} className="text-indigo-600" /> Cartographie des Liens
-                            </h3>
-                            <p className="text-xs font-bold text-slate-400 italic">Cliquez sur une procédure pour analyser ses corrélations</p>
-                        </div>
-
-                        <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden flex flex-col h-[600px]">
-                            <div className="flex-1 overflow-auto">
-                                <table className="w-full border-collapse">
-                                    <thead>
-                                        <tr className="bg-slate-50/80 sticky top-0 z-30 shadow-sm">
-                                            <th className="p-6 text-left text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 sticky left-0 bg-slate-50 z-40">Procédures</th>
-                                            {CRITERIA.map(c => (
-                                                <th key={c.id} className="p-4 text-center text-[10px] font-black text-slate-900 uppercase tracking-tighter border-b border-slate-100 min-w-[100px] bg-slate-50">
-                                                    {c.label}
-                                                    <p className="text-[8px] text-slate-400 lowercase font-mono opacity-50">{c.id.split('.')[0]}</p>
-                                                </th>
-                                            ))}
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-50">
-                                        {displayProcedures.map(proc => (
-                                            <tr
-                                                key={proc.id}
-                                                onClick={() => setSelectedProcedureId(proc.id)}
-                                                className={`hover:bg-indigo-50/30 transition-all cursor-pointer group ${selectedProcedureId === proc.id ? 'bg-indigo-50/50' : ''}`}
-                                            >
-                                                <td className="p-6 sticky left-0 bg-white group-hover:bg-indigo-50/30 transition-colors z-20 border-r border-slate-50">
-                                                    <p className="font-black text-slate-800 text-sm tracking-tight">{proc.name}</p>
-                                                    <p className="text-[10px] font-mono text-slate-400">{proc.id}</p>
-                                                </td>
-                                                {CRITERIA.map(c => {
-                                                    const isLinked = proc.variables.has(c.id);
-                                                    const isSuggested = suggestions.find(s => s.procedureId === proc.id && s.criterionId === c.id);
-                                                    const isAccepted = acceptedSuggestions.includes(`${proc.id}-${c.id}`);
-
-                                                    return (
-                                                        <td key={c.id} className="p-4 text-center">
-                                                            <div className="flex justify-center">
-                                                                {isSuggested && !isAccepted ? (
-                                                                    <div className="w-6 h-6 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 animate-pulse cursor-help group relative shadow-inner">
-                                                                        <Zap size={14} />
-                                                                        <div className="absolute bottom-full mb-3 left-1/2 -translate-x-1/2 w-64 p-4 bg-slate-900 text-white text-[10px] font-bold rounded-2xl opacity-0 group-hover:opacity-100 transition-all pointer-events-none z-50 shadow-2xl scale-95 group-hover:scale-100">
-                                                                            <p className="text-amber-400 mb-1 flex items-center gap-1"><Cpu size={12} /> Suggestion IA</p>
-                                                                            {isSuggested.reason}
-                                                                        </div>
-                                                                    </div>
-                                                                ) : isLinked || isAccepted ? (
-                                                                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all ${isAccepted ? 'bg-emerald-500 text-white animate-bounce-short' : 'bg-indigo-100 text-indigo-600 rotate-0 group-hover:rotate-12 group-hover:scale-110 shadow-sm'}`}>
-                                                                        <CheckCircle size={16} />
-                                                                    </div>
-                                                                ) : (
-                                                                    <div className="w-1.5 h-1.5 rounded-full bg-slate-100 group-hover:bg-slate-200 transition-colors" />
-                                                                )}
-                                                            </div>
-                                                        </td>
-                                                    );
-                                                })}
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                {/* SIDEBAR D'INTELLIGENCE AUGMENTÉE */}
+                <div className="w-[450px] border-l border-slate-200 bg-white flex flex-col p-8 overflow-y-auto space-y-10 shadow-2xl z-30">
+                    {!selectedProcedureId ? (
+                        <div className="flex flex-col items-center justify-center h-full text-center space-y-6">
+                            <div className="w-24 h-24 bg-slate-50 rounded-[2.5rem] flex items-center justify-center text-slate-300 shadow-inner">
+                                <Activity size={48} />
                             </div>
-                            <div className="p-6 bg-slate-50 border-t border-slate-100 flex justify-between items-center px-10">
-                                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{procedures.length} procédures analysées</span>
-                                <button
-                                    onClick={() => setShowAll(!showAll)}
-                                    className="px-6 py-2 bg-white border border-slate-200 rounded-xl text-xs font-black text-indigo-600 hover:bg-slate-50 transition-colors uppercase tracking-widest shadow-sm"
-                                >
-                                    {showAll ? 'Réduire la liste' : 'Afficher l\'intégralité (37)'}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* PANNEAU DE CORRÉLATION TRANSVERSALE */}
-                    <div className="space-y-6">
-                        <h3 className="text-xl font-black text-slate-900 flex items-center gap-2 uppercase tracking-tighter">
-                            <Layers size={20} className="text-indigo-600" /> Corrélations
-                        </h3>
-
-                        {!selectedProcedureId ? (
-                            <div className="bg-slate-100 border-2 border-dashed border-slate-200 rounded-[2.5rem] p-12 text-center space-y-4">
-                                <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto text-slate-300 shadow-sm">
-                                    <Link2 size={32} />
-                                </div>
-                                <p className="text-xs font-bold text-slate-400 uppercase leading-relaxed max-w-[200px] mx-auto">
-                                    Sélectionnez une procédure pour voir son impact réseau
+                            <div className="space-y-2">
+                                <h4 className="text-xl font-black uppercase text-slate-900">Analyseur de Toile</h4>
+                                <p className="text-sm font-medium text-slate-400 leading-relaxed max-w-[250px] mx-auto">
+                                    Cliquez sur une procédure pour décoder son ADN juridique et voir ses corrélations.
                                 </p>
                             </div>
-                        ) : (
-                            <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
-                                <div className="bg-white p-6 rounded-[2rem] border-2 border-indigo-100 shadow-sm group">
-                                    <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-1">Focus Procédure</p>
-                                    <h4 className="font-black text-slate-900 leading-tight text-lg">{matrixMetadata.find(m => m.id === selectedProcedureId)?.name}</h4>
+                        </div>
+                    ) : (
+                        <div className="space-y-10 animate-in slide-in-from-right-8 duration-500">
+                            {/* Header Focus */}
+                            <div className="space-y-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-xl shadow-indigo-100">
+                                        <Layers size={24} />
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] font-black uppercase text-indigo-500 tracking-widest">Focus Actif</p>
+                                        <h4 className="text-xl font-black text-slate-900 leading-none">Corrélation</h4>
+                                    </div>
                                 </div>
+                                <div className="p-6 bg-slate-900 text-white rounded-[2rem] shadow-2xl relative overflow-hidden group">
+                                    <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500 rounded-full blur-[60px] opacity-20 -mr-16 -mt-16 group-hover:opacity-40 transition-opacity"></div>
+                                    <h5 className="font-black text-lg leading-tight uppercase relative z-10">{matrixMetadata.find(m => m.id === selectedProcedureId)?.name}</h5>
+                                    <p className="text-[10px] font-mono text-indigo-300 mt-2 relative z-10">{selectedProcedureId}</p>
+                                </div>
+                            </div>
 
-                                <div className="space-y-3">
-                                    <p className="text-xs font-black text-slate-400 uppercase tracking-widest px-2">Analyse de similitude structurelle :</p>
+                            {/* Résumé ADN */}
+                            <div className="space-y-4">
+                                <h6 className="text-xs font-black uppercase tracking-widest text-slate-400 px-2 flex items-center gap-2">
+                                    <Activity size={14} /> ADN Structurel ({matrixMetadata.find(m => m.id === selectedProcedureId)?.variables.size} critères)
+                                </h6>
+                                <div className="flex flex-wrap gap-2">
+                                    {Array.from(matrixMetadata.find(m => m.id === selectedProcedureId)?.variables || []).map(v => (
+                                        <span key={v} className="px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-xl text-[10px] font-black uppercase tracking-tighter border border-indigo-100">
+                                            {v.split('.').pop()}
+                                        </span>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Procédures Sœurs avec Score */}
+                            <div className="space-y-4">
+                                <h6 className="text-xs font-black uppercase tracking-widest text-slate-400 px-2">Procédures Sœurs Détectées</h6>
+                                <div className="space-y-4">
                                     {similarities.length > 0 ? similarities.map(sim => (
-                                        <div key={sim.id} className="bg-white p-5 rounded-[2rem] border border-slate-200 group hover:border-indigo-400 hover:shadow-xl hover:shadow-indigo-500/5 transition-all">
-                                            <div className="flex items-center justify-between mb-3">
+                                        <div key={sim.id} className="bg-white p-6 rounded-[2.5rem] border border-slate-100 hover:border-indigo-400 hover:shadow-2xl hover:shadow-indigo-500/10 transition-all group">
+                                            <div className="flex items-center justify-between mb-4">
                                                 <div className="flex items-center gap-2">
-                                                    <div className="w-8 h-8 bg-slate-50 text-slate-400 rounded-xl flex items-center justify-center font-black text-xs group-hover:bg-indigo-600 group-hover:text-white transition-all">
-                                                        {sim.commonCount}
+                                                    <div className="w-10 h-10 bg-slate-50 text-slate-900 rounded-2xl flex items-center justify-center font-black text-xs group-hover:bg-indigo-600 group-hover:text-white transition-all shadow-inner">
+                                                        {sim.score}%
                                                     </div>
-                                                    <span className="text-[10px] font-black uppercase text-indigo-600 tracking-tighter">Critères en commun</span>
+                                                    <span className="text-[10px] font-black uppercase text-slate-400 group-hover:text-indigo-600">Similitude</span>
                                                 </div>
-                                                <Workflow size={14} className="text-slate-200" />
+                                                <div className="flex items-center gap-1">
+                                                    {[1, 2, 3, 4, 5].map(i => (
+                                                        <div key={i} className={`w-1.5 h-3 rounded-full ${i <= (sim.score / 20) ? 'bg-emerald-400' : 'bg-slate-100'}`} />
+                                                    ))}
+                                                </div>
                                             </div>
-                                            <p className="font-bold text-slate-800 text-sm leading-snug mb-3 group-hover:text-indigo-600 transition-colors">{sim.name}</p>
-                                            <div className="flex flex-wrap gap-1">
-                                                {sim.commonVars.map(v => (
-                                                    <span key={v} className="px-2 py-0.5 bg-slate-100 text-[8px] font-bold text-slate-500 rounded-md">
-                                                        {v.split('.').pop()}
-                                                    </span>
-                                                ))}
+                                            <p className="font-black text-slate-900 text-sm leading-snug mb-4 group-hover:text-indigo-600 transition-colors uppercase tracking-tight">{sim.name}</p>
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex -space-x-2">
+                                                    {sim.commonVars.slice(0, 3).map(v => {
+                                                        const crit = CRITERIA.find(c => c.id === v);
+                                                        return (
+                                                            <div key={v} className={`w-6 h-6 rounded-lg border-2 border-white ${crit?.color || 'bg-slate-400'}`} title={v} />
+                                                        );
+                                                    })}
+                                                    {sim.commonVars.length > 3 && (
+                                                        <div className="w-6 h-6 rounded-lg bg-slate-200 border-2 border-white flex items-center justify-center text-[8px] font-black">+{sim.commonVars.length - 3}</div>
+                                                    )}
+                                                </div>
+                                                <button className="text-[10px] font-black uppercase text-indigo-600 hover:underline">Comparer →</button>
                                             </div>
                                         </div>
                                     )) : (
-                                        <div className="p-6 text-center text-[10px] font-bold text-slate-400 italic">
-                                            Aucune similitude forte détectée.
+                                        <div className="p-10 text-center bg-slate-50 rounded-3xl border border-dashed border-slate-200">
+                                            <p className="text-xs font-bold text-slate-400 italic">Aucune corrélation trouvée.</p>
                                         </div>
                                     )}
                                 </div>
-
-                                <button
-                                    onClick={() => setShowGraph(true)}
-                                    className="w-full py-5 bg-slate-900 text-white rounded-[1.5rem] font-black shadow-xl flex items-center justify-center gap-2 hover:bg-slate-800 transition-all active:scale-95 shadow-slate-200"
-                                >
-                                    <Workflow size={18} /> Voir le Graphe
-                                </button>
                             </div>
-                        )}
 
-                        {/* SUGGESTIONS RAPIDES */}
-                        <div className="bg-amber-50 rounded-[2.5rem] p-6 border border-amber-100 space-y-4 shadow-sm hover:translate-y-[-4px] transition-transform">
-                            <div className="flex items-center gap-2">
-                                <Zap size={18} className="text-amber-500" />
-                                <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest">IA Insight</p>
+                            {/* IA Alerts */}
+                            <div className="bg-amber-50 rounded-[2.5rem] p-8 border border-amber-100 space-y-4 shadow-sm relative overflow-hidden group">
+                                <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/10 rounded-full -mr-12 -mt-12 group-hover:scale-150 transition-transform"></div>
+                                <div className="flex items-center gap-2 relative z-10">
+                                    <div className="w-8 h-8 bg-amber-500 rounded-xl flex items-center justify-center text-white">
+                                        <Zap size={18} />
+                                    </div>
+                                    <p className="text-xs font-black text-amber-700 uppercase tracking-widest">Audit IA</p>
+                                </div>
+                                <p className="text-xs font-medium text-amber-900 leading-relaxed italic relative z-10">
+                                    "Attention : La procédure sélectionnée partage {matrixMetadata.find(m => m.id === selectedProcedureId)?.variables.size} critères avec le tronc commun CESEDA. Toute modification ici impactera la cohérence globale du moteur."
+                                </p>
                             </div>
-                            <p className="text-xs font-medium text-amber-900 leading-relaxed italic">
-                                "La matrice révèle une corrélation de 85% entre vos procédures Talent et Startup. Pensez à unifier les critères de ressources."
-                            </p>
                         </div>
+                    )}
+                </div>
+            </div>
+
+            {/* Légende Bas de Page */}
+            <div className="bg-white border-t border-slate-200 px-8 py-3 flex items-center justify-between z-40">
+                <div className="flex items-center gap-6">
+                    {CRITERIA.slice(0, 5).map(c => (
+                        <div key={c.id} className="flex items-center gap-2">
+                            <span className={`w-2 h-2 rounded-full ${c.color}`} />
+                            <span className="text-[10px] font-black uppercase text-slate-400 tracking-tighter">{c.label}</span>
+                        </div>
+                    ))}
+                    <span className="text-[10px] font-black text-slate-300">... +{CRITERIA.length - 5} autres</span>
+                </div>
+                <div className="flex items-center gap-3">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Mode Visualisation :</span>
+                    <div className="flex bg-slate-100 p-1 rounded-xl">
+                        <button className="px-3 py-1 bg-white rounded-lg text-[10px] font-black shadow-sm">GRILLE UX</button>
+                        <button className="px-3 py-1 text-[10px] font-black text-slate-400">DETAIL</button>
                     </div>
                 </div>
             </div>
