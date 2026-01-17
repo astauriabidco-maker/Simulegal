@@ -30,28 +30,45 @@ export function evaluateRule(user: UserProfile, condition: RuleCondition): boole
 
         // Handle undefined user values (false by default)
         if (userValue === undefined || userValue === null) {
+            if (process.env.NODE_ENV === 'development') {
+                console.log(`[Engine] Rule fail: ${condition.var} is undefined/null`);
+            }
             return false;
         }
 
+        let result = false;
         switch (condition.op) {
             case 'EQ':
-                return userValue === targetValue;
+                result = userValue === targetValue;
+                break;
             case 'NEQ':
-                return userValue !== targetValue;
+                result = userValue !== targetValue;
+                break;
             case 'GTE':
-                return userValue >= targetValue;
+                result = userValue >= targetValue;
+                break;
             case 'GT':
-                return userValue > targetValue;
+                result = userValue > targetValue;
+                break;
             case 'LTE':
-                return userValue <= targetValue;
+                result = userValue <= targetValue;
+                break;
             case 'LT':
-                return userValue < targetValue;
+                result = userValue < targetValue;
+                break;
             case 'IN':
-                return Array.isArray(targetValue) && targetValue.includes(userValue);
+                result = Array.isArray(targetValue) && targetValue.includes(userValue);
+                break;
             default:
                 console.warn(`[Engine] Unsupported operator: ${condition.op}`);
-                return false;
+                result = false;
         }
+
+        if (!result && process.env.NODE_ENV === 'development') {
+            console.log(`[Engine] Rule fail: ${condition.var} (${userValue}) ${condition.op} ${targetValue}`);
+        }
+
+        return result;
     }
 
     return false;

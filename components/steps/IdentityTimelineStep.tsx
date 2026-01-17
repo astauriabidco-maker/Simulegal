@@ -23,7 +23,7 @@ export default function IdentityTimelineStep({ data, update, onNext, canNext }: 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <button
                         onClick={() => update('project', { target_goal: 'NATURALIZATION' })}
-                        className={`p-4 rounded-xl border-2 text-left transition-all ${data.project.target_goal === 'NATURALIZATION'
+                        className={`p-4 rounded-xl border-2 text-left transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] ${data.project.target_goal === 'NATURALIZATION'
                             ? 'bg-indigo-50 border-indigo-600 ring-2 ring-indigo-600/10'
                             : 'bg-white border-slate-100 hover:border-slate-200 shadow-sm'
                             }`}
@@ -35,7 +35,7 @@ export default function IdentityTimelineStep({ data, update, onNext, canNext }: 
 
                     <button
                         onClick={() => update('project', { target_goal: 'RESIDENCE_PERMIT' })}
-                        className={`p-4 rounded-xl border-2 text-left transition-all ${data.project.target_goal === 'RESIDENCE_PERMIT'
+                        className={`p-4 rounded-xl border-2 text-left transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] ${data.project.target_goal === 'RESIDENCE_PERMIT'
                             ? 'bg-indigo-50 border-indigo-600 ring-2 ring-indigo-600/10'
                             : 'bg-white border-slate-100 hover:border-slate-200 shadow-sm'
                             }`}
@@ -47,7 +47,7 @@ export default function IdentityTimelineStep({ data, update, onNext, canNext }: 
 
                     <button
                         onClick={() => update('project', { target_goal: 'BOTH' })}
-                        className={`p-4 rounded-xl border-2 text-left transition-all ${data.project.target_goal === 'BOTH'
+                        className={`p-4 rounded-xl border-2 text-left transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] ${data.project.target_goal === 'BOTH'
                             ? 'bg-indigo-50 border-indigo-600 ring-2 ring-indigo-600/10'
                             : 'bg-white border-slate-100 hover:border-slate-200 shadow-sm'
                             }`}
@@ -87,6 +87,7 @@ export default function IdentityTimelineStep({ data, update, onNext, canNext }: 
                     <input
                         type="number"
                         value={data.identity.age}
+                        onFocus={(e) => e.target.select()}
                         onChange={(e) => update('identity', { age: Number(e.target.value) || 0 })}
                         className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
                     />

@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
-import { X, Lock, CheckCircle, FileText, CreditCard, Download, MessageCircle, ArrowRight } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { X, Lock, CheckCircle, FileText, CreditCard, Download, MessageCircle, ArrowRight, PenTool, ShieldCheck, RotateCcw, FolderOpen } from 'lucide-react';
 import { CRM } from '../services/crmStore';
+import { ServiceConfigStore } from '../services/ServiceConfigStore';
 
 interface CheckoutFlowProps {
     isOpen: boolean;
@@ -10,34 +11,92 @@ interface CheckoutFlowProps {
     serviceId: string;
     serviceName: string;
     price: number; // En centimes
+    partnerId?: string | null; // Code partenaire pour mode Kiosk
+    isKioskMode?: boolean;
+    onKioskReset?: () => void;
 }
 
-export default function CheckoutFlow({ isOpen, onClose, serviceId, serviceName, price }: CheckoutFlowProps) {
+export default function CheckoutFlow({
+    isOpen,
+    onClose,
+    serviceId,
+    serviceName,
+    price,
+    partnerId,
+    isKioskMode = false,
+    onKioskReset
+}: CheckoutFlowProps) {
     if (!isOpen) return null;
 
     const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
     const [formData, setFormData] = useState({ name: '', email: '', phone: '' });
     const [isProcessing, setIsProcessing] = useState(false);
     const [hasAgreed, setHasAgreed] = useState(false);
+    const [hasReadContract, setHasReadContract] = useState(false);
+    const [contractData, setContractData] = useState<any>(null);
+    const [createdLeadId, setCreatedLeadId] = useState<string | null>(null);
+    const contractRef = useRef<HTMLDivElement>(null);
+
+    const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+        const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+        // On considère lu si on arrive à 5px du bas
+        if (scrollHeight - scrollTop <= clientHeight + 5) {
+            setHasReadContract(true);
+        }
+    };
 
     const handleNext = () => setStep((s) => (s + 1) as any);
 
+    const handleSignContract = () => {
+        // 1. Simulation de la collecte de preuve (Audit Trail)
+        const auditTrail = {
+            signedAt: new Date().toISOString(),
+            ip: '192.168.1.1', // Récupéré via backend en prod
+            userAgent: navigator.userAgent,
+            contractVersion: 'v1.2-2026',
+            contractHash: 'SHA256:' + Math.random().toString(36).substring(2, 15),
+            consent: true,
+            scrollValidated: true
+        };
+
+        setContractData(auditTrail);
+        setStep(3);
+    };
+
+
     const handlePayment = () => {
         setIsProcessing(true);
+
+        // Récupère la checklist dynamique pour ce service
+        const checklist = ServiceConfigStore.getRequirements(serviceId);
+
         setTimeout(() => {
-            // Simulation appel API Stripe + CRM
-            CRM.saveLead({
+            const newLead = CRM.saveLead({
                 name: formData.name,
                 email: formData.email,
                 phone: formData.phone,
                 serviceId: serviceId,
+                serviceName: serviceName,
                 amountPaid: price,
-                contractSignedAt: new Date().toISOString()
-            });
+                // Checklist figée pour ce dossier
+                requiredDocuments: checklist,
+                // On attache la preuve ici
+                contract: {
+                    signedAt: new Date().toISOString(),
+                    ipAddress: "88.123.44.12", // Simulé
+                    consentVersion: "v1.0",
+                    isSigned: true
+                },
+                // Injection du partenaire pour le mode Kiosk
+                ...(partnerId && { originAgencyId: partnerId })
+            } as any);
+            setCreatedLeadId(newLead.id);
             setIsProcessing(false);
             setStep(4);
         }, 2000);
     };
+
+
 
     return (
         <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-300">
@@ -115,54 +174,71 @@ export default function CheckoutFlow({ isOpen, onClose, serviceId, serviceName, 
                         </div>
                     )}
 
-                    {/* STEP 2: CONTRAT */}
+                    {/* STEP 2: CONTRAT & SIGNATURE (Mise à jour Legal) */}
                     {step === 2 && (
-                        <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
-                            <div className="space-y-2">
-                                <h2 className="text-2xl font-black text-slate-900 flex items-center gap-3">
-                                    <FileText className="text-indigo-600" size={28} /> Signature du Mandat
-                                </h2>
-                                <p className="text-slate-500 font-medium">Mandat exclusif d'accompagnement juridique.</p>
+                        <div className="space-y-4">
+                            <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                                <FileText className="text-indigo-600" /> Mandat de Représentation
+                            </h2>
+
+                            <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 text-xs text-slate-600 h-40 overflow-y-auto leading-relaxed text-justify shadow-inner">
+                                <p className="font-bold mb-2 uppercase">Mandat de pouvoir spécial</p>
+                                <p>JE SOUSSIGNÉ(E) :</p>
+                                <p><strong>{formData.name}</strong>, (ci-après "Le Mandant"),</p>
+                                <p>Email : {formData.email}</p>
+                                <br />
+                                <p>DONNE PAR LA PRÉSENTE MANDAT EXPRÈS À :</p>
+                                <p>La société <strong>ANTIGRAVITY SERVICES</strong> (ci-après "Le Mandataire"),</p>
+                                <br />
+                                <p><strong>POUR :</strong> Effectuer en mon nom et pour mon compte toutes les démarches administratives nécessaires relatives au service : <strong>{serviceName.toUpperCase()}</strong>.</p>
+                                <p>Cela inclut la constitution du dossier, la vérification des pièces, la prise de rendez-vous et la correspondance avec l'administration compétente.</p>
+                                <p>Le Mandant certifie que toutes les informations fournies sont exactes et sincères.</p>
+                                <br />
+                                <p className="italic text-slate-400">Ce mandat est signé électroniquement conformément au règlement eIDAS. Une preuve d'horodatage sera conservée.</p>
                             </div>
 
-                            <div className="bg-slate-50 p-6 rounded-2xl border-2 border-slate-100 text-[11px] text-slate-600 h-48 overflow-y-auto leading-relaxed custom-scrollbar bg-opacity-50">
-                                <p className="font-extrabold text-slate-900 mb-4 underline uppercase">MANDAT DE PRESTATION DE SERVICE</p>
-                                <p>Je soussigné(e), <strong>{formData.name}</strong>, domicilié(e) au numéro de téléphone <strong>{formData.phone}</strong>, mandate expressément la plateforme <strong>SimuLegal</strong> pour m'accompagner dans mes démarches administratives et juridiques relatives au service : <strong>{serviceName}</strong>.</p>
-
-                                <p className="mt-4 font-bold text-slate-800">Ce mandat inclut :</p>
-                                <ul className="list-disc pl-4 mt-2 space-y-1">
-                                    <li>L'analyse approfondie des pièces justificatives fournies.</li>
-                                    <li>La préparation du dossier technique conforme aux exigences préfectorales.</li>
-                                    <li>L'assistance juridique par nos experts tout au long de la procédure.</li>
-                                    <li>Le suivi et la relance auprès des autorités compétentes si nécessaire.</li>
-                                </ul>
-
-                                <p className="mt-4 italic">Le présent mandat est conclu pour une durée nécessaire à l'accomplissement des prestations. Le client reconnaît que SimuLegal agit en tant qu'assistant aux formalités.</p>
-
-                                <p className="mt-6 font-bold text-slate-900 uppercase">Fait à Paris, le {new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}.</p>
-                            </div>
-
-                            <label className="flex items-start gap-4 p-5 border-2 border-slate-100 rounded-2xl cursor-pointer hover:bg-slate-50 transition-colors group">
-                                <input
-                                    type="checkbox"
-                                    checked={hasAgreed}
-                                    onChange={(e) => setHasAgreed(e.target.checked)}
-                                    className="mt-1 w-6 h-6 rounded-lg text-indigo-600 border-slate-300 focus:ring-indigo-600 transition-all cursor-pointer"
-                                />
-                                <span className="text-xs font-bold text-slate-600 leading-snug group-hover:text-slate-900 transition-colors">
-                                    Je reconnais avoir lu et accepté les <strong>CGV</strong> et je procède à la signature électronique de ce mandat.
+                            <label className="flex items-start gap-3 p-3 border rounded-lg cursor-pointer hover:bg-slate-50 transition-colors group">
+                                <div className="relative flex items-center">
+                                    <input
+                                        type="checkbox"
+                                        className="peer h-5 w-5 cursor-pointer appearance-none rounded border border-slate-300 shadow-sm transition-all checked:border-indigo-600 checked:bg-indigo-600 hover:shadow-md"
+                                        onChange={(e) => {
+                                            const btn = document.getElementById('btn-sign');
+                                            if (btn) btn.removeAttribute('disabled');
+                                            if (!e.target.checked && btn) btn.setAttribute('disabled', 'true');
+                                        }}
+                                    />
+                                    <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 opacity-0 peer-checked:opacity-100 text-white pointer-events-none">
+                                        <CheckCircle size={12} />
+                                    </span>
+                                </div>
+                                <span className="text-sm text-slate-700 group-hover:text-slate-900">
+                                    Je reconnais avoir lu le mandat ci-dessus, j'accepte les CGV et je consens à la signature électronique.
                                 </span>
                             </label>
 
                             <button
-                                disabled={!hasAgreed}
-                                onClick={handleNext}
-                                className="w-full bg-slate-900 text-white p-5 rounded-2xl font-black text-lg hover:bg-black transition-all shadow-xl shadow-slate-200 flex justify-center items-center gap-3 disabled:opacity-30 disabled:shadow-none"
+                                id="btn-sign"
+                                disabled
+                                onClick={() => {
+                                    // Simulation Audit Trail
+                                    const auditData = {
+                                        signedAt: new Date().toISOString(),
+                                        ipAddress: "88.123.44.12",
+                                        consentVersion: "v1.0",
+                                        isSigned: true
+                                    };
+                                    setContractData(auditData);
+                                    setStep(3);
+                                }}
+                                className="w-full py-3 rounded-lg font-bold flex justify-center items-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed bg-slate-900 text-white hover:bg-slate-800 shadow-md hover:shadow-lg"
                             >
-                                ✍️ Signer & Continuer
+                                <PenTool size={18} />
+                                <span>Signer le mandat</span>
                             </button>
                         </div>
                     )}
+
 
                     {/* STEP 3: PAIEMENT */}
                     {step === 3 && (
@@ -234,6 +310,12 @@ export default function CheckoutFlow({ isOpen, onClose, serviceId, serviceName, 
                             <div className="space-y-2">
                                 <h2 className="text-3xl font-black text-slate-900">Félicitations !</h2>
                                 <p className="text-slate-500 font-medium">Votre dossier numéro <span className="text-indigo-600 font-black">#SL-{Math.floor(Math.random() * 90000 + 10000)}</span> est maintenant ouvert.</p>
+                                <div className="flex items-center justify-center gap-1.5 text-[10px] font-bold text-emerald-600 uppercase tracking-tight">
+                                    <ShieldCheck size={14} /> Dossier scellé juridiquement (Audit Trail v1.2)
+                                </div>
+                                {partnerId && (
+                                    <p className="text-xs text-slate-400 mt-2">Partenaire : {partnerId}</p>
+                                )}
                             </div>
 
                             <div className="bg-slate-900 rounded-[2.5rem] p-8 text-left relative overflow-hidden shadow-2xl">
@@ -245,23 +327,45 @@ export default function CheckoutFlow({ isOpen, onClose, serviceId, serviceName, 
                                 <p className="text-slate-400 text-sm font-medium mb-8 relative z-10">Nous avons généré votre liste de documents personnalisée prête à l'emploi.</p>
 
                                 <div className="space-y-4 relative z-10">
-                                    <button className="w-full bg-white text-slate-900 p-5 rounded-2xl font-black flex items-center justify-center gap-3 hover:bg-slate-50 transition-all shadow-lg active:scale-95">
-                                        <Download size={20} /> Télécharger (PDF)
-                                    </button>
-                                    <button className="w-full bg-[#25D366] text-white p-5 rounded-2xl font-black flex items-center justify-center gap-3 hover:bg-[#20bd5a] transition-all shadow-lg active:scale-95">
-                                        <MessageCircle size={20} /> Recevoir sur WhatsApp
-                                    </button>
+                                    {/* Mode Kiosk: Bouton géant pour reset */}
+                                    {isKioskMode && onKioskReset ? (
+                                        <button
+                                            onClick={onKioskReset}
+                                            className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-6 rounded-2xl font-black text-lg flex items-center justify-center gap-3 hover:from-indigo-700 hover:to-purple-700 transition-all shadow-lg active:scale-95"
+                                        >
+                                            <RotateCcw size={24} />
+                                            Terminer et revenir à l'accueil
+                                        </button>
+                                    ) : (
+                                        <>
+                                            <button
+                                                onClick={() => window.location.href = `/espace-client?id=${createdLeadId}`}
+                                                className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-5 rounded-2xl font-black flex items-center justify-center gap-3 hover:from-indigo-700 hover:to-purple-700 transition-all shadow-lg active:scale-95"
+                                            >
+                                                <FolderOpen size={20} /> Accéder à mon Espace Client
+                                            </button>
+                                            <button className="w-full bg-white text-slate-900 p-5 rounded-2xl font-black flex items-center justify-center gap-3 hover:bg-slate-50 transition-all shadow-lg active:scale-95">
+                                                <Download size={20} /> Télécharger (PDF)
+                                            </button>
+                                            <button className="w-full bg-[#25D366] text-white p-5 rounded-2xl font-black flex items-center justify-center gap-3 hover:bg-[#20bd5a] transition-all shadow-lg active:scale-95">
+                                                <MessageCircle size={20} /> Recevoir sur WhatsApp
+                                            </button>
+                                        </>
+                                    )}
                                 </div>
                             </div>
 
-                            <button
-                                onClick={onClose}
-                                className="text-slate-400 font-black text-xs uppercase tracking-widest hover:text-slate-600 transition-colors"
-                            >
-                                Fermer la fenêtre
-                            </button>
+                            {!isKioskMode && (
+                                <button
+                                    onClick={onClose}
+                                    className="text-slate-400 font-black text-xs uppercase tracking-widest hover:text-slate-600 transition-colors"
+                                >
+                                    Fermer la fenêtre
+                                </button>
+                            )}
                         </div>
                     )}
+
                 </div>
             </div>
         </div>

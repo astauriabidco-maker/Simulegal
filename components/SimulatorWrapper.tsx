@@ -519,6 +519,8 @@ export default function SimulatorWrapper({ serviceId }: SimulatorWrapperProps) {
     const currentTotalSteps = (isFamilyReunification || isDrivingExchange || isRdvPrefecture || isLegalConsultation || isFrenchCourse || isCivicExam || isCallback) ? 2 : 5;
     const progress = (step / currentTotalSteps) * 100;
 
+    const [showDebug, setShowDebug] = useState(false);
+
     return (
         <div className="w-full max-w-4xl mx-auto p-4 md:p-8">
             {step < currentTotalSteps && (
@@ -548,7 +550,15 @@ export default function SimulatorWrapper({ serviceId }: SimulatorWrapperProps) {
                                 </span></>
                             )}
                         </span>
-                        <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">{Math.round(progress)}%</span>
+                        <div className="flex items-center gap-4">
+                            <button
+                                onClick={() => setShowDebug(!showDebug)}
+                                className={`text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded border transition-all ${showDebug ? 'bg-slate-900 text-white border-slate-900' : 'bg-transparent text-slate-400 border-slate-200 hover:border-slate-400'}`}
+                            >
+                                {showDebug ? 'Debug ON' : 'Debug OFF'}
+                            </button>
+                            <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">{Math.round(progress)}%</span>
+                        </div>
                     </div>
                     <div className="w-full bg-slate-200/50 rounded-full h-2 overflow-hidden shadow-inner">
                         <div
@@ -564,12 +574,14 @@ export default function SimulatorWrapper({ serviceId }: SimulatorWrapperProps) {
             </div>
 
             {/* Debug Panel (Dev Mode) */}
-            <div className="mt-8">
-                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Debug Info (Real-time Profile)</h4>
-                <pre className="bg-slate-900 text-emerald-400 p-6 rounded-2xl text-[10px] overflow-auto max-h-60 border border-slate-800 shadow-2xl">
-                    {JSON.stringify(userProfile, null, 2)}
-                </pre>
-            </div>
+            {showDebug && (
+                <div className="mt-8 animate-in fade-in slide-in-from-top-2 duration-300">
+                    <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Debug Info (Real-time Profile)</h4>
+                    <pre className="bg-slate-900 text-emerald-400 p-6 rounded-2xl text-[10px] overflow-auto max-h-60 border border-slate-800 shadow-2xl">
+                        {JSON.stringify(userProfile, null, 2)}
+                    </pre>
+                </div>
+            )}
         </div>
     );
 }

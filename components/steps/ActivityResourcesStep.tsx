@@ -64,6 +64,7 @@ export default function ActivityResourcesStep({ data, update, onNext, onBack, ca
                         <input
                             type="number"
                             value={data.work.salary_monthly_gross}
+                            onFocus={(e) => e.target.select()}
                             onChange={(e) => {
                                 const val = Number(e.target.value) || 0;
                                 update('work', { salary_monthly_gross: val });
@@ -165,6 +166,7 @@ export default function ActivityResourcesStep({ data, update, onNext, onBack, ca
                                     <input
                                         type="number"
                                         value={data.work.salary_monthly_gross}
+                                        onFocus={(e) => e.target.select()}
                                         onChange={(e) => update('work', { salary_monthly_gross: Number(e.target.value) || 0 })}
                                         className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
                                     />
@@ -181,6 +183,7 @@ export default function ActivityResourcesStep({ data, update, onNext, onBack, ca
                                     <input
                                         type="number"
                                         value={data.investment.amount}
+                                        onFocus={(e) => e.target.select()}
                                         onChange={(e) => update('investment', { amount: Number(e.target.value) || 0 })}
                                         className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
                                     />
@@ -209,6 +212,7 @@ export default function ActivityResourcesStep({ data, update, onNext, onBack, ca
                                 <input
                                     type="number"
                                     value={data.financial.resources_monthly_average}
+                                    onFocus={(e) => e.target.select()}
                                     onChange={(e) => update('financial', { resources_monthly_average: Number(e.target.value) || 0 })}
                                     className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
                                 />
