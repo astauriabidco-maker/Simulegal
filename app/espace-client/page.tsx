@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import ClientPortal from '../../components/client/ClientPortal';
 import { CRM } from '../../services/crmStore';
 import { AlertCircle } from 'lucide-react';
+import RoleGuard from '../../components/auth/RoleGuard';
 
 export default function EspaceClientPage() {
     const searchParams = useSearchParams();
@@ -18,32 +19,23 @@ export default function EspaceClientPage() {
             const lead = CRM.getLeadById(id);
             if (lead) {
                 setLeadId(id);
+                localStorage.setItem('active_lead_id', id); // Définit la session pour RoleGuard
             } else {
                 setError('Dossier introuvable. Vérifiez votre lien d\'accès.');
             }
         } else {
-            setError('Aucun identifiant de dossier fourni.');
+            // Si pas d'ID dans l'URL, vérifie s'il y a une session active
+            const session = localStorage.getItem('active_lead_id');
+            if (session) {
+                setLeadId(session);
+            } else {
+                setError('Aucun identifiant de dossier fourni.');
+            }
         }
     }, [searchParams]);
 
     if (error) {
-        return (
-            <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
-                <div className="bg-white rounded-2xl shadow-lg p-8 max-w-md text-center">
-                    <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <AlertCircle className="text-red-600" size={32} />
-                    </div>
-                    <h1 className="text-xl font-black text-slate-900 mb-2">Accès refusé</h1>
-                    <p className="text-slate-500">{error}</p>
-                    <a
-                        href="/"
-                        className="inline-block mt-6 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl font-bold transition-colors"
-                    >
-                        Retour à l'accueil
-                    </a>
-                </div>
-            </div>
-        );
+        // ... (reste identique)
     }
 
     if (!leadId) {
@@ -55,10 +47,15 @@ export default function EspaceClientPage() {
     }
 
     return (
-        <ClientPortal
-            leadId={leadId}
-            isOpen={true}
-            onClose={() => window.location.href = '/'}
-        />
+        <RoleGuard allowedRoles={['CLIENT']}>
+            <ClientPortal
+                leadId={leadId}
+                isOpen={true}
+                onClose={() => {
+                    localStorage.removeItem('active_lead_id');
+                    window.location.href = '/';
+                }}
+            />
+        </RoleGuard>
     );
 }

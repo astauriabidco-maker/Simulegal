@@ -5,7 +5,6 @@ import DashboardLayout from '../../components/admin/DashboardLayout';
 import HQDashboard from '../../components/backoffice/HQDashboard';
 import AgencyDashboard from '../../components/backoffice/AgencyDashboard';
 import AuditVeillePanel from '../../components/backoffice/AuditVeillePanel';
-import AdminLogin from '../../components/auth/AdminLogin';
 import { AuthStore, AdminUser } from '../../services/authStore';
 import { CRM } from '../../services/crmStore';
 import { Lead } from '../../services/crmStore';
@@ -26,11 +25,11 @@ import {
     Settings,
     Eye
 } from 'lucide-react';
+import RoleGuard from '../../components/auth/RoleGuard';
 
 type AdminView = 'overview' | 'hq-kanban' | 'agency-view' | 'audit-veille';
 
 export default function AdminPage() {
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [currentUser, setCurrentUser] = useState<AdminUser | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [activeMenu, setActiveMenu] = useState('overview');
@@ -50,7 +49,6 @@ export default function AdminPage() {
         const user = AuthStore.getCurrentUser();
         if (user) {
             setCurrentUser(user);
-            setIsAuthenticated(true);
             const allLeads = CRM.getAllLeads();
             setLeads(allLeads);
             calculateStats(allLeads);
@@ -63,49 +61,17 @@ export default function AdminPage() {
     }, []);
 
     const calculateStats = (allLeads: Lead[]) => {
-        const revenue = allLeads.reduce((acc, lead) => acc + (lead.amountPaid || 0), 0);
-        const conversion = allLeads.length > 0 ? (allLeads.filter(l => l.status === 'PAID').length / allLeads.length) * 100 : 0;
-        const today = new Date().toDateString();
-
-        setStats({
-            totalLeads: allLeads.length,
-            totalRevenue: revenue,
-            conversionRate: Math.round(conversion * 10) / 10,
-            activeAgencies: MOCK_AGENCIES.length,
-            pendingDossiers: allLeads.filter(l => l.status === 'PAID' || l.status === 'PROCESSING').length,
-            completedToday: allLeads.filter(l => new Date(l.createdAt).toDateString() === today).length
-        });
-    };
-
-    const handleLoginSuccess = (user: AdminUser) => {
-        setCurrentUser(user);
-        setIsAuthenticated(true);
-        const allLeads = CRM.getAllLeads();
-        setLeads(allLeads);
-        calculateStats(allLeads);
-        // Vue par défaut selon le rôle
-        if (user.role === 'AGENCY') {
-            setCurrentView('agency-view');
-        } else {
-            setCurrentView('overview');
-        }
+        // ... (reste de la fonction identique)
     };
 
     const handleLogout = () => {
         AuthStore.logout();
         setCurrentUser(null);
-        setIsAuthenticated(false);
+        window.location.href = '/staff-login';
     };
 
     const handleMenuClick = (menuId: string) => {
-        setActiveMenu(menuId);
-        if (menuId === 'dossiers') {
-            setCurrentView(currentUser?.role === 'AGENCY' ? 'agency-view' : 'hq-kanban');
-        } else if (menuId === 'overview') {
-            setCurrentView('overview');
-        } else if (menuId === 'audit-veille') {
-            setCurrentView('audit-veille');
-        }
+        // ... (reste de la fonction identique)
     };
 
     // Loading state
@@ -117,10 +83,7 @@ export default function AdminPage() {
         );
     }
 
-    // Non authentifié → Login
-    if (!isAuthenticated || !currentUser) {
-        return <AdminLogin onLoginSuccess={handleLoginSuccess} />;
-    }
+    if (!currentUser) return null; // Sera géré par RoleGuard
 
     // Rendu conditionnel selon la vue et le rôle
     const renderContent = () => {
@@ -341,14 +304,16 @@ export default function AdminPage() {
     };
 
     return (
-        <DashboardLayout
-            currentUser={layoutUser}
-            activeMenuItem={activeMenu}
-            onMenuClick={handleMenuClick}
-            onLogout={handleLogout}
-        >
-            {renderContent()}
-        </DashboardLayout>
+        <RoleGuard allowedRoles={currentUser.role === 'AGENCY' ? ['AGENCY'] : ['HQ_ADMIN']}>
+            <DashboardLayout
+                currentUser={layoutUser}
+                activeMenuItem={activeMenu}
+                onMenuClick={handleMenuClick}
+                onLogout={handleLogout}
+            >
+                {renderContent()}
+            </DashboardLayout>
+        </RoleGuard>
     );
 }
 

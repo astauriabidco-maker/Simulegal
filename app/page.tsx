@@ -6,7 +6,7 @@ import LandingPage from '@/components/LandingPage';
 import CheckoutFlow from '@/components/CheckoutFlow';
 import HQDashboard from '@/components/backoffice/HQDashboard';
 import AgencyDashboard from '@/components/backoffice/AgencyDashboard';
-import { Building2, LayoutDashboard, X, Radio } from 'lucide-react';
+import { Building2, LayoutDashboard, X, Radio, Shield } from 'lucide-react';
 
 declare global {
   interface Window {
@@ -159,26 +159,16 @@ export default function Home() {
         </div>
       )}
 
-      {/* DEV MODE: Sélecteur Back-Office (masqué en mode Kiosk) */}
+      {/* LIEN ACCÈS PRO SÉCURISÉ */}
       {!partnerId && (
         <div className="fixed bottom-4 right-4 z-50">
-          <div className="bg-slate-900 rounded-2xl shadow-2xl p-3 space-y-2">
-            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider px-2">🛠️ Dev Mode</p>
-            <button
-              onClick={() => setDevView('hq')}
-              className="w-full flex items-center gap-2 px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-colors"
-            >
-              <LayoutDashboard size={14} />
-              Vue HQ (Siège)
-            </button>
-            <button
-              onClick={() => setDevView('agency')}
-              className="w-full flex items-center gap-2 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-colors"
-            >
-              <Building2 size={14} />
-              Vue Agence
-            </button>
-          </div>
+          <a
+            href="/staff-login"
+            className="flex items-center gap-2 px-6 py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl text-xs font-black transition-all shadow-2xl hover:scale-105"
+          >
+            <Shield size={16} className="text-indigo-400" />
+            Accès Portail Pro
+          </a>
         </div>
       )}
     </div>
