@@ -16,8 +16,9 @@ import {
 } from 'lucide-react';
 import ServiceConfigPanel from './ServiceConfigPanel';
 import EligibilityConfigPanel from './EligibilityConfigPanel';
+import LegalMatrixModule from './LegalMatrixModule';
 
-type TabType = 'veille' | 'services' | 'eligibility';
+type TabType = 'veille' | 'services' | 'eligibility' | 'matrix';
 
 export default function AuditVeillePanel() {
     const [activeTab, setActiveTab] = useState<TabType>('veille');
@@ -96,7 +97,7 @@ export default function AuditVeillePanel() {
                     {legalUpdates.map((update) => (
                         <div key={update.id} className="bg-white rounded-3xl border border-slate-200 p-6 flex gap-4 hover:shadow-xl hover:shadow-indigo-500/5 transition-all group">
                             <div className={`w-1 font-black rounded-full ${update.severity === 'high' ? 'bg-red-500' :
-                                    update.severity === 'medium' ? 'bg-amber-500' : 'bg-blue-500'
+                                update.severity === 'medium' ? 'bg-amber-500' : 'bg-blue-500'
                                 }`} />
                             <div className="flex-1 space-y-2">
                                 <div className="flex items-center justify-between">
@@ -160,8 +161,9 @@ export default function AuditVeillePanel() {
                 <div className="flex gap-8">
                     {[
                         { id: 'veille', label: '📊 Veille Juridique', icon: <Eye size={18} /> },
+                        { id: 'matrix', label: '🧠 Matrice IA', icon: <Brain size={18} /> },
                         { id: 'services', label: '⚙️ Services & Documents', icon: <Settings size={18} /> },
-                        { id: 'eligibility', label: '🎓 Éligibilité No-Code', icon: <Brain size={18} /> }
+                        { id: 'eligibility', label: '🎓 Éligibilité No-Code', icon: <Zap size={18} /> }
                     ].map((tab) => (
                         <button
                             key={tab.id}
@@ -181,6 +183,7 @@ export default function AuditVeillePanel() {
             {/* Content Area */}
             <div className="flex-1 overflow-auto">
                 {activeTab === 'veille' && renderVeilleJuridique()}
+                {activeTab === 'matrix' && <LegalMatrixModule />}
                 {activeTab === 'services' && <ServiceConfigPanel />}
                 {activeTab === 'eligibility' && <EligibilityConfigPanel />}
             </div>
