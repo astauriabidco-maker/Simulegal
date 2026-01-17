@@ -5,6 +5,7 @@ import DashboardLayout from '../../components/admin/DashboardLayout';
 import HQDashboard from '../../components/backoffice/HQDashboard';
 import AgencyDashboard from '../../components/backoffice/AgencyDashboard';
 import ServiceConfigPanel from '../../components/backoffice/ServiceConfigPanel';
+import EligibilityConfigPanel from '../../components/backoffice/EligibilityConfigPanel';
 import AdminLogin from '../../components/auth/AdminLogin';
 import { AuthStore, AdminUser } from '../../services/authStore';
 import { CRM } from '../../services/crmStore';
@@ -26,7 +27,7 @@ import {
     Settings
 } from 'lucide-react';
 
-type AdminView = 'overview' | 'hq-kanban' | 'agency-view' | 'settings';
+type AdminView = 'overview' | 'hq-kanban' | 'agency-view' | 'settings' | 'eligibility';
 
 export default function AdminPage() {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -106,6 +107,8 @@ export default function AdminPage() {
             setCurrentView('overview');
         } else if (menuId === 'settings') {
             setCurrentView('settings');
+        } else if (menuId === 'eligibility') {
+            setCurrentView('eligibility');
         }
     };
 
@@ -138,6 +141,8 @@ export default function AdminPage() {
                 return <AgencyDashboard />;
             case 'settings':
                 return <ServiceConfigPanel />;
+            case 'eligibility':
+                return <EligibilityConfigPanel />;
             default:
                 return renderOverview();
         }

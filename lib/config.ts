@@ -1,12 +1,13 @@
-import config from '../specs/config_thresholds.json';
+import EligibilityStore from '../services/EligibilityStore';
 
 /**
  * Resolves a value that might be a reference to the configuration thresholds.
- * If the value starts with "@config:", it traverses the config_thresholds.json file.
+ * If the value starts with "@config:", it traverses the thresholds from EligibilityStore.
  */
 export function resolveThreshold(value: any): number | any {
     if (typeof value === 'string' && value.startsWith('@config:')) {
         const path = value.replace('@config:', '').split('.');
+        const config = EligibilityStore.getThresholds();
         let current: any = config;
 
         for (const key of path) {

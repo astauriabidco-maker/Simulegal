@@ -3,9 +3,7 @@
 import React, { useMemo } from 'react';
 import { UserProfile, ProcedureRule } from '@/types';
 import { evaluateRule } from '@/lib/engine';
-import rulesSejour from '@/specs/rules_sejour.json';
-import rulesNaturalisation from '@/specs/rules_naturalisation.json';
-import rulesFamily from '@/specs/rules_family.json';
+import EligibilityStore from '@/services/EligibilityStore';
 import { ArrowRight, Bell, Scale, CheckCircle2, AlertTriangle, AlertCircle, FileText, Smartphone, Car, Info, XCircle, MapPin, Languages, GraduationCap, Phone, Clock } from 'lucide-react';
 
 import { clsx, type ClassValue } from 'clsx';
@@ -55,13 +53,15 @@ export default function ResultsView({ userProfile, onReset, serviceId }: Results
 
     const familyResults = useMemo(() => {
         if (!isFamilyReunification) return [];
-        return (rulesFamily as ProcedureRule[])
+        const rulesFamily = EligibilityStore.getRules('family');
+        return rulesFamily
             .filter((rule) => evaluateRule(userProfile, rule.conditions));
     }, [userProfile, isFamilyReunification]);
 
     const eligibleStays = useMemo(() => {
         if (isFamilyReunification) return [];
-        let results = (rulesSejour as ProcedureRule[])
+        const rulesSejour = EligibilityStore.getRules('sejour');
+        let results = rulesSejour
             .filter((rule) => evaluateRule(userProfile, rule.conditions));
 
         if (userProfile.admin.current_visa_type === 'RESIDENT_CARD') {
@@ -81,7 +81,8 @@ export default function ResultsView({ userProfile, onReset, serviceId }: Results
 
     const eligibleNaturalization = useMemo(() => {
         if (isFamilyReunification) return [];
-        return (rulesNaturalisation as ProcedureRule[])
+        const rulesNaturalisation = EligibilityStore.getRules('naturalisation');
+        return rulesNaturalisation
             .filter((rule) => evaluateRule(userProfile, rule.conditions))
             .sort((a, b) => b.priority - a.priority);
     }, [userProfile, isFamilyReunification]);
@@ -92,8 +93,8 @@ export default function ResultsView({ userProfile, onReset, serviceId }: Results
     const isFamilyEligible = isFamilyReunification && familyResults.length > 0;
 
     const getFamilyFailureReason = () => {
-        const familyRules = rulesFamily as ProcedureRule[];
-        const rule = familyRules[0];
+        const rulesFamily = EligibilityStore.getRules('family');
+        const rule = rulesFamily[0];
         const conditions = rule.conditions.AND || [];
 
         const durationCondition = conditions[0];
