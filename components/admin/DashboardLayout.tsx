@@ -15,7 +15,8 @@ import {
     Shield,
     Crown,
     Settings,
-    Brain
+    Brain,
+    Eye
 } from 'lucide-react';
 
 
@@ -47,15 +48,13 @@ const MENU_CONFIG: Record<UserRoleType, MenuItem[]> = {
         { id: 'dossiers', label: 'Tous les Dossiers', icon: <FolderKanban size={20} />, href: '/admin/dossiers' },
         { id: 'network', label: 'Réseau Agences', icon: <Building2 size={20} />, href: '/admin/network' },
         { id: 'finances', label: 'Finances', icon: <Wallet size={20} />, href: '/admin/finances' },
-        { id: 'settings', label: '⚙️ Paramètres Services', icon: <Settings size={20} />, href: '/admin/settings' },
-        { id: 'eligibility', label: '🎓 Éligibilité', icon: <Brain size={20} />, href: '/admin/eligibility' },
+        { id: 'audit-veille', label: '⚖️ Audit et Veille', icon: <Eye size={20} />, href: '/admin/audit' },
     ],
     HQ: [
         { id: 'overview', label: 'Vue Globale', icon: <LayoutDashboard size={20} />, href: '/admin' },
         { id: 'dossiers', label: 'Tous les Dossiers', icon: <FolderKanban size={20} />, href: '/admin/dossiers' },
         { id: 'network', label: 'Réseau Agences', icon: <Building2 size={20} />, href: '/admin/network' },
-        { id: 'settings', label: '⚙️ Paramètres Services', icon: <Settings size={20} />, href: '/admin/settings' },
-        { id: 'eligibility', label: '🎓 Éligibilité', icon: <Brain size={20} />, href: '/admin/eligibility' },
+        { id: 'audit-veille', label: '⚖️ Audit et Veille', icon: <Eye size={20} />, href: '/admin/audit' },
     ],
     AGENCY: [
         { id: 'overview', label: 'Tableau de Bord', icon: <LayoutDashboard size={20} />, href: '/admin' },

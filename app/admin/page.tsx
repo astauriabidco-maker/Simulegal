@@ -4,8 +4,7 @@ import React, { useState, useEffect } from 'react';
 import DashboardLayout from '../../components/admin/DashboardLayout';
 import HQDashboard from '../../components/backoffice/HQDashboard';
 import AgencyDashboard from '../../components/backoffice/AgencyDashboard';
-import ServiceConfigPanel from '../../components/backoffice/ServiceConfigPanel';
-import EligibilityConfigPanel from '../../components/backoffice/EligibilityConfigPanel';
+import AuditVeillePanel from '../../components/backoffice/AuditVeillePanel';
 import AdminLogin from '../../components/auth/AdminLogin';
 import { AuthStore, AdminUser } from '../../services/authStore';
 import { CRM } from '../../services/crmStore';
@@ -24,10 +23,11 @@ import {
     Store,
     LogOut,
     Shield,
-    Settings
+    Settings,
+    Eye
 } from 'lucide-react';
 
-type AdminView = 'overview' | 'hq-kanban' | 'agency-view' | 'settings' | 'eligibility';
+type AdminView = 'overview' | 'hq-kanban' | 'agency-view' | 'audit-veille';
 
 export default function AdminPage() {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -39,6 +39,8 @@ export default function AdminPage() {
     const [stats, setStats] = useState({
         totalLeads: 0,
         totalRevenue: 0,
+        conversionRate: 0,
+        activeAgencies: 0,
         pendingDossiers: 0,
         completedToday: 0
     });
@@ -49,6 +51,9 @@ export default function AdminPage() {
         if (user) {
             setCurrentUser(user);
             setIsAuthenticated(true);
+            const allLeads = CRM.getAllLeads();
+            setLeads(allLeads);
+            calculateStats(allLeads);
             // Définit la vue par défaut selon le rôle
             if (user.role === 'AGENCY') {
                 setCurrentView('agency-view');
@@ -57,33 +62,27 @@ export default function AdminPage() {
         setIsLoading(false);
     }, []);
 
-    // Charge les données quand authentifié
-    useEffect(() => {
-        if (isAuthenticated) {
-            const allLeads = CRM.getAllLeads();
+    const calculateStats = (allLeads: Lead[]) => {
+        const revenue = allLeads.reduce((acc, lead) => acc + (lead.amountPaid || 0), 0);
+        const conversion = allLeads.length > 0 ? (allLeads.filter(l => l.status === 'PAID').length / allLeads.length) * 100 : 0;
+        const today = new Date().toDateString();
 
-            // Filtre les leads selon le rôle
-            let filteredLeads = allLeads;
-            if (currentUser?.role === 'AGENCY' && currentUser.agencyId) {
-                // Agence voit seulement ses leads
-                filteredLeads = allLeads.filter(l => l.originAgencyId === currentUser.agencyId);
-            }
-
-            setLeads(filteredLeads);
-
-            const today = new Date().toDateString();
-            setStats({
-                totalLeads: filteredLeads.length,
-                totalRevenue: filteredLeads.reduce((sum, l) => sum + (l.amountPaid || 0), 0),
-                pendingDossiers: filteredLeads.filter(l => l.status === 'PAID' || l.status === 'PROCESSING').length,
-                completedToday: filteredLeads.filter(l => new Date(l.createdAt).toDateString() === today).length
-            });
-        }
-    }, [isAuthenticated, currentUser]);
+        setStats({
+            totalLeads: allLeads.length,
+            totalRevenue: revenue,
+            conversionRate: Math.round(conversion * 10) / 10,
+            activeAgencies: MOCK_AGENCIES.length,
+            pendingDossiers: allLeads.filter(l => l.status === 'PAID' || l.status === 'PROCESSING').length,
+            completedToday: allLeads.filter(l => new Date(l.createdAt).toDateString() === today).length
+        });
+    };
 
     const handleLoginSuccess = (user: AdminUser) => {
         setCurrentUser(user);
         setIsAuthenticated(true);
+        const allLeads = CRM.getAllLeads();
+        setLeads(allLeads);
+        calculateStats(allLeads);
         // Vue par défaut selon le rôle
         if (user.role === 'AGENCY') {
             setCurrentView('agency-view');
@@ -96,7 +95,6 @@ export default function AdminPage() {
         AuthStore.logout();
         setCurrentUser(null);
         setIsAuthenticated(false);
-        setCurrentView('overview');
     };
 
     const handleMenuClick = (menuId: string) => {
@@ -105,10 +103,8 @@ export default function AdminPage() {
             setCurrentView(currentUser?.role === 'AGENCY' ? 'agency-view' : 'hq-kanban');
         } else if (menuId === 'overview') {
             setCurrentView('overview');
-        } else if (menuId === 'settings') {
-            setCurrentView('settings');
-        } else if (menuId === 'eligibility') {
-            setCurrentView('eligibility');
+        } else if (menuId === 'audit-veille') {
+            setCurrentView('audit-veille');
         }
     };
 
@@ -133,18 +129,17 @@ export default function AdminPage() {
             return <AgencyDashboard />;
         }
 
-        // HQ et SuperAdmin peuvent switcher
         switch (currentView) {
+            case 'overview':
+                return <HQDashboard />;
             case 'hq-kanban':
                 return <HQDashboard />;
             case 'agency-view':
                 return <AgencyDashboard />;
-            case 'settings':
-                return <ServiceConfigPanel />;
-            case 'eligibility':
-                return <EligibilityConfigPanel />;
+            case 'audit-veille':
+                return <AuditVeillePanel />;
             default:
-                return renderOverview();
+                return <HQDashboard />;
         }
     };
 
