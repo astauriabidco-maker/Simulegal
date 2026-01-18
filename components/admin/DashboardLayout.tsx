@@ -59,6 +59,7 @@ const DEFAULT_MENU: MenuItem[] = [
     { id: 'audit-veille', label: '⚖️ Audit et Veille', icon: <Eye size={20} />, href: '/admin/audit', permission: 'settings.manage' },
     { id: 'roles', label: 'Rôles & Droits', icon: <Shield size={20} />, href: '/admin/rbac', permission: 'roles.manage' },
     { id: 'calendar', label: 'Agenda & RDV', icon: <CalendarIcon size={20} />, href: '/admin/calendar', permission: 'crm.view_agency' },
+    { id: 'settings', label: 'Paramètres Généraux', icon: <Settings size={20} />, href: '/admin/settings', permission: 'settings.manage' },
 ];
 
 export default function DashboardLayout({

@@ -16,6 +16,8 @@ import { AppointmentsModule } from './appointments/appointments.module';
 import { DocumentsModule } from './documents/documents.module';
 import { EligibilityModule } from './eligibility/eligibility.module';
 import { CatalogModule } from './catalog/catalog.module';
+import { SettingsModule } from './settings/settings.module';
+import { DashboardModule } from './dashboard/dashboard.module';
 
 @Module({
   imports: [
@@ -32,7 +34,9 @@ import { CatalogModule } from './catalog/catalog.module';
     AppointmentsModule,
     DocumentsModule,
     EligibilityModule,
-    CatalogModule
+    CatalogModule,
+    SettingsModule,
+    DashboardModule
   ],
   controllers: [AppController],
   providers: [AppService],

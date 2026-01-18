@@ -12,6 +12,7 @@ export declare class UsersService {
             type: import(".prisma/client").$Enums.AgencyType;
             status: import(".prisma/client").$Enums.AgencyStatus;
             region: string;
+            city: string;
             zipCodes: string;
             commissionRate: number;
             contactEmail: string;
@@ -26,13 +27,13 @@ export declare class UsersService {
             description: string;
             isSystem: boolean;
         } | null;
-        agencyId: string | null;
         role: import(".prisma/client").$Enums.UserRole;
         id: string;
         email: string;
         password: string;
         name: string;
         roleId: string | null;
+        agencyId: string | null;
         homeAgencyId: string | null;
         permissions: string;
         createdAt: Date;
@@ -49,6 +50,7 @@ export declare class UsersService {
             type: import(".prisma/client").$Enums.AgencyType;
             status: import(".prisma/client").$Enums.AgencyStatus;
             region: string;
+            city: string;
             zipCodes: string;
             commissionRate: number;
             contactEmail: string;
@@ -63,13 +65,13 @@ export declare class UsersService {
             description: string;
             isSystem: boolean;
         } | null;
-        agencyId: string | null;
         role: import(".prisma/client").$Enums.UserRole;
         id: string;
         email: string;
         password: string;
         name: string;
         roleId: string | null;
+        agencyId: string | null;
         homeAgencyId: string | null;
         permissions: string;
         createdAt: Date;
@@ -86,6 +88,7 @@ export declare class UsersService {
             type: import(".prisma/client").$Enums.AgencyType;
             status: import(".prisma/client").$Enums.AgencyStatus;
             region: string;
+            city: string;
             zipCodes: string;
             commissionRate: number;
             contactEmail: string;
@@ -100,13 +103,13 @@ export declare class UsersService {
             description: string;
             isSystem: boolean;
         } | null;
-        agencyId: string | null;
         role: import(".prisma/client").$Enums.UserRole;
         id: string;
         email: string;
         password: string;
         name: string;
         roleId: string | null;
+        agencyId: string | null;
         homeAgencyId: string | null;
         permissions: string;
         createdAt: Date;
@@ -114,13 +117,13 @@ export declare class UsersService {
         lastLogin: Date | null;
     } | null>;
     create(data: any): Promise<{
-        agencyId: string | null;
         role: import(".prisma/client").$Enums.UserRole;
         id: string;
         email: string;
         password: string;
         name: string;
         roleId: string | null;
+        agencyId: string | null;
         homeAgencyId: string | null;
         scopeAgencyIds: string;
         permissions: string;
@@ -129,13 +132,13 @@ export declare class UsersService {
         lastLogin: Date | null;
     }>;
     update(id: string, data: any): Promise<{
-        agencyId: string | null;
         role: import(".prisma/client").$Enums.UserRole;
         id: string;
         email: string;
         password: string;
         name: string;
         roleId: string | null;
+        agencyId: string | null;
         homeAgencyId: string | null;
         scopeAgencyIds: string;
         permissions: string;
@@ -144,13 +147,13 @@ export declare class UsersService {
         lastLogin: Date | null;
     }>;
     delete(id: string): Promise<{
-        agencyId: string | null;
         role: import(".prisma/client").$Enums.UserRole;
         id: string;
         email: string;
         password: string;
         name: string;
         roleId: string | null;
+        agencyId: string | null;
         homeAgencyId: string | null;
         scopeAgencyIds: string;
         permissions: string;

@@ -35,6 +35,7 @@ export declare class LeadsController {
             type: import(".prisma/client").$Enums.AgencyType;
             status: import(".prisma/client").$Enums.AgencyStatus;
             region: string;
+            city: string;
             zipCodes: string;
             commissionRate: number;
             contactEmail: string;

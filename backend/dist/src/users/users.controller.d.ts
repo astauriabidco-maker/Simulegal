@@ -12,6 +12,7 @@ export declare class UsersController {
             type: import(".prisma/client").$Enums.AgencyType;
             status: import(".prisma/client").$Enums.AgencyStatus;
             region: string;
+            city: string;
             zipCodes: string;
             commissionRate: number;
             contactEmail: string;
@@ -26,13 +27,13 @@ export declare class UsersController {
             description: string;
             isSystem: boolean;
         } | null;
-        agencyId: string | null;
         role: import(".prisma/client").$Enums.UserRole;
         id: string;
         email: string;
         password: string;
         name: string;
         roleId: string | null;
+        agencyId: string | null;
         homeAgencyId: string | null;
         permissions: string;
         createdAt: Date;
@@ -49,6 +50,7 @@ export declare class UsersController {
             type: import(".prisma/client").$Enums.AgencyType;
             status: import(".prisma/client").$Enums.AgencyStatus;
             region: string;
+            city: string;
             zipCodes: string;
             commissionRate: number;
             contactEmail: string;
@@ -63,13 +65,13 @@ export declare class UsersController {
             description: string;
             isSystem: boolean;
         } | null;
-        agencyId: string | null;
         role: import(".prisma/client").$Enums.UserRole;
         id: string;
         email: string;
         password: string;
         name: string;
         roleId: string | null;
+        agencyId: string | null;
         homeAgencyId: string | null;
         permissions: string;
         createdAt: Date;
@@ -77,13 +79,13 @@ export declare class UsersController {
         lastLogin: Date | null;
     } | null>;
     create(req: any, data: any): Promise<{
-        agencyId: string | null;
         role: import(".prisma/client").$Enums.UserRole;
         id: string;
         email: string;
         password: string;
         name: string;
         roleId: string | null;
+        agencyId: string | null;
         homeAgencyId: string | null;
         scopeAgencyIds: string;
         permissions: string;
@@ -92,13 +94,13 @@ export declare class UsersController {
         lastLogin: Date | null;
     }>;
     update(req: any, id: string, data: any): Promise<{
-        agencyId: string | null;
         role: import(".prisma/client").$Enums.UserRole;
         id: string;
         email: string;
         password: string;
         name: string;
         roleId: string | null;
+        agencyId: string | null;
         homeAgencyId: string | null;
         scopeAgencyIds: string;
         permissions: string;
@@ -107,13 +109,13 @@ export declare class UsersController {
         lastLogin: Date | null;
     }>;
     remove(req: any, id: string): Promise<{
-        agencyId: string | null;
         role: import(".prisma/client").$Enums.UserRole;
         id: string;
         email: string;
         password: string;
         name: string;
         roleId: string | null;
+        agencyId: string | null;
         homeAgencyId: string | null;
         scopeAgencyIds: string;
         permissions: string;

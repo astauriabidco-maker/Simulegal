@@ -12,6 +12,7 @@ export interface Agency {
     zipCodes: string[]; // Zones couvertes pour les rappels (ex: ['75001', '75002'])
     commissionRate: number; // 0% si OWNED (généralement), X% si FRANCHISE
     address?: string;
+    city?: string;
 }
 
 export interface UserRole {
@@ -54,7 +55,8 @@ export const MOCK_AGENCIES: Agency[] = [
         region: 'IDF',
         zipCodes: ['75001', '75002', '75003', '75004', '75005'],
         commissionRate: 0,
-        address: '8 Rue de la Paix, 75002 Paris'
+        address: '8 Rue de la Paix, 75002 Paris',
+        city: 'Paris'
     },
     {
         id: 'OWN-001',
@@ -63,7 +65,8 @@ export const MOCK_AGENCIES: Agency[] = [
         region: 'AURA',
         zipCodes: ['69001', '69002', '69003', '69004', '69005'],
         commissionRate: 0,
-        address: '15 Place Bellecour, 69002 Lyon'
+        address: '15 Place Bellecour, 69002 Lyon',
+        city: 'Lyon'
     },
     {
         id: 'FRAN-001',
@@ -72,7 +75,8 @@ export const MOCK_AGENCIES: Agency[] = [
         region: 'PACA',
         zipCodes: ['13001', '13002', '13003', '13004'],
         commissionRate: 15,
-        address: '40 Quai du Port, 13002 Marseille'
+        address: '40 Quai du Port, 13002 Marseille',
+        city: 'Marseille'
     },
     {
         id: 'RELAY-001',
@@ -81,6 +85,7 @@ export const MOCK_AGENCIES: Agency[] = [
         region: 'NAQ',
         zipCodes: ['33000', '33100'],
         commissionRate: 5,
-        address: '12 Cours de l\'Intendance, 33000 Bordeaux'
+        address: '12 Cours de l\'Intendance, 33000 Bordeaux',
+        city: 'Bordeaux'
     }
 ];

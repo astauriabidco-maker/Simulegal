@@ -22,14 +22,15 @@ export declare class FinanceController {
             type: import(".prisma/client").$Enums.AgencyType;
             status: import(".prisma/client").$Enums.AgencyStatus;
             region: string;
+            city: string;
             zipCodes: string;
             commissionRate: number;
             contactEmail: string;
             kioskUrl: string;
         };
     } & {
-        agencyId: string;
         id: string;
+        agencyId: string;
         createdAt: Date;
         status: string;
         amount: number;
@@ -42,8 +43,8 @@ export declare class FinanceController {
         amount: number;
         period: string;
     }): Promise<{
-        agencyId: string;
         id: string;
+        agencyId: string;
         createdAt: Date;
         status: string;
         amount: number;

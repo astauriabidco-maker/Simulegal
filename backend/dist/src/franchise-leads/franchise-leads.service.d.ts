@@ -41,6 +41,7 @@ export declare class FranchiseLeadsService {
             type: import(".prisma/client").$Enums.AgencyType;
             status: import(".prisma/client").$Enums.AgencyStatus;
             region: string;
+            city: string;
             zipCodes: string;
             commissionRate: number;
             contactEmail: string;
@@ -119,6 +120,7 @@ export declare class FranchiseLeadsService {
             type: import(".prisma/client").$Enums.AgencyType;
             status: import(".prisma/client").$Enums.AgencyStatus;
             region: string;
+            city: string;
             zipCodes: string;
             commissionRate: number;
             contactEmail: string;
@@ -126,13 +128,13 @@ export declare class FranchiseLeadsService {
         };
         user: {
             tempPassword: string;
-            agencyId: string | null;
             role: import(".prisma/client").$Enums.UserRole;
             id: string;
             email: string;
             password: string;
             name: string;
             roleId: string | null;
+            agencyId: string | null;
             homeAgencyId: string | null;
             scopeAgencyIds: string;
             permissions: string;

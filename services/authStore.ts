@@ -42,7 +42,7 @@ export const AuthStore = {
 
             // Mapping des rôles Backend -> Frontend
             let role: UserRole = 'HQ';
-            if (apiUser.role === 'SUPERADMIN') role = 'SUPERADMIN';
+            if (apiUser.role === 'SUPER_ADMIN' || apiUser.role === 'SUPERADMIN') role = 'SUPERADMIN';
             else if (apiUser.role === 'HQ_ADMIN') role = 'HQ';
             else role = 'AGENCY';
 
@@ -53,7 +53,7 @@ export const AuthStore = {
                 role: role,
                 agencyId: apiUser.agencyId,
                 agencyName: apiUser.agencyName,
-                permissions: apiUser.permissions.split(','),
+                permissions: Array.isArray(apiUser.permissions) ? apiUser.permissions : (apiUser.permissions || '').split(','),
                 lastLogin: new Date().toISOString()
             };
 

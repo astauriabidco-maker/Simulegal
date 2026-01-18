@@ -87,7 +87,7 @@ export default function FranchiseLeadsPage() {
                             {/* Contenu Colonne */}
                             <div className="p-3 space-y-3 overflow-y-auto flex-1">
                                 {leads.filter(l => l.status === column.id).map(lead => (
-                                    <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-200 hover:shadow-md transition-shadow group relative cursor-pointer"
+                                    <div key={lead.id} className="bg-white p-4 rounded-lg shadow-sm border border-slate-200 hover:shadow-md transition-shadow group relative cursor-pointer"
                                         onClick={() => window.location.href = `/admin/franchise-leads/${lead.id}`}
                                     >
                                         <div className="flex justify-between items-start mb-2">

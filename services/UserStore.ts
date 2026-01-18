@@ -16,11 +16,24 @@ const getHeaders = () => {
 export const UserStore = {
     getAllUsers: async (): Promise<StaffUser[]> => {
         try {
+            const token = AuthStore.getToken();
+            if (!token) {
+                console.warn('[IAM] ⚠️ Pas de token disponible - utilisateur non authentifié');
+                return [];
+            }
+
             const response = await fetch(API_URL, { headers: getHeaders() });
-            if (!response.ok) throw new Error('Erreur lors du chargement des utilisateurs');
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.warn(`[IAM] ⚠️ API ${response.status}: ${response.status === 403 ? 'Accès restreint au siège' : errorText}`);
+                // Return empty array instead of throwing - let UI handle access control
+                return [];
+            }
+
             return response.json();
         } catch (error) {
-            console.error('[IAM] ❌ Erreur API:', error);
+            console.error('[IAM] ❌ Erreur réseau:', error);
             return [];
         }
     },

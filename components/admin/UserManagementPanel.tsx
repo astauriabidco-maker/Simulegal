@@ -20,12 +20,14 @@ import { AgencyStore } from '../../services/AgencyStore';
 import { Agency } from '../../types/backoffice';
 import { StaffUser, UserStore } from '../../services/UserStore';
 import { UserRole, ROLE_LABELS } from '../../config/Permissions';
+import { AuthStore } from '../../services/authStore';
 
 export default function UserManagementPanel() {
     const [users, setUsers] = useState<StaffUser[]>([]);
     const [agencies, setAgencies] = useState<Agency[]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingUser, setEditingUser] = useState<StaffUser | null>(null);
+    const [accessDenied, setAccessDenied] = useState(false);
 
     // État local pour le type de staff (UI only)
     const [staffType, setStaffType] = useState<'AGENCY' | 'HQ'>('AGENCY');
@@ -40,6 +42,12 @@ export default function UserManagementPanel() {
     });
 
     useEffect(() => {
+        // Check role before loading
+        const currentUser = AuthStore.getCurrentUser();
+        if (!currentUser || !['SUPERADMIN', 'HQ'].includes(currentUser.role)) {
+            setAccessDenied(true);
+            return;
+        }
         loadData();
     }, []);
 
@@ -131,6 +139,28 @@ export default function UserManagementPanel() {
 
     const isGlobalScope = !formData.scopeAgencyIds || formData.scopeAgencyIds.length === 0;
 
+    // Access denied UI
+    if (accessDenied) {
+        return (
+            <div className="p-8 flex items-center justify-center min-h-[400px]">
+                <div className="text-center space-y-4">
+                    <div className="w-20 h-20 bg-red-50 rounded-3xl flex items-center justify-center mx-auto">
+                        <Shield className="text-red-500" size={40} />
+                    </div>
+                    <h2 className="text-2xl font-black text-slate-900">Accès Refusé</h2>
+                    <p className="text-slate-500 max-w-md">
+                        Cette fonctionnalité est réservée aux <strong>Administrateurs du Siège</strong> (HQ_ADMIN ou SUPER_ADMIN).
+                    </p>
+                    <button
+                        onClick={() => window.location.href = '/staff-login'}
+                        className="px-6 py-3 bg-slate-900 text-white rounded-2xl font-black text-sm"
+                    >
+                        Se reconnecter
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="p-8">

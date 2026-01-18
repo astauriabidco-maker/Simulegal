@@ -99,6 +99,7 @@ model Agency {
   type           AgencyType
   status         AgencyStatus @default(ACTIVE)
   region         String       @default("IDF") // Région (ex: IDF, PACA, AURA)
+  city           String       @default("Paris")
   zipCodes       String       // Stocké sous forme de chaîne (ex: "75001,75002")
   commissionRate Float        @default(15)
   contactEmail   String
@@ -252,3 +253,14 @@ enum AppointmentStatus {
   CANCELLED
   NO_SHOW
 }
+
+model SystemSettings {
+  id              String   @id @default("GLOBAL")
+  company         String   @default("{}") // JSON String
+  payment         String   @default("{}") // JSON String
+  notifications   String   @default("{}") // JSON String
+  integrations    String   @default("{}") // JSON String
+  storage         String   @default("{}") // JSON String
+  updatedAt       DateTime @updatedAt
+}
+
