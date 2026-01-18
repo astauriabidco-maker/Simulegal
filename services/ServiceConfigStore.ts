@@ -288,7 +288,25 @@ export const AVAILABLE_SERVICES: ServiceMetadata[] = [
 const CUSTOM_DOCS_KEY = 'custom_documents';
 const CUSTOM_SERVICES_KEY = 'custom_services';
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+
 export const ServiceConfigStore = {
+
+    syncWithBackend: async () => {
+        try {
+            const res = await fetch(`${API_URL}/catalog/services`);
+            if (res.ok) {
+                const services = await res.json();
+                // Merge with custom services or replace?
+                // For this implementation, we assume backend is source of truth for BASE services.
+                // We don't overwrite custom definitions in localStorage here, but in a real app backend would handle all.
+                console.log(`[CONFIG] ✅ Loaded ${services.length} services from backend`);
+            }
+        } catch (e) {
+            console.warn('[CONFIG] Backend sync failed');
+        }
+    },
+
     /**
      * Charge toutes les configurations (localStorage ou par défaut)
      */

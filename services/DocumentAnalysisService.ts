@@ -20,65 +20,45 @@ export interface AnalysisResponse {
 // Délai simulé d'analyse (1-3 secondes)
 const ANALYSIS_DELAY = () => Math.random() * 2000 + 1000;
 
-export const DocumentAnalysisService = {
-    /**
-     * Analyse un fichier uploadé et retourne le résultat de validation
-     * Simulation : rejette si le nom contient certains mots-clés
-     */
-    analyze: async (file: File, docType?: string): Promise<AnalysisResponse> => {
-        console.log(`[OCR] 🔍 Analyse du fichier: ${file.name} (${docType || 'type inconnu'})`);
+/**
+ * Analyse un fichier uploadé et retourne le résultat de validation
+ * Appel API vers /documents/analyze
+ */
+analyze: async (file: File, docType?: string): Promise<AnalysisResponse> => {
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
-        // Simule un délai d'analyse
-        await new Promise(resolve => setTimeout(resolve, ANALYSIS_DELAY()));
+    try {
+        const formData = new FormData();
+        formData.append('file', file);
+        if (docType) formData.append('docType', docType);
 
-        const fileName = file.name.toLowerCase();
+        const res = await fetch(`${API_URL}/documents/analyze`, {
+            method: 'POST',
+            body: formData
+            // Note: fetch automatically sets Content-Type to multipart/form-data with boundary
+        });
 
-        // Règles de rejet basées sur le nom du fichier (simulation)
-        if (fileName.includes('flou') || fileName.includes('blur') || fileName.includes('blurry')) {
-            console.log('[OCR] ❌ Document flou détecté');
+        if (!res.ok) {
+            console.error('[OCR] ❌ Erreur analyse:', res.statusText);
             return {
-                status: 'REJECTED_BLURRY',
-                confidence: 15,
-                message: 'Le document est trop flou. Veuillez reprendre la photo avec un meilleur éclairage.'
+                status: 'REJECTED_WRONG_TYPE', // Generic fallback
+                confidence: 0,
+                message: 'Erreur lors de l\'analyse du document.'
             };
         }
 
-        if (fileName.includes('incomplet') || fileName.includes('partial')) {
-            return {
-                status: 'REJECTED_INCOMPLETE',
-                confidence: 30,
-                message: 'Le document n\'est pas entièrement visible. Assurez-vous de capturer toute la page.'
-            };
-        }
+        const data: AnalysisResponse = await res.json();
+        return data;
 
-        if (fileName.includes('expire') || fileName.includes('perime')) {
-            return {
-                status: 'REJECTED_EXPIRED',
-                confidence: 85,
-                message: 'Ce document semble être expiré. Veuillez fournir un document valide.'
-            };
-        }
-
-        if (fileName.includes('mauvais') || fileName.includes('wrong')) {
-            return {
-                status: 'REJECTED_WRONG_TYPE',
-                confidence: 90,
-                message: 'Ce n\'est pas le bon type de document. Veuillez vérifier la demande.'
-            };
-        }
-
-        // Par défaut : document valide
-        console.log('[OCR] ✅ Document validé');
+    } catch (error) {
+        console.error('[OCR] ❌ Erreur réseau:', error);
         return {
-            status: 'VALID',
-            confidence: 95,
-            message: 'Document validé avec succès !',
-            extractedData: {
-                documentType: docType || 'unknown',
-                analyzedAt: new Date().toISOString()
-            }
+            status: 'REJECTED_WRONG_TYPE',
+            confidence: 0,
+            message: 'Erreur de connexion au service d\'analyse.'
         };
-    },
+    }
+},
 
     /**
      * Vérifie si un résultat est valide
@@ -87,27 +67,27 @@ export const DocumentAnalysisService = {
         return result === 'VALID';
     },
 
-    /**
-     * Retourne le message d'erreur approprié
-     */
-    getErrorMessage: (result: AnalysisResult): string => {
-        const messages: Record<AnalysisResult, string> = {
-            VALID: '',
-            REJECTED_BLURRY: 'Photo floue - Reprenez avec plus de lumière',
-            REJECTED_INCOMPLETE: 'Document incomplet - Capturez toute la page',
-            REJECTED_WRONG_TYPE: 'Mauvais document - Vérifiez le type demandé',
-            REJECTED_EXPIRED: 'Document expiré - Fournissez un document valide'
-        };
-        return messages[result];
-    },
+        /**
+         * Retourne le message d'erreur approprié
+         */
+        getErrorMessage: (result: AnalysisResult): string => {
+            const messages: Record<AnalysisResult, string> = {
+                VALID: '',
+                REJECTED_BLURRY: 'Photo floue - Reprenez avec plus de lumière',
+                REJECTED_INCOMPLETE: 'Document incomplet - Capturez toute la page',
+                REJECTED_WRONG_TYPE: 'Mauvais document - Vérifiez le type demandé',
+                REJECTED_EXPIRED: 'Document expiré - Fournissez un document valide'
+            };
+            return messages[result] || 'Erreur inconnue';
+        },
 
-    /**
-     * Retourne l'icône appropriée pour le résultat
-     */
-    getResultIcon: (result: AnalysisResult): string => {
-        if (result === 'VALID') return '✅';
-        return '❌';
-    }
+            /**
+             * Retourne l'icône appropriée pour le résultat
+             */
+            getResultIcon: (result: AnalysisResult): string => {
+                if (result === 'VALID') return '✅';
+                return '❌';
+            }
 };
 
 export default DocumentAnalysisService;

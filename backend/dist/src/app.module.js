@@ -20,12 +20,31 @@ const devices_module_1 = require("./devices/devices.module");
 const notifications_module_1 = require("./notifications/notifications.module");
 const roles_module_1 = require("./roles/roles.module");
 const franchise_leads_module_1 = require("./franchise-leads/franchise-leads.module");
+const appointments_module_1 = require("./appointments/appointments.module");
+const documents_module_1 = require("./documents/documents.module");
+const eligibility_module_1 = require("./eligibility/eligibility.module");
+const catalog_module_1 = require("./catalog/catalog.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
 exports.AppModule = AppModule = __decorate([
     (0, common_1.Module)({
-        imports: [auth_module_1.AuthModule, users_module_1.UsersModule, prisma_module_1.PrismaModule, agencies_module_1.AgenciesModule, leads_module_1.LeadsModule, finance_module_1.FinanceModule, devices_module_1.DevicesModule, notifications_module_1.NotificationsModule, roles_module_1.RolesModule, franchise_leads_module_1.FranchiseLeadsModule],
+        imports: [
+            auth_module_1.AuthModule,
+            users_module_1.UsersModule,
+            prisma_module_1.PrismaModule,
+            agencies_module_1.AgenciesModule,
+            leads_module_1.LeadsModule,
+            finance_module_1.FinanceModule,
+            devices_module_1.DevicesModule,
+            notifications_module_1.NotificationsModule,
+            roles_module_1.RolesModule,
+            franchise_leads_module_1.FranchiseLeadsModule,
+            appointments_module_1.AppointmentsModule,
+            documents_module_1.DocumentsModule,
+            eligibility_module_1.EligibilityModule,
+            catalog_module_1.CatalogModule
+        ],
         controllers: [app_controller_1.AppController],
         providers: [app_service_1.AppService],
     })

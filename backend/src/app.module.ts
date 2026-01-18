@@ -12,9 +12,28 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { RolesModule } from './roles/roles.module';
 
 import { FranchiseLeadsModule } from './franchise-leads/franchise-leads.module';
+import { AppointmentsModule } from './appointments/appointments.module';
+import { DocumentsModule } from './documents/documents.module';
+import { EligibilityModule } from './eligibility/eligibility.module';
+import { CatalogModule } from './catalog/catalog.module';
 
 @Module({
-  imports: [AuthModule, UsersModule, PrismaModule, AgenciesModule, LeadsModule, FinanceModule, DevicesModule, NotificationsModule, RolesModule, FranchiseLeadsModule],
+  imports: [
+    AuthModule,
+    UsersModule,
+    PrismaModule,
+    AgenciesModule,
+    LeadsModule,
+    FinanceModule,
+    DevicesModule,
+    NotificationsModule,
+    RolesModule,
+    FranchiseLeadsModule,
+    AppointmentsModule,
+    DocumentsModule,
+    EligibilityModule,
+    CatalogModule
+  ],
   controllers: [AppController],
   providers: [AppService],
 })

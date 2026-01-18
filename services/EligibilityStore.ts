@@ -17,6 +17,36 @@ export const EligibilityStore = {
     // GESTION DES SEUILS (THRESHOLDS)
     // ============================================
 
+
+    /**
+     * Synchronise les configurations depuis le Backend
+     */
+    syncWithBackend: async () => {
+        if (typeof window === 'undefined') return;
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+
+        try {
+            // 1. Thresholds
+            const tRes = await fetch(`${API_URL}/eligibility/thresholds`);
+            if (tRes.ok) {
+                const thresholds = await tRes.json();
+                localStorage.setItem(THRESHOLDS_KEY, JSON.stringify(thresholds));
+            }
+
+            // 2. Rules (Example for 'naturalisation')
+            const rRes = await fetch(`${API_URL}/eligibility/rules/naturalisation`);
+            if (rRes.ok) {
+                const rules = await rRes.json();
+                if (rules && rules.length > 0) {
+                    localStorage.setItem(RULES_KEY_PREFIX + 'naturalisation', JSON.stringify(rules));
+                }
+            }
+            console.log('[ELIGIBILITY] ✅ Sync complete');
+        } catch (err) {
+            console.warn('[ELIGIBILITY] ⚠️ Backend sync failed, using defaults', err);
+        }
+    },
+
     /**
      * Récupère tous les seuils (SMIC, durées, salaires...)
      */
@@ -30,6 +60,8 @@ export const EligibilityStore = {
                 return defaultThresholds;
             }
         }
+        // Trigger background sync if missing?
+        // EligibilityStore.syncWithBackend(); 
         return defaultThresholds;
     },
 

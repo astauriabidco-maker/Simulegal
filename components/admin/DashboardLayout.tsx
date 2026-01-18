@@ -18,7 +18,8 @@ import {
     Settings,
     Brain,
     Eye,
-    Tablet
+    Tablet,
+    Calendar as CalendarIcon
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePermission } from '../../hooks/usePermission';
@@ -57,6 +58,7 @@ const DEFAULT_MENU: MenuItem[] = [
     { id: 'devices', label: 'Terminaux', icon: <Tablet size={20} />, href: '/admin/devices', permission: 'fleet.manage' },
     { id: 'audit-veille', label: '⚖️ Audit et Veille', icon: <Eye size={20} />, href: '/admin/audit', permission: 'settings.manage' },
     { id: 'roles', label: 'Rôles & Droits', icon: <Shield size={20} />, href: '/admin/rbac', permission: 'roles.manage' },
+    { id: 'calendar', label: 'Agenda & RDV', icon: <CalendarIcon size={20} />, href: '/admin/calendar', permission: 'crm.view_agency' },
 ];
 
 export default function DashboardLayout({

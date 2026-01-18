@@ -29,18 +29,18 @@ export default function CheckoutFlow({
 }: CheckoutFlowProps) {
     if (!isOpen) return null;
 
-    const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
+    const [step, setStep] = useState<1 | 2 | 3 | 4 | 5>(1);
     const [formData, setFormData] = useState({ name: '', email: '', phone: '', zipCode: '' });
     const [isProcessing, setIsProcessing] = useState(false);
     const [hasAgreed, setHasAgreed] = useState(false);
     const [hasReadContract, setHasReadContract] = useState(false);
     const [contractData, setContractData] = useState<any>(null);
     const [createdLeadId, setCreatedLeadId] = useState<string | null>(null);
+    const [assignedAgency, setAssignedAgency] = useState<any>(null); // Store agency for booking
     const contractRef = useRef<HTMLDivElement>(null);
 
     const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
         const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
-        // On considère lu si on arrive à 5px du bas
         if (scrollHeight - scrollTop <= clientHeight + 5) {
             setHasReadContract(true);
         }
@@ -49,10 +49,9 @@ export default function CheckoutFlow({
     const handleNext = () => setStep((s) => (s + 1) as any);
 
     const handleSignContract = () => {
-        // 1. Simulation de la collecte de preuve (Audit Trail)
         const auditTrail = {
             signedAt: new Date().toISOString(),
-            ip: '192.168.1.1', // Récupéré via backend en prod
+            ip: '192.168.1.1',
             userAgent: navigator.userAgent,
             contractVersion: 'v1.2-2026',
             contractHash: 'SHA256:' + Math.random().toString(36).substring(2, 15),
@@ -64,14 +63,19 @@ export default function CheckoutFlow({
         setStep(3);
     };
 
-
     const handlePayment = async () => {
         setIsProcessing(true);
-
-        // Récupère la checklist dynamique pour ce service
         const checklist = ServiceConfigStore.getRequirements(serviceId);
 
+        // Determine Agency
+        const originAgencyId = partnerId || LeadRouter.getOriginAgency(serviceId, formData.zipCode, partnerId);
+
         try {
+            // Fetch Agency Details to decide flow
+            const allAgencies = await import('../services/AgencyStore').then(m => m.AgencyStore.getAllAgencies());
+            const agency = allAgencies.find(a => a.id === originAgencyId);
+            setAssignedAgency(agency);
+
             const newLead = await CRM.saveLead({
                 name: formData.name,
                 email: formData.email,
@@ -79,64 +83,78 @@ export default function CheckoutFlow({
                 serviceId: serviceId,
                 serviceName: serviceName,
                 amountPaid: price,
-                // Checklist figée pour ce dossier
                 requiredDocuments: checklist,
-                // Routage intelligent du dossier
-                originAgencyId: LeadRouter.getOriginAgency(serviceId, formData.zipCode, partnerId),
-                // On attache la preuve ici
+                originAgencyId: originAgencyId,
                 contract: {
                     signedAt: new Date().toISOString(),
-                    ipAddress: "88.123.44.12", // Simulé
+                    ipAddress: "88.123.44.12",
                     consentVersion: "v1.0",
                     isSigned: true
-                },
-                // Injection du partenaire pour le mode Kiosk
-                ...(partnerId && { originAgencyId: partnerId })
+                }
             } as any);
 
             if (newLead) {
                 setCreatedLeadId(newLead.id);
             }
             setIsProcessing(false);
-            setStep(4);
+
+            // Decision Matrix for Booking Flow
+            const isDigitalService = ['rdv_juriste', 'consultation_avocat'].includes(serviceId);
+
+            if (isDigitalService) {
+                // CASE 1: Digital Service -> Always Show Booking (Visio)
+                setStep(4);
+            } else if (agency && agency.type === 'CORNER') {
+                // CASE 3: Procedural + Corner -> Skip Booking (Drop-off)
+                setStep(5);
+            } else {
+                // CASE 2: Procedural + Physical/HQ -> Show Booking (Physical)
+                setStep(4);
+            }
+
         } catch (error) {
             console.error('[CheckoutFlow] Erreur paiement:', error);
             setIsProcessing(false);
-            // Optionnel: afficher une erreur UI
         }
     };
 
-
+    // Helper to determine mode for widget
+    const getBookingMode = () => {
+        if (['rdv_juriste', 'consultation_avocat'].includes(serviceId)) return 'VISIO_JURISTE';
+        return 'PHYSICAL_AGENCY';
+    };
 
     return (
         <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-300">
-            <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-300">
+            <div className={`bg-white rounded-[2rem] shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-300 ${step === 4 ? 'bg-slate-50' : ''}`}>
 
-                {/* Header avec Stepper */}
-                <div className="bg-slate-50 p-6 border-b border-slate-100">
-                    <div className="flex justify-between items-center mb-6">
-                        <div>
-                            <h3 className="font-black text-slate-900 text-lg uppercase tracking-tight">Finalisation de commande</h3>
-                            <p className="text-xs text-slate-500 font-bold">{serviceName}</p>
-                        </div>
-                        <button onClick={onClose} className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 hover:rotate-90 transition-all border border-slate-100 shadow-sm">
-                            <X size={20} />
-                        </button>
-                    </div>
-
-                    <div className="flex gap-2">
-                        {[1, 2, 3, 4].map(s => (
-                            <div key={s} className="flex-1 h-1.5 rounded-full bg-slate-200 relative overflow-hidden">
-                                <div
-                                    className={`absolute inset-0 bg-indigo-600 transition-transform duration-500 ease-out origin-left ${s <= step ? 'scale-x-100' : 'scale-x-0'}`}
-                                />
+                {/* Header with Stepper */}
+                {step !== 4 && ( // Hide standard header during booking for immersive feel
+                    <div className="bg-slate-50 p-6 border-b border-slate-100">
+                        <div className="flex justify-between items-center mb-6">
+                            <div>
+                                <h3 className="font-black text-slate-900 text-lg uppercase tracking-tight">Finalisation de commande</h3>
+                                <p className="text-xs text-slate-500 font-bold">{serviceName}</p>
                             </div>
-                        ))}
-                    </div>
-                </div>
+                            <button onClick={onClose} className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 hover:rotate-90 transition-all border border-slate-100 shadow-sm">
+                                <X size={20} />
+                            </button>
+                        </div>
 
-                {/* Contenu Scrollable */}
-                <div className="p-8 overflow-y-auto custom-scrollbar">
+                        <div className="flex gap-2">
+                            {[1, 2, 3, 4, 5].map(s => (
+                                <div key={s} className="flex-1 h-1.5 rounded-full bg-slate-200 relative overflow-hidden">
+                                    <div
+                                        className={`absolute inset-0 bg-indigo-600 transition-transform duration-500 ease-out origin-left ${s <= step ? 'scale-x-100' : 'scale-x-0'}`}
+                                    />
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {/* Scrollable Content */}
+                <div className={`p-8 overflow-y-auto custom-scrollbar ${step === 4 ? 'p-0' : ''}`}>
 
                     {/* STEP 1: IDENTITÉ */}
                     {step === 1 && (
@@ -193,7 +211,7 @@ export default function CheckoutFlow({
                         </div>
                     )}
 
-                    {/* STEP 2: CONTRAT & SIGNATURE (Mise à jour Legal) */}
+                    {/* STEP 2: CONTRAT & SIGNATURE */}
                     {step === 2 && (
                         <div className="space-y-4">
                             <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
@@ -239,17 +257,7 @@ export default function CheckoutFlow({
                             <button
                                 id="btn-sign"
                                 disabled
-                                onClick={() => {
-                                    // Simulation Audit Trail
-                                    const auditData = {
-                                        signedAt: new Date().toISOString(),
-                                        ipAddress: "88.123.44.12",
-                                        consentVersion: "v1.0",
-                                        isSigned: true
-                                    };
-                                    setContractData(auditData);
-                                    setStep(3);
-                                }}
+                                onClick={handleSignContract}
                                 className="w-full py-3 rounded-lg font-bold flex justify-center items-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed bg-slate-900 text-white hover:bg-slate-800 shadow-md hover:shadow-lg"
                             >
                                 <PenTool size={18} />
@@ -257,7 +265,6 @@ export default function CheckoutFlow({
                             </button>
                         </div>
                     )}
-
 
                     {/* STEP 3: PAIEMENT */}
                     {step === 3 && (
@@ -316,8 +323,24 @@ export default function CheckoutFlow({
                         </div>
                     )}
 
-                    {/* STEP 4: SUCCÈS */}
+                    {/* STEP 4: PRISE DE RDV (SMART AGENDA) */}
                     {step === 4 && (
+                        <div className="animate-in fade-in slide-in-from-right-4 duration-500">
+                            {/* Importation dynamique pour éviter les dépendances circulaires ou lourdes si non nécessaire */}
+                            {React.createElement(
+                                React.lazy(() => import('./calendar/BookingWidget')),
+                                {
+                                    lead: { id: createdLeadId || '', name: formData.name, email: formData.email },
+                                    forcedAgencyId: assignedAgency?.id,
+                                    initialMode: getBookingMode(),
+                                    onComplete: () => setStep(5)
+                                }
+                            )}
+                        </div>
+                    )}
+
+                    {/* STEP 5: SUCCÈS & RECAP */}
+                    {step === 5 && (
                         <div className="text-center space-y-8 py-4 animate-in fade-in zoom-in-95 duration-700">
                             <div className="relative">
                                 <div className="absolute inset-0 bg-green-200 rounded-full blur-3xl opacity-20 animate-pulse" />
@@ -346,7 +369,6 @@ export default function CheckoutFlow({
                                 <p className="text-slate-400 text-sm font-medium mb-8 relative z-10">Nous avons généré votre liste de documents personnalisée prête à l'emploi.</p>
 
                                 <div className="space-y-4 relative z-10">
-                                    {/* Mode Kiosk: Bouton géant pour reset */}
                                     {isKioskMode && onKioskReset ? (
                                         <button
                                             onClick={onKioskReset}
@@ -384,7 +406,6 @@ export default function CheckoutFlow({
                             )}
                         </div>
                     )}
-
                 </div>
             </div>
         </div>

@@ -76,6 +76,7 @@ model User {
   homeAgencyId  String?   // Rattachement physique (null = HQ)
   scopeAgencyIds String   @default("[]") // Périmètre de supervision (JSON stringé: string[])
   permissions   String    // À migrer vers Role.permissions
+  appointments  Appointment[]
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   lastLogin     DateTime?
@@ -103,6 +104,7 @@ model Agency {
   contactEmail   String
   kioskUrl       String
   users          User[]
+  appointments   Appointment[]
   leads          Lead[]
   payouts        Payout[]
   devices        Device[]
@@ -212,4 +214,41 @@ model FranchiseLeadNote {
   leadId          String
   lead            FranchiseLead @relation(fields: [leadId], references: [id])
   createdAt       DateTime      @default(now())
+}
+
+model Appointment {
+  id          String           @id @default(cuid())
+  start       DateTime
+  end         DateTime
+  type        AppointmentType
+  status      AppointmentStatus @default(SCHEDULED)
+  
+  // Client Info (denormalized)
+  leadId      String
+  leadName    String
+  leadEmail   String?
+
+  // Context
+  agencyId    String?
+  agency      Agency?          @relation(fields: [agencyId], references: [id])
+  
+  hostUserId  String?
+  hostUser    User?            @relation(fields: [hostUserId], references: [id])
+
+  meetingLink String?
+
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+}
+
+enum AppointmentType {
+  VISIO_JURISTE
+  PHYSICAL_AGENCY
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
 }
