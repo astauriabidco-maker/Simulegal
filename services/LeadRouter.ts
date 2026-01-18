@@ -1,7 +1,4 @@
-/**
- * LeadRouter Service
- * Décide de l'assignation initiale des dossiers (Agence vs Siège)
- */
+import { AgencyExt } from './AgencyStore';
 
 export const LeadRouter = {
     /**
@@ -9,31 +6,30 @@ export const LeadRouter = {
      * @param serviceId ID du service demandé
      * @param zipCode Code postal saisi par l'utilisateur (optionnel)
      * @param partnerId ID du partenaire si borne/kiosk (optionnel)
+     * @param agencies Liste des agences pour le matching (optionnel)
      */
     getOriginAgency: (
         serviceId: string,
         zipCode?: string,
-        partnerId?: string | null
+        partnerId?: string | null,
+        agencies: AgencyExt[] = []
     ): string | null => {
 
         // 1. SERVICES CENTRALISÉS (Flux Call Center / Secrétariat Siège)
-        // Ces flux arrivent tous au Siège pour qualification
         if (['rappel_echeances', 'contact_simple', 'rdv_juriste'].includes(serviceId)) {
             console.log(`[LeadRouter] 🏢 Routage vers Siège (HQ) pour le service: ${serviceId}`);
-            return 'HQ'; // ou null selon la convention de la DB
+            return 'HQ';
         }
 
         // 2. MODE BORNE / KIOSK
-        // Si on a un partnerId, le dossier appartient à la borne propriétaire
         if (partnerId) {
             console.log(`[LeadRouter] 🤖 Routage vers Borne/Partenaire: ${partnerId}`);
             return partnerId;
         }
 
         // 3. ROUTAGE GÉOGRAPHIQUE (Agences Physiques)
-        // Logique par défaut : on tente de matcher le CP avec une agence
-        if (zipCode) {
-            const agencyId = LeadRouter.findAgencyByZipCode(zipCode);
+        if (zipCode && agencies.length > 0) {
+            const agencyId = LeadRouter.findAgencyByZipCode(zipCode, agencies);
             if (agencyId) {
                 console.log(`[LeadRouter] 📍 Routage vers Agence Locale: ${agencyId} (CP: ${zipCode})`);
                 return agencyId;
@@ -45,17 +41,17 @@ export const LeadRouter = {
     },
 
     /**
-     * Logique simplifiée de matching par code postal
-     * (En prod, cela interrogerait une base d'agences avec leurs zones de chalandise)
+     * Logique de matching par code postal sur les données réelles
      */
-    findAgencyByZipCode: (zipCode: string): string | null => {
-        // Simulation de zones
-        if (zipCode.startsWith('75')) return 'AGENCY-PARIS';
-        if (zipCode.startsWith('69')) return 'AGENCY-LYON';
-        if (zipCode.startsWith('13')) return 'AGENCY-MARSEILLE';
-        if (zipCode.startsWith('33')) return 'AGENCY-BORDEAUX';
+    findAgencyByZipCode: (zipCode: string, agencies: AgencyExt[]): string | null => {
+        // On cherche une agence dont la liste des zipCodes (séparés par virgules) contient le zipCode
+        const match = agencies.find(a => {
+            if (!a.zipCodes) return false;
+            const codes = a.zipCodes.split(',').map(c => c.trim());
+            return codes.some(c => zipCode.startsWith(c));
+        });
 
-        return null; // Pas d'agence locale trouvée
+        return match ? match.id : null;
     }
 };
 

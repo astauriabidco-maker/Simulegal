@@ -58,9 +58,30 @@ export class AppointmentsService {
             throw new BadRequestException('Slot already taken');
         }
 
-        return this.prisma.appointment.create({
+        const appointment = await this.prisma.appointment.create({
             data,
         });
+
+        // Update Lead status and add note
+        try {
+            const start = new Date(data.start);
+            await this.prisma.lead.update({
+                where: { id: (data as any).leadId },
+                data: { status: 'BOOKED' }
+            });
+
+            await this.prisma.leadNote.create({
+                data: {
+                    leadId: (data as any).leadId,
+                    author: 'SYSTEM',
+                    content: `📅 Rendez-vous ${data.type === 'VISIO_JURISTE' ? 'Visio' : 'en Agence'} confirmé pour le ${start.toLocaleDateString()} à ${start.toLocaleTimeString()}`
+                }
+            });
+        } catch (error) {
+            console.warn(`[Appointments] Could not update lead:`, error.message);
+        }
+
+        return appointment;
     }
 
     async getAvailableSlots(dateStr: string, agencyId?: string): Promise<string[]> {

@@ -3,24 +3,39 @@ import { WorkflowStage } from './WorkflowService';
 
 export const NotificationService = {
     /**
-     * Simule l'envoi WhatsApp Business API
-     * En production, cela appellerait une API comme Twilio ou Meta
+     * Simule l'envoi WhatsApp Business API via le Backend
      */
-    sendWhatsApp: (phone: string, template: string, params: any) => {
-        console.log(`[WhatsApp Business] 🟢 Message envoyé à ${phone}`);
-        console.log(`[WhatsApp] Template: ${template}`, params);
+    sendWhatsApp: async (phone: string, template: string, params: any) => {
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
-        // Notification visuelle système (pour simulation front)
-        if (typeof window !== 'undefined') {
-            const event = new CustomEvent('simulegal_notification', {
-                detail: {
-                    type: 'WHATSAPP',
-                    phone,
-                    message: params.message,
-                    timestamp: new Date().toISOString()
-                }
+        try {
+            await fetch(`${API_URL}/notifications/send-whatsapp`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                    // Note: This API might need auth if called from admin, 
+                    // but for leads it might be public or use a different key.
+                    // For now, assume it's protected or tracked.
+                },
+                body: JSON.stringify({ phone, template, params })
             });
-            window.dispatchEvent(event);
+
+            console.log(`[WhatsApp Business] 🟢 Message envoyé à ${phone}`);
+
+            // Notification visuelle système (pour simulation front)
+            if (typeof window !== 'undefined') {
+                const event = new CustomEvent('simulegal_notification', {
+                    detail: {
+                        type: 'WHATSAPP',
+                        phone,
+                        message: params.message,
+                        timestamp: new Date().toISOString()
+                    }
+                });
+                window.dispatchEvent(event);
+            }
+        } catch (e) {
+            console.warn('[WhatsApp] Erreur API:', e);
         }
     },
 
