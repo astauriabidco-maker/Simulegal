@@ -1,428 +1,298 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
-import { DocumentAnalysis, AnalysisResult } from '../../services/DocumentAnalysisService';
+import React, { useState, useRef, useCallback } from 'react';
+import { DocumentAnalysisService, AnalysisResponse } from '../../services/DocumentAnalysisService';
+import { LeadDocument, DocumentStatus } from '../../services/crmStore';
 import {
     Camera,
     CheckCircle,
     XCircle,
-    RefreshCw,
+    Loader2,
+    ChevronLeft,
     ChevronRight,
-    Sparkles,
+    Upload,
     FileText,
+    User,
     Home,
     CreditCard,
-    User,
-    Image as ImageIcon,
-    Stamp,
     Briefcase,
     GraduationCap,
-    Globe,
-    AlertTriangle
+    Heart,
+    Shield,
+    X
 } from 'lucide-react';
 
-// ============================================
-// TYPES
-// ============================================
-export type Language = 'FR' | 'EN' | 'AR' | 'ES';
-export type ScanStatus = 'WAITING' | 'SCANNING' | 'SUCCESS' | 'ERROR';
-
-export interface DocumentStep {
+interface DocumentStep {
     id: string;
+    label: string;
+    description: string;
     icon: React.ReactNode;
     required: boolean;
 }
 
 interface GuidedScannerProps {
     documents: DocumentStep[];
+    existingDocs: LeadDocument[];
+    onDocumentUploaded: (docId: string, file: File, result: AnalysisResponse) => void;
     onComplete: () => void;
-    onDocumentScanned: (docId: string, file: File) => void;
+    onClose?: () => void;
 }
 
-// ============================================
-// TRADUCTIONS MULTILINGUES
-// ============================================
-const TRANSLATIONS: Record<Language, Record<string, string>> = {
-    FR: {
-        passport: 'Votre Passeport',
-        domicile: 'Justificatif de domicile',
-        photos: 'Photos d\'identité',
-        timbre: 'Timbre fiscal',
-        travail: 'Contrat de travail',
-        acte_naissance: 'Acte de naissance',
-        avis_imposition: 'Avis d\'imposition',
-        b2_francais: 'Diplôme français B2',
-        casier: 'Casier judiciaire',
-        permis_etranger: 'Permis étranger',
-        traduction: 'Traduction assermentée',
-        default: 'Document requis',
-        snap: 'Prendre une photo',
-        scanning: 'Analyse en cours...',
-        success: 'Document validé !',
-        error: 'Photo floue ou illisible',
-        error_expired: 'Document expiré',
-        error_wrong: 'Mauvais document',
-        retry: 'Réessayer',
-        next: 'Suivant',
-        step: 'Étape',
-        of: 'sur',
-        instruction: 'Prenez une photo claire de',
-        tip_good: '✓ Bien éclairé, net',
-        tip_bad: '✗ Flou, sombre',
-        complete: 'Bravo ! Tout est envoyé',
-        waiting: 'Votre dossier est en cours de traitement',
-        back_home: 'Retour à l\'accueil'
-    },
-    EN: {
-        passport: 'Your Passport',
-        domicile: 'Proof of address',
-        photos: 'ID Photos',
-        timbre: 'Tax stamp',
-        travail: 'Employment contract',
-        acte_naissance: 'Birth certificate',
-        avis_imposition: 'Tax notice',
-        b2_francais: 'French B2 diploma',
-        casier: 'Criminal record',
-        permis_etranger: 'Foreign license',
-        traduction: 'Sworn translation',
-        default: 'Required document',
-        snap: 'Take a photo',
-        scanning: 'Scanning...',
-        success: 'Document validated!',
-        error: 'Blurry or unreadable',
-        error_expired: 'Expired document',
-        error_wrong: 'Wrong document',
-        retry: 'Retry',
-        next: 'Next',
-        step: 'Step',
-        of: 'of',
-        instruction: 'Take a clear photo of',
-        tip_good: '✓ Well lit, sharp',
-        tip_bad: '✗ Blurry, dark',
-        complete: 'Done! All sent',
-        waiting: 'Your file is being processed',
-        back_home: 'Back to home'
-    },
-    AR: {
-        passport: 'جواز السفر',
-        domicile: 'إثبات العنوان',
-        photos: 'صور الهوية',
-        timbre: 'الطابع الضريبي',
-        travail: 'عقد العمل',
-        acte_naissance: 'شهادة الميلاد',
-        avis_imposition: 'إشعار الضريبة',
-        b2_francais: 'شهادة الفرنسية B2',
-        casier: 'السجل الجنائي',
-        permis_etranger: 'رخصة القيادة الأجنبية',
-        traduction: 'ترجمة معتمدة',
-        default: 'مستند مطلوب',
-        snap: 'التقط صورة',
-        scanning: 'جاري التحليل...',
-        success: 'تم التحقق!',
-        error: 'صورة غير واضحة',
-        error_expired: 'مستند منتهي الصلاحية',
-        error_wrong: 'مستند خاطئ',
-        retry: 'أعد المحاولة',
-        next: 'التالي',
-        step: 'خطوة',
-        of: 'من',
-        instruction: 'التقط صورة واضحة لـ',
-        tip_good: '✓ إضاءة جيدة',
-        tip_bad: '✗ ضبابي، مظلم',
-        complete: '!تم إرسال كل شيء',
-        waiting: 'ملفك قيد المعالجة',
-        back_home: 'العودة للرئيسية'
-    },
-    ES: {
-        passport: 'Su Pasaporte',
-        domicile: 'Justificante de domicilio',
-        photos: 'Fotos de identidad',
-        timbre: 'Timbre fiscal',
-        travail: 'Contrato de trabajo',
-        acte_naissance: 'Partida de nacimiento',
-        avis_imposition: 'Aviso fiscal',
-        b2_francais: 'Diploma francés B2',
-        casier: 'Antecedentes penales',
-        permis_etranger: 'Licencia extranjera',
-        traduction: 'Traducción jurada',
-        default: 'Documento requerido',
-        snap: 'Tomar foto',
-        scanning: 'Analizando...',
-        success: '¡Documento validado!',
-        error: 'Foto borrosa o ilegible',
-        error_expired: 'Documento caducado',
-        error_wrong: 'Documento incorrecto',
-        retry: 'Reintentar',
-        next: 'Siguiente',
-        step: 'Paso',
-        of: 'de',
-        instruction: 'Tome una foto clara de',
-        tip_good: '✓ Bien iluminado',
-        tip_bad: '✗ Borroso, oscuro',
-        complete: '¡Listo! Todo enviado',
-        waiting: 'Su expediente está en proceso',
-        back_home: 'Volver al inicio'
-    }
-};
-
-// Drapeaux pour le sélecteur de langue
-const FLAGS: Record<Language, string> = {
-    FR: '🇫🇷',
-    EN: '🇬🇧',
-    AR: '🇸🇦',
-    ES: '🇪🇸'
-};
-
-// Icônes par type de document
-const DOC_ICONS: Record<string, React.ReactNode> = {
-    passport: <Globe size={80} />,
-    domicile: <Home size={80} />,
-    photos: <ImageIcon size={80} />,
-    timbre: <Stamp size={80} />,
-    travail: <Briefcase size={80} />,
-    acte_naissance: <FileText size={80} />,
-    avis_imposition: <CreditCard size={80} />,
-    b2_francais: <GraduationCap size={80} />,
-    casier: <FileText size={80} />,
-    permis_etranger: <CreditCard size={80} />,
-    traduction: <FileText size={80} />,
-    default: <FileText size={80} />
+// Mapping des icônes par type de document
+const getDocIcon = (docId: string): React.ReactNode => {
+    const id = docId.toLowerCase();
+    if (id.includes('passport') || id.includes('identite') || id.includes('cni')) return <User size={32} />;
+    if (id.includes('domicile') || id.includes('hebergement')) return <Home size={32} />;
+    if (id.includes('bancaire') || id.includes('rib')) return <CreditCard size={32} />;
+    if (id.includes('travail') || id.includes('contrat') || id.includes('emploi')) return <Briefcase size={32} />;
+    if (id.includes('diplome') || id.includes('etude')) return <GraduationCap size={32} />;
+    if (id.includes('mariage') || id.includes('famille')) return <Heart size={32} />;
+    if (id.includes('sejour') || id.includes('titre')) return <Shield size={32} />;
+    return <FileText size={32} />;
 };
 
 export default function GuidedScanner({
     documents,
+    existingDocs,
+    onDocumentUploaded,
     onComplete,
-    onDocumentScanned
+    onClose
 }: GuidedScannerProps) {
     const [currentStep, setCurrentStep] = useState(0);
-    const [language, setLanguage] = useState<Language>('FR');
-    const [status, setStatus] = useState<ScanStatus>('WAITING');
-    const [scannedDocs, setScannedDocs] = useState<Set<string>>(new Set());
-    const [errorMessage, setErrorMessage] = useState<string>('');
-    const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
-    const inputRef = useRef<HTMLInputElement>(null);
+    const [isAnalyzing, setIsAnalyzing] = useState(false);
+    const [lastResult, setLastResult] = useState<AnalysisResponse | null>(null);
+    const [showResult, setShowResult] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const t = TRANSLATIONS[language];
-    const isRTL = language === 'AR';
     const currentDoc = documents[currentStep];
-    const docName = t[currentDoc?.id] || t.default;
-    const isComplete = currentStep >= documents.length;
+    const progress = ((currentStep + 1) / documents.length) * 100;
 
-    const handleCapture = () => {
-        inputRef.current?.click();
-    };
+    // Vérifie si le doc actuel est déjà uploadé
+    const existingDoc = existingDocs.find(d => d.id === currentDoc?.id);
+    const isCurrentValid = existingDoc?.status === 'VALID';
 
-    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Gestion de l'upload
+    const handleFileSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
-        if (!file) return;
+        if (!file || !currentDoc) return;
 
-        setStatus('SCANNING');
-        setErrorMessage('');
-        setAnalysisResult(null);
+        setIsAnalyzing(true);
+        setShowResult(false);
 
-        // Utilise le service d'analyse IA
-        const result = await DocumentAnalysis.analyze(file);
-        setAnalysisResult(result);
+        try {
+            const result = await DocumentAnalysisService.analyze(file, currentDoc.id);
+            setLastResult(result);
+            setShowResult(true);
 
-        if (result.isValid) {
-            setStatus('SUCCESS');
-            onDocumentScanned(currentDoc.id, file);
-            setScannedDocs(prev => new Set([...prev, currentDoc.id]));
+            onDocumentUploaded(currentDoc.id, file, result);
 
-            // Passage automatique après 1.5s
-            setTimeout(() => {
-                if (currentStep < documents.length - 1) {
-                    setCurrentStep(prev => prev + 1);
-                    setStatus('WAITING');
-                } else {
-                    onComplete();
-                }
-            }, 1500);
-        } else {
-            setStatus('ERROR');
-            // Sélectionne le message selon la langue
-            const msg = language === 'EN' ? result.messageEN :
-                language === 'AR' ? result.messageAR :
-                    language === 'ES' ? result.messageES :
-                        result.message;
-            setErrorMessage(msg || result.message);
+            // Si valide, passe au suivant après un délai
+            if (result.status === 'VALID') {
+                setTimeout(() => {
+                    if (currentStep < documents.length - 1) {
+                        setCurrentStep(prev => prev + 1);
+                        setShowResult(false);
+                        setLastResult(null);
+                    } else {
+                        onComplete();
+                    }
+                }, 1500);
+            }
+        } catch (error) {
+            console.error('[SCANNER] Erreur analyse:', error);
+        } finally {
+            setIsAnalyzing(false);
+            // Reset input
+            if (fileInputRef.current) fileInputRef.current.value = '';
         }
+    }, [currentDoc, currentStep, documents.length, onDocumentUploaded, onComplete]);
 
-        // Reset input pour permettre de re-sélectionner le même fichier
-        e.target.value = '';
+    // Navigation
+    const goNext = () => {
+        if (currentStep < documents.length - 1) {
+            setCurrentStep(prev => prev + 1);
+            setShowResult(false);
+            setLastResult(null);
+        } else {
+            onComplete();
+        }
     };
 
-    const handleRetry = () => {
-        setStatus('WAITING');
+    const goPrev = () => {
+        if (currentStep > 0) {
+            setCurrentStep(prev => prev - 1);
+            setShowResult(false);
+            setLastResult(null);
+        }
     };
 
-    // Écran de complétion
-    if (isComplete) {
-        return (
-            <div className={`min-h-screen bg-gradient-to-b from-emerald-500 to-emerald-600 flex flex-col items-center justify-center p-6 text-white ${isRTL ? 'rtl' : ''}`}>
-                <div className="w-32 h-32 bg-white rounded-full flex items-center justify-center mb-8 shadow-2xl animate-bounce">
-                    <CheckCircle className="text-emerald-500" size={64} />
-                </div>
-                <h1 className="text-3xl font-black mb-4 text-center">{t.complete}</h1>
-                <p className="text-emerald-100 text-center mb-8">{t.waiting}</p>
-                <button
-                    onClick={() => window.location.href = '/'}
-                    className="bg-white text-emerald-600 px-8 py-4 rounded-2xl font-black text-lg shadow-lg"
-                >
-                    {t.back_home}
-                </button>
-            </div>
-        );
-    }
+    if (!currentDoc) return null;
 
     return (
-        <div className={`min-h-screen bg-gradient-to-b from-indigo-600 to-purple-700 flex flex-col ${isRTL ? 'rtl' : ''}`}>
-            {/* Header avec sélecteur de langue */}
-            <div className="p-4 flex items-center justify-between">
-                {/* Progress */}
-                <div className="flex items-center gap-2 text-white/80">
-                    <span className="font-bold">{t.step} {currentStep + 1}</span>
-                    <span>{t.of}</span>
-                    <span className="font-bold">{documents.length}</span>
-                </div>
-
-                {/* Language Selector */}
-                <div className="flex gap-1 bg-white/10 rounded-full p-1">
-                    {(Object.keys(FLAGS) as Language[]).map((lang) => (
-                        <button
-                            key={lang}
-                            onClick={() => setLanguage(lang)}
-                            className={`w-10 h-10 rounded-full flex items-center justify-center text-xl transition-all ${language === lang
-                                ? 'bg-white shadow-lg scale-110'
-                                : 'hover:bg-white/20'
-                                }`}
+        <div className="fixed inset-0 bg-slate-900 flex flex-col z-50">
+            {/* Header avec barre de progression */}
+            <div className="safe-area-inset-top bg-slate-900">
+                {/* Barre de progression style Instagram */}
+                <div className="flex gap-1 px-2 pt-2">
+                    {documents.map((_, index) => (
+                        <div
+                            key={index}
+                            className="flex-1 h-1 rounded-full overflow-hidden bg-white/20"
                         >
-                            {FLAGS[lang]}
-                        </button>
+                            <div
+                                className={`h-full rounded-full transition-all duration-500 ${index < currentStep ? 'bg-white w-full' :
+                                        index === currentStep ? 'bg-white' : 'w-0'
+                                    }`}
+                                style={{
+                                    width: index === currentStep ? `${isCurrentValid ? 100 : 50}%` : undefined
+                                }}
+                            />
+                        </div>
                     ))}
                 </div>
-            </div>
 
-            {/* Progress Bar */}
-            <div className="px-6 mb-8">
-                <div className="h-2 bg-white/20 rounded-full overflow-hidden">
-                    <div
-                        className="h-full bg-white rounded-full transition-all duration-500"
-                        style={{ width: `${((currentStep) / documents.length) * 100}%` }}
-                    />
+                {/* Header */}
+                <div className="flex items-center justify-between p-4">
+                    <button
+                        onClick={goPrev}
+                        disabled={currentStep === 0}
+                        className="p-2 text-white/60 disabled:opacity-30"
+                    >
+                        <ChevronLeft size={24} />
+                    </button>
+                    <span className="text-white/80 text-sm font-medium">
+                        {currentStep + 1} / {documents.length}
+                    </span>
+                    {onClose && (
+                        <button onClick={onClose} className="p-2 text-white/60">
+                            <X size={24} />
+                        </button>
+                    )}
                 </div>
             </div>
 
-            {/* Main Content */}
-            <div className="flex-1 flex flex-col items-center justify-center px-6">
-                {status === 'WAITING' && (
-                    <div className="text-center animate-in fade-in duration-300">
-                        {/* Icône Document */}
-                        <div className="w-40 h-40 bg-white/10 rounded-3xl flex items-center justify-center mx-auto mb-8 text-white">
-                            {DOC_ICONS[currentDoc?.id] || DOC_ICONS.default}
+            {/* Contenu principal */}
+            <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
+                {/* État: Analyse en cours */}
+                {isAnalyzing && (
+                    <div className="flex flex-col items-center">
+                        <div className="w-24 h-24 bg-blue-500/20 rounded-3xl flex items-center justify-center mb-6 animate-pulse">
+                            <Loader2 className="text-blue-400 animate-spin" size={48} />
                         </div>
-
-                        {/* Instruction */}
-                        <p className="text-white/70 mb-2">{t.instruction}</p>
-                        <h2 className="text-3xl font-black text-white mb-8">{docName}</h2>
-
-                        {/* Tips Visuels */}
-                        <div className="flex justify-center gap-4 mb-8">
-                            <div className="bg-emerald-500/30 text-white px-4 py-2 rounded-xl text-sm font-bold">
-                                {t.tip_good}
-                            </div>
-                            <div className="bg-red-500/30 text-white px-4 py-2 rounded-xl text-sm font-bold">
-                                {t.tip_bad}
-                            </div>
-                        </div>
+                        <h2 className="text-2xl font-bold text-white mb-2">Analyse en cours...</h2>
+                        <p className="text-white/60">Vérification du document</p>
                     </div>
                 )}
 
-                {status === 'SCANNING' && (
-                    <div className="text-center animate-in fade-in duration-300">
-                        <div className="w-32 h-32 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-8">
-                            <Sparkles className="text-white animate-pulse" size={48} />
-                        </div>
-                        <h2 className="text-2xl font-black text-white">{t.scanning}</h2>
-                    </div>
-                )}
-
-                {status === 'SUCCESS' && (
-                    <div className="text-center animate-in fade-in zoom-in duration-300">
-                        <div className="w-32 h-32 bg-emerald-500 rounded-full flex items-center justify-center mx-auto mb-8 shadow-2xl">
-                            <CheckCircle className="text-white" size={64} />
-                        </div>
-                        <h2 className="text-2xl font-black text-white">{t.success}</h2>
-                    </div>
-                )}
-
-                {status === 'ERROR' && (
-                    <div className="text-center animate-in fade-in duration-300">
-                        <div className="w-32 h-32 bg-red-500 rounded-full flex items-center justify-center mx-auto mb-8 shadow-2xl">
-                            {analysisResult?.status === 'REJECTED_EXPIRED' ? (
-                                <AlertTriangle className="text-white" size={64} />
-                            ) : analysisResult?.status === 'REJECTED_WRONG_TYPE' ? (
-                                <XCircle className="text-white" size={64} />
+                {/* État: Résultat affiché */}
+                {showResult && lastResult && !isAnalyzing && (
+                    <div className="flex flex-col items-center">
+                        <div className={`w-24 h-24 rounded-3xl flex items-center justify-center mb-6 ${lastResult.status === 'VALID'
+                                ? 'bg-emerald-500/20'
+                                : 'bg-red-500/20'
+                            }`}>
+                            {lastResult.status === 'VALID' ? (
+                                <CheckCircle className="text-emerald-400" size={48} />
                             ) : (
-                                <XCircle className="text-white" size={64} />
+                                <XCircle className="text-red-400" size={48} />
                             )}
                         </div>
-                        <h2 className="text-2xl font-black text-white mb-2">
-                            {analysisResult?.status === 'REJECTED_EXPIRED' ? t.error_expired :
-                                analysisResult?.status === 'REJECTED_WRONG_TYPE' ? t.error_wrong :
-                                    t.error}
+                        <h2 className={`text-2xl font-bold mb-2 ${lastResult.status === 'VALID' ? 'text-emerald-400' : 'text-red-400'
+                            }`}>
+                            {lastResult.status === 'VALID' ? 'Document validé !' : 'Document rejeté'}
                         </h2>
-                        <p className="text-white/70 text-sm mb-6 px-8">{errorMessage}</p>
-                        {analysisResult?.confidence && (
-                            <p className="text-white/50 text-xs mb-4">
-                                Confiance IA: {analysisResult.confidence}%
-                            </p>
+                        <p className="text-white/60 max-w-xs">{lastResult.message}</p>
+
+                        {lastResult.status !== 'VALID' && (
+                            <button
+                                onClick={() => fileInputRef.current?.click()}
+                                className="mt-6 px-6 py-3 bg-white text-slate-900 rounded-2xl font-bold"
+                            >
+                                Réessayer
+                            </button>
                         )}
-                        <button
-                            onClick={handleRetry}
-                            className="bg-white text-red-600 px-8 py-3 rounded-2xl font-black flex items-center gap-2 mx-auto"
-                        >
-                            <RefreshCw size={20} />
-                            {t.retry}
-                        </button>
+                    </div>
+                )}
+
+                {/* État: Prêt à capturer */}
+                {!isAnalyzing && !showResult && (
+                    <div className="flex flex-col items-center">
+                        {/* Icône du document */}
+                        <div className={`w-32 h-32 rounded-3xl flex items-center justify-center mb-8 ${isCurrentValid
+                                ? 'bg-emerald-500/20 text-emerald-400'
+                                : 'bg-white/10 text-white'
+                            }`}>
+                            {isCurrentValid ? (
+                                <CheckCircle size={48} />
+                            ) : (
+                                currentDoc.icon || getDocIcon(currentDoc.id)
+                            )}
+                        </div>
+
+                        {/* Titre et description */}
+                        <h2 className="text-2xl font-bold text-white mb-3">
+                            {currentDoc.label}
+                        </h2>
+                        <p className="text-white/60 max-w-xs mb-8">
+                            {currentDoc.description}
+                        </p>
+
+                        {/* Statut actuel */}
+                        {isCurrentValid && (
+                            <div className="flex items-center gap-2 text-emerald-400 mb-6">
+                                <CheckCircle size={20} />
+                                <span className="font-medium">Déjà validé</span>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>
 
-            {/* Capture Button */}
-            {(status === 'WAITING') && (
-                <div className="p-8 pb-safe">
-                    <input
-                        ref={inputRef}
-                        type="file"
-                        accept="image/*"
-                        capture="environment"
-                        className="hidden"
-                        onChange={handleFileChange}
-                    />
-                    <button
-                        onClick={handleCapture}
-                        className="w-24 h-24 bg-white rounded-full mx-auto flex items-center justify-center shadow-2xl active:scale-95 transition-transform"
-                    >
-                        <Camera className="text-indigo-600" size={40} />
-                    </button>
-                    <p className="text-center text-white/70 mt-4 font-medium">{t.snap}</p>
-                </div>
-            )}
+            {/* Footer avec bouton capture */}
+            <div className="safe-area-inset-bottom bg-slate-900 p-6">
+                {!isAnalyzing && !showResult && (
+                    <div className="flex flex-col gap-3">
+                        {/* Bouton principal de capture */}
+                        <button
+                            onClick={() => fileInputRef.current?.click()}
+                            className="w-full py-5 bg-white text-slate-900 rounded-2xl font-black text-lg flex items-center justify-center gap-3 active:scale-98 transition-transform"
+                        >
+                            <Camera size={24} />
+                            {isCurrentValid ? 'Remplacer la photo' : 'Prendre une photo'}
+                        </button>
 
-            {/* Skip indicator (bottom dots) */}
-            <div className="pb-6 flex justify-center gap-2">
-                {documents.map((_, idx) => (
-                    <div
-                        key={idx}
-                        className={`w-2 h-2 rounded-full transition-all ${idx < currentStep
-                            ? 'bg-emerald-400'
-                            : idx === currentStep
-                                ? 'bg-white w-6'
-                                : 'bg-white/30'
-                            }`}
-                    />
-                ))}
+                        {/* Bouton passer */}
+                        {!currentDoc.required && (
+                            <button
+                                onClick={goNext}
+                                className="w-full py-4 text-white/60 font-medium"
+                            >
+                                Passer cette étape →
+                            </button>
+                        )}
+
+                        {/* Bouton suivant si déjà validé */}
+                        {isCurrentValid && (
+                            <button
+                                onClick={goNext}
+                                className="w-full py-4 bg-emerald-500 text-white rounded-2xl font-bold flex items-center justify-center gap-2"
+                            >
+                                Continuer
+                                <ChevronRight size={20} />
+                            </button>
+                        )}
+                    </div>
+                )}
+
+                {/* Input file caché */}
+                <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    onChange={handleFileSelect}
+                    className="hidden"
+                />
             </div>
         </div>
     );

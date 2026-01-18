@@ -14,15 +14,19 @@ export default function EspaceClientPage() {
 
     useEffect(() => {
         const id = searchParams.get('id');
-        if (id) {
+        const checkLead = async (targetId: string) => {
             // Vérifie que le lead existe
-            const lead = CRM.getLeadById(id);
+            const lead = await CRM.getLeadById(targetId);
             if (lead) {
-                setLeadId(id);
-                localStorage.setItem('active_lead_id', id); // Définit la session pour RoleGuard
+                setLeadId(targetId);
+                localStorage.setItem('active_lead_id', targetId); // Définit la session pour RoleGuard
             } else {
                 setError('Dossier introuvable. Vérifiez votre lien d\'accès.');
             }
+        };
+
+        if (id) {
+            checkLead(id);
         } else {
             // Si pas d'ID dans l'URL, vérifie s'il y a une session active
             const session = localStorage.getItem('active_lead_id');

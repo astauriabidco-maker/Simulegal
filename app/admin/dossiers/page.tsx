@@ -12,15 +12,5 @@ const CURRENT_USER = {
 };
 
 export default function DossiersPage() {
-    const [activeMenu, setActiveMenu] = useState('dossiers');
-
-    return (
-        <DashboardLayout
-            currentUser={CURRENT_USER}
-            activeMenuItem={activeMenu}
-            onMenuClick={setActiveMenu}
-        >
-            <HQDashboard />
-        </DashboardLayout>
-    );
+    return <HQDashboard />;
 }

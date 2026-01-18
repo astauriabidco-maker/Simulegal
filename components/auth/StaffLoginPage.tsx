@@ -24,29 +24,53 @@ export default function StaffLoginPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
 
+    const handleQuickLogin = async (roleEmail: string, rolePass: string) => {
+        setEmail(roleEmail);
+        setPassword(rolePass);
+
+        // Petit délai pour l'effet visuel avant soumission
+        setTimeout(async () => {
+            setError('');
+            setIsLoading(true);
+            try {
+                const result = await AuthStore.login(roleEmail, rolePass);
+                if (result.success && result.user) {
+                    router.push('/admin');
+                } else {
+                    setError(result.error || 'Identifiants démo invalides');
+                }
+            } catch (err) {
+                setError('Erreur lors du login démo');
+            } finally {
+                setIsLoading(false);
+            }
+        }, 100);
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
         setIsLoading(true);
 
-        // Simulation délai
-        await new Promise(r => setTimeout(r, 1000));
+        try {
+            const result = await AuthStore.login(email, password);
 
-        const result = AuthStore.login(email, password);
-
-        if (result.success && result.user) {
-            console.log(`[STAFF-AUTH] Valid login for ${result.user.name}`);
-            // Redirection selon le rôle
-            if (result.user.role === 'AGENCY') {
-                router.push('/admin'); // Ou une route spécifique agence si elle existait séparément
+            if (result.success && result.user) {
+                console.log(`[STAFF-AUTH] Valid login for ${result.user.name}`);
+                // Redirection selon le rôle
+                if (result.user.role === 'AGENCY') {
+                    router.push('/admin'); // Ou une route spécifique agence si elle existait séparément
+                } else {
+                    router.push('/admin');
+                }
             } else {
-                router.push('/admin');
+                setError(result.error || 'Identifiants professionnels invalides');
             }
-        } else {
-            setError(result.error || 'Identifiants professionnels invalides');
+        } catch (err) {
+            setError('Une erreur est survenue lors de la connexion');
+        } finally {
+            setIsLoading(false);
         }
-
-        setIsLoading(false);
     };
 
     return (
@@ -160,6 +184,49 @@ export default function StaffLoginPage() {
                             )}
                         </button>
                     </form>
+
+                    {/* Quick Access (Demo Mode) */}
+                    <div className="space-y-4">
+                        <div className="flex items-center gap-2">
+                            <div className="h-px flex-1 bg-slate-100"></div>
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Accès Rapide (Demo)</span>
+                            <div className="h-px flex-1 bg-slate-100"></div>
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-2">
+                            <button
+                                onClick={() => handleQuickLogin('admin@simulegal.fr', 'superadmin')}
+                                className="w-full h-12 bg-white border-2 border-indigo-100 hover:border-indigo-600 hover:bg-indigo-50 text-indigo-900 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-between px-4 group"
+                            >
+                                <span>Super Admin</span>
+                                <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                            </button>
+
+                            <button
+                                onClick={() => handleQuickLogin('hq@simulegal.fr', 'demo123')}
+                                className="w-full h-12 bg-white border-2 border-emerald-100 hover:border-emerald-600 hover:bg-emerald-50 text-emerald-900 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-between px-4 group"
+                            >
+                                <span>Admin Siège (HQ)</span>
+                                <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                            </button>
+
+                            <button
+                                onClick={() => handleQuickLogin('agence.paris@simulegal.fr', 'demo123')}
+                                className="w-full h-12 bg-white border-2 border-slate-100 hover:border-slate-600 hover:bg-slate-50 text-slate-900 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-between px-4 group"
+                            >
+                                <span>Manager Agence (Paris)</span>
+                                <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                            </button>
+
+                            <button
+                                onClick={() => handleQuickLogin('relay.bordeaux@simulegal.fr', 'demo123')}
+                                className="w-full h-12 bg-white border-2 border-amber-100 hover:border-amber-600 hover:bg-amber-50 text-amber-900 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-between px-4 group"
+                            >
+                                <span>Point Relais (Bordeaux)</span>
+                                <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                            </button>
+                        </div>
+                    </div>
 
                     <div className="pt-8 border-t border-slate-100 flex items-center justify-between">
                         <button

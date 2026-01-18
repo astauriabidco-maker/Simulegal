@@ -12,28 +12,33 @@ import {
     ChevronRight,
     LogOut,
     User,
+    Users,
     Shield,
     Crown,
     Settings,
     Brain,
-    Eye
+    Eye,
+    Tablet
 } from 'lucide-react';
+import Link from 'next/link';
+import { usePermission } from '../../hooks/usePermission';
+import { PermissionKey } from '../../config/PermissionRegistry';
 
-
-type UserRoleType = 'SUPER_ADMIN' | 'HQ' | 'AGENCY' | 'CASE_WORKER' | 'AGENCY_MANAGER';
+type UserRoleType = 'SUPERADMIN' | 'HQ' | 'AGENCY' | 'CASE_WORKER' | 'AGENCY_MANAGER';
 
 interface MenuItem {
     id: string;
     label: string;
     icon: ReactNode;
     href: string;
+    permission?: PermissionKey;
 }
 
 interface DashboardLayoutProps {
     children: ReactNode;
     currentUser: {
         name: string;
-        role: UserRoleType;
+        role: string; // Utilise maintenant l'ID du rôle
         agencyName?: string;
     };
     activeMenuItem?: string;
@@ -41,38 +46,18 @@ interface DashboardLayoutProps {
     onLogout?: () => void;
 }
 
-// Menus selon le rôle
-const MENU_CONFIG: Record<UserRoleType, MenuItem[]> = {
-    SUPER_ADMIN: [
-        { id: 'overview', label: 'Vue Globale', icon: <LayoutDashboard size={20} />, href: '/admin' },
-        { id: 'dossiers', label: 'Tous les Dossiers', icon: <FolderKanban size={20} />, href: '/admin/dossiers' },
-        { id: 'network', label: 'Réseau Agences', icon: <Building2 size={20} />, href: '/admin/network' },
-        { id: 'finances', label: 'Finances', icon: <Wallet size={20} />, href: '/admin/finances' },
-        { id: 'audit-veille', label: '⚖️ Audit et Veille', icon: <Eye size={20} />, href: '/admin/audit' },
-    ],
-    HQ: [
-        { id: 'overview', label: 'Vue Globale', icon: <LayoutDashboard size={20} />, href: '/admin' },
-        { id: 'dossiers', label: 'Tous les Dossiers', icon: <FolderKanban size={20} />, href: '/admin/dossiers' },
-        { id: 'network', label: 'Réseau Agences', icon: <Building2 size={20} />, href: '/admin/network' },
-        { id: 'audit-veille', label: '⚖️ Audit et Veille', icon: <Eye size={20} />, href: '/admin/audit' },
-    ],
-    AGENCY: [
-        { id: 'overview', label: 'Tableau de Bord', icon: <LayoutDashboard size={20} />, href: '/admin' },
-        { id: 'leads', label: 'Mes Leads à rappeler', icon: <PhoneCall size={20} />, href: '/admin/leads' },
-        { id: 'dossiers', label: 'Mes Dossiers', icon: <FileSearch size={20} />, href: '/admin/dossiers' },
-        { id: 'commissions', label: 'Mes Commissions', icon: <DollarSign size={20} />, href: '/admin/commissions' },
-    ],
-    CASE_WORKER: [
-        { id: 'overview', label: 'Mon Tableau de Bord', icon: <LayoutDashboard size={20} />, href: '/admin' },
-        { id: 'dossiers', label: 'Mes Dossiers', icon: <FolderKanban size={20} />, href: '/admin/dossiers' },
-    ],
-    AGENCY_MANAGER: [
-        { id: 'leads', label: 'Mes Leads à rappeler', icon: <PhoneCall size={20} />, href: '/admin/leads' },
-        { id: 'dossiers', label: 'Mes Dossiers en cours', icon: <FileSearch size={20} />, href: '/admin/dossiers' },
-        { id: 'commissions', label: 'Mes Commissions', icon: <DollarSign size={20} />, href: '/admin/commissions' },
-    ],
-};
-
+// Menus selon le rôle (Servira de fallback si besoin, mais on filtre surtout par permission)
+const DEFAULT_MENU: MenuItem[] = [
+    { id: 'overview', label: 'Vue Globale', icon: <LayoutDashboard size={20} />, href: '/admin' },
+    { id: 'dossiers', label: 'Dossiers', icon: <FolderKanban size={20} />, href: '/admin/dossiers', permission: 'crm.view_agency' },
+    { id: 'network', label: 'Réseau Agences', icon: <Building2 size={20} />, href: '/admin/network', permission: 'network.manage' },
+    { id: 'franchise-leads', label: 'Franchises (CRM)', icon: <Users size={20} />, href: '/admin/franchise-leads', permission: 'network.manage' }, // TODO: permission dédiée
+    { id: 'staff', label: 'Gestion Équipe', icon: <Users size={20} />, href: '/admin/staff', permission: 'users.manage' },
+    { id: 'finances', label: 'Finances', icon: <Wallet size={20} />, href: '/admin/finances', permission: 'finance.view_agency' },
+    { id: 'devices', label: 'Terminaux', icon: <Tablet size={20} />, href: '/admin/devices', permission: 'fleet.manage' },
+    { id: 'audit-veille', label: '⚖️ Audit et Veille', icon: <Eye size={20} />, href: '/admin/audit', permission: 'settings.manage' },
+    { id: 'roles', label: 'Rôles & Droits', icon: <Shield size={20} />, href: '/admin/rbac', permission: 'roles.manage' },
+];
 
 export default function DashboardLayout({
     children,
@@ -81,23 +66,19 @@ export default function DashboardLayout({
     onMenuClick,
     onLogout
 }: DashboardLayoutProps) {
-    const menuItems = MENU_CONFIG[currentUser.role] || MENU_CONFIG['AGENCY'];
+    const { can, role } = usePermission();
 
-    const getRoleBadge = (role: UserRoleType) => {
-        switch (role) {
-            case 'SUPER_ADMIN':
-                return { label: 'Super Admin', color: 'bg-amber-100 text-amber-700', icon: <Crown size={10} /> };
-            case 'HQ':
-                return { label: 'Siège', color: 'bg-indigo-100 text-indigo-700', icon: <Building2 size={10} /> };
-            case 'AGENCY':
-                return { label: 'Agence', color: 'bg-emerald-100 text-emerald-700', icon: <Building2 size={10} /> };
-            case 'CASE_WORKER':
-                return { label: 'Juriste', color: 'bg-blue-100 text-blue-700', icon: <User size={10} /> };
-            case 'AGENCY_MANAGER':
-                return { label: 'Manager Agence', color: 'bg-emerald-100 text-emerald-700', icon: <Building2 size={10} /> };
-            default:
-                return { label: 'Utilisateur', color: 'bg-slate-100 text-slate-700', icon: <User size={10} /> };
-        }
+    // Filtre les menus en fonction des permissions de l'utilisateur
+    const menuItems = DEFAULT_MENU.filter(item => {
+        if (!item.permission) return true;
+        return can(item.permission);
+    });
+
+    const getRoleBadge = (roleId: string) => {
+        if (roleId === 'SUPERADMIN') return { label: 'Super Admin', color: 'bg-amber-100 text-amber-700', icon: <Crown size={10} /> };
+        if (roleId === 'HQ') return { label: 'Siège', color: 'bg-indigo-100 text-indigo-700', icon: <Building2 size={10} /> };
+        if (roleId.startsWith('AGENCY')) return { label: 'Agence', color: 'bg-emerald-100 text-emerald-700', icon: <Building2 size={10} /> };
+        return { label: role?.label || roleId || 'Utilisateur', color: 'bg-slate-100 text-slate-700', icon: <User size={10} /> };
     };
 
     const badge = getRoleBadge(currentUser.role);
@@ -122,9 +103,9 @@ export default function DashboardLayout({
                 {/* Menu */}
                 <nav className="flex-1 p-4 space-y-1">
                     {menuItems.map((item) => (
-                        <button
+                        <Link
                             key={item.id}
-                            onClick={() => onMenuClick?.(item.id)}
+                            href={item.href}
                             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all group ${activeMenuItem === item.id
                                 ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
                                 : 'text-slate-400 hover:bg-slate-800 hover:text-white'
@@ -135,7 +116,7 @@ export default function DashboardLayout({
                             {activeMenuItem === item.id && (
                                 <ChevronRight size={16} className="opacity-60" />
                             )}
-                        </button>
+                        </Link>
                     ))}
                 </nav>
 

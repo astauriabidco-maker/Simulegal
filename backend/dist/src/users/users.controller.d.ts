@@ -1,0 +1,124 @@
+import { UsersService } from './users.service';
+export declare class UsersController {
+    private readonly usersService;
+    constructor(usersService: UsersService);
+    findAll(req: any): Promise<{
+        scopeAgencyIds: any;
+        agency: {
+            id: string;
+            name: string;
+            createdAt: Date;
+            updatedAt: Date;
+            type: import(".prisma/client").$Enums.AgencyType;
+            status: import(".prisma/client").$Enums.AgencyStatus;
+            region: string;
+            zipCodes: string;
+            commissionRate: number;
+            contactEmail: string;
+            kioskUrl: string;
+        } | null;
+        roleRef: {
+            id: string;
+            permissions: string;
+            createdAt: Date;
+            updatedAt: Date;
+            label: string;
+            description: string;
+            isSystem: boolean;
+        } | null;
+        agencyId: string | null;
+        role: import(".prisma/client").$Enums.UserRole;
+        id: string;
+        email: string;
+        password: string;
+        name: string;
+        roleId: string | null;
+        homeAgencyId: string | null;
+        permissions: string;
+        createdAt: Date;
+        updatedAt: Date;
+        lastLogin: Date | null;
+    }[]>;
+    findOne(id: string): Promise<{
+        scopeAgencyIds: any;
+        agency: {
+            id: string;
+            name: string;
+            createdAt: Date;
+            updatedAt: Date;
+            type: import(".prisma/client").$Enums.AgencyType;
+            status: import(".prisma/client").$Enums.AgencyStatus;
+            region: string;
+            zipCodes: string;
+            commissionRate: number;
+            contactEmail: string;
+            kioskUrl: string;
+        } | null;
+        roleRef: {
+            id: string;
+            permissions: string;
+            createdAt: Date;
+            updatedAt: Date;
+            label: string;
+            description: string;
+            isSystem: boolean;
+        } | null;
+        agencyId: string | null;
+        role: import(".prisma/client").$Enums.UserRole;
+        id: string;
+        email: string;
+        password: string;
+        name: string;
+        roleId: string | null;
+        homeAgencyId: string | null;
+        permissions: string;
+        createdAt: Date;
+        updatedAt: Date;
+        lastLogin: Date | null;
+    } | null>;
+    create(req: any, data: any): Promise<{
+        agencyId: string | null;
+        role: import(".prisma/client").$Enums.UserRole;
+        id: string;
+        email: string;
+        password: string;
+        name: string;
+        roleId: string | null;
+        homeAgencyId: string | null;
+        scopeAgencyIds: string;
+        permissions: string;
+        createdAt: Date;
+        updatedAt: Date;
+        lastLogin: Date | null;
+    }>;
+    update(req: any, id: string, data: any): Promise<{
+        agencyId: string | null;
+        role: import(".prisma/client").$Enums.UserRole;
+        id: string;
+        email: string;
+        password: string;
+        name: string;
+        roleId: string | null;
+        homeAgencyId: string | null;
+        scopeAgencyIds: string;
+        permissions: string;
+        createdAt: Date;
+        updatedAt: Date;
+        lastLogin: Date | null;
+    }>;
+    remove(req: any, id: string): Promise<{
+        agencyId: string | null;
+        role: import(".prisma/client").$Enums.UserRole;
+        id: string;
+        email: string;
+        password: string;
+        name: string;
+        roleId: string | null;
+        homeAgencyId: string | null;
+        scopeAgencyIds: string;
+        permissions: string;
+        createdAt: Date;
+        updatedAt: Date;
+        lastLogin: Date | null;
+    }>;
+}

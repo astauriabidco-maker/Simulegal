@@ -35,8 +35,8 @@ export default function MagicLinkLogin() {
         // Simule un délai réseau
         await new Promise(resolve => setTimeout(resolve, 1000));
 
-        // Recherche dans le CRM
-        const leads = CRM.getAllLeadsByEmail(email);
+        // Recherche dans le CRM via le store (qui gère le mode démo/mock)
+        const leads = await CRM.getAllLeadsByEmail(email);
 
         if (leads.length === 0) {
             setErrorMessage('Aucun dossier trouvé pour cet email. Avez-vous déjà commandé un service ?');
@@ -120,6 +120,50 @@ export default function MagicLinkLogin() {
                                     )}
                                 </button>
                             </form>
+                        )}
+
+                        {/* Demo Mode for Candidates */}
+                        {state === 'INPUT' && (
+                            <div className="mt-6 pt-6 border-t border-slate-100">
+                                <div className="flex items-center gap-2 mb-4">
+                                    <Sparkles className="text-amber-500" size={16} />
+                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Accès Démo par Service</span>
+                                </div>
+                                <div className="grid grid-cols-1 gap-2">
+                                    {[
+                                        { email: 'candidat@demo.fr', name: 'Jean', label: 'Naturalisation' },
+                                        { email: 'marie@demo.fr', name: 'Marie', label: 'Titre de Séjour (VPF)' },
+                                        { email: 'paul@demo.fr', name: 'Paul', label: 'Salarié' },
+                                        { email: 'lea@demo.fr', name: 'Léa', label: 'Étudiant' },
+                                        { email: 'alex@demo.fr', name: 'Alex', label: 'Passeport Talent' },
+                                        { email: 'marc@demo.fr', name: 'Marc', label: 'Échange Permis' },
+                                    ].map((demo) => (
+                                        <button
+                                            key={demo.email}
+                                            onClick={async () => {
+                                                setIsLoading(true);
+                                                const lead = await CRM.demoLogin(demo.email);
+                                                if (lead) {
+                                                    window.location.href = `/espace-client?id=${lead.id}`;
+                                                } else {
+                                                    setErrorMessage('Échec de la connexion démo. Vérifiez que le backend est lancé.');
+                                                    setState('ERROR');
+                                                    setIsLoading(false);
+                                                }
+                                            }}
+                                            className="w-full h-11 bg-slate-50 hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 rounded-xl text-xs font-bold border border-slate-100 hover:border-indigo-100 transition-all flex items-center justify-between px-4 group"
+                                        >
+                                            <span className="flex items-center gap-2">
+                                                <span className="w-6 h-6 bg-white rounded-lg flex items-center justify-center text-[10px] shadow-sm group-hover:scale-110 transition-transform">
+                                                    {demo.name.charAt(0)}
+                                                </span>
+                                                {demo.label}
+                                            </span>
+                                            <ArrowRight size={14} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
                         )}
 
                         {state === 'SENT' && (

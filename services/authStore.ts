@@ -16,112 +16,73 @@ export interface AdminUser {
     lastLogin?: string;
 }
 
-// Utilisateurs de démonstration
-const DEMO_USERS: Record<string, { password: string; user: AdminUser }> = {
-    'hq@simulegal.fr': {
-        password: 'demo123',
-        user: {
-            id: 'USR-HQ-001',
-            email: 'hq@simulegal.fr',
-            name: 'Admin Siège',
-            role: 'HQ',
-            permissions: ['view_all_leads', 'validate_documents', 'manage_agencies', 'view_reports']
-        }
-    },
-    'juridique@simulegal.fr': {
-        password: 'demo123',
-        user: {
-            id: 'USR-HQ-002',
-            email: 'juridique@simulegal.fr',
-            name: 'Marie Dupont',
-            role: 'HQ',
-            permissions: ['view_all_leads', 'validate_documents']
-        }
-    },
-    'agence.paris@simulegal.fr': {
-        password: 'demo123',
-        user: {
-            id: 'USR-AGC-001',
-            email: 'agence.paris@simulegal.fr',
-            name: 'Pierre Martin',
-            role: 'AGENCY',
-            agencyId: 'AGC-PARIS-001',
-            agencyName: 'SimuLegal Paris 15ème',
-            permissions: ['view_own_leads', 'add_notes']
-        }
-    },
-    'agence.lyon@simulegal.fr': {
-        password: 'demo123',
-        user: {
-            id: 'USR-AGC-002',
-            email: 'agence.lyon@simulegal.fr',
-            name: 'Sophie Bernard',
-            role: 'AGENCY',
-            agencyId: 'AGC-LYON-001',
-            agencyName: 'SimuLegal Lyon Part-Dieu',
-            permissions: ['view_own_leads', 'add_notes']
-        }
-    },
-    'admin@simulegal.fr': {
-        password: 'superadmin',
-        user: {
-            id: 'USR-SUPER-001',
-            email: 'admin@simulegal.fr',
-            name: 'Super Admin',
-            role: 'SUPERADMIN',
-            permissions: ['*'] // Toutes les permissions
-        }
-    }
-};
-
 const SESSION_KEY = 'admin_session';
+const TOKEN_KEY = 'admin_token';
+const API_URL = 'http://localhost:3001';
 
 export const AuthStore = {
     /**
-     * Tente de connecter un utilisateur
+     * Tente de connecter un utilisateur via l'API Backend
      */
-    login: (email: string, password: string): { success: boolean; user?: AdminUser; error?: string } => {
-        const normalizedEmail = email.toLowerCase().trim();
-        const userData = DEMO_USERS[normalizedEmail];
+    login: async (email: string, password: string): Promise<{ success: boolean; user?: AdminUser; error?: string }> => {
+        try {
+            const response = await fetch(`${API_URL}/auth/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
+            });
 
-        if (!userData) {
-            console.log(`[AUTH] ❌ Utilisateur non trouvé: ${normalizedEmail}`);
-            return { success: false, error: 'Identifiants incorrects' };
+            if (!response.ok) {
+                const errorData = await response.json();
+                return { success: false, error: errorData.message || 'Identifiants incorrects' };
+            }
+
+            const data = await response.json();
+            const { access_token, user: apiUser } = data;
+
+            // Mapping des rôles Backend -> Frontend
+            let role: UserRole = 'HQ';
+            if (apiUser.role === 'SUPERADMIN') role = 'SUPERADMIN';
+            else if (apiUser.role === 'HQ_ADMIN') role = 'HQ';
+            else role = 'AGENCY';
+
+            const user: AdminUser = {
+                id: apiUser.id,
+                email: apiUser.email,
+                name: apiUser.name,
+                role: role,
+                agencyId: apiUser.agencyId,
+                agencyName: apiUser.agencyName,
+                permissions: apiUser.permissions.split(','),
+                lastLogin: new Date().toISOString()
+            };
+
+            // Sauvegarde la session et le token
+            localStorage.setItem(TOKEN_KEY, access_token);
+            localStorage.setItem(SESSION_KEY, JSON.stringify(user));
+
+            console.log(`[AUTH] ✅ Connexion API réussie: ${user.name} (${user.role})`);
+            return { success: true, user };
+        } catch (error) {
+            console.error('[AUTH] ❌ Erreur réseau:', error);
+            return { success: false, error: 'Serveur injoignable' };
         }
-
-        if (userData.password !== password) {
-            console.log(`[AUTH] ❌ Mot de passe incorrect pour: ${normalizedEmail}`);
-            return { success: false, error: 'Identifiants incorrects' };
-        }
-
-        // Connexion réussie
-        const user: AdminUser = {
-            ...userData.user,
-            lastLogin: new Date().toISOString()
-        };
-
-        // Sauvegarde la session
-        localStorage.setItem(SESSION_KEY, JSON.stringify(user));
-        console.log(`[AUTH] ✅ Connexion réussie: ${user.name} (${user.role})`);
-
-        return { success: true, user };
     },
 
     /**
      * Déconnecte l'utilisateur
      */
     logout: (): void => {
-        const user = AuthStore.getCurrentUser();
-        if (user) {
-            console.log(`[AUTH] 👋 Déconnexion: ${user.name}`);
-        }
         localStorage.removeItem(SESSION_KEY);
+        localStorage.removeItem(TOKEN_KEY);
+        window.location.href = '/staff-login';
     },
 
     /**
      * Récupère l'utilisateur actuellement connecté
      */
     getCurrentUser: (): AdminUser | null => {
+        if (typeof window === 'undefined') return null;
         const session = localStorage.getItem(SESSION_KEY);
         if (!session) return null;
 
@@ -129,6 +90,40 @@ export const AuthStore = {
             return JSON.parse(session) as AdminUser;
         } catch {
             return null;
+        }
+    },
+
+    /**
+     * Récupère le token JWT
+     */
+    getToken: (): string | null => {
+        if (typeof window === 'undefined') return null;
+        return localStorage.getItem(TOKEN_KEY);
+    },
+
+    /**
+     * Définit le token JWT (pour login externe comme demo-login)
+     */
+    setToken: (token: string): void => {
+        if (typeof window !== 'undefined') {
+            localStorage.setItem(TOKEN_KEY, token);
+        }
+    },
+
+    /**
+     * Définit l'utilisateur en session (pour login externe)
+     */
+    setUser: (user: { id: string; email: string; name: string; role: string }): void => {
+        if (typeof window !== 'undefined') {
+            const sessionUser: AdminUser = {
+                id: user.id,
+                email: user.email,
+                name: user.name,
+                role: user.role as UserRole,
+                permissions: ['view_own_dossier'],
+                lastLogin: new Date().toISOString()
+            };
+            localStorage.setItem(SESSION_KEY, JSON.stringify(sessionUser));
         }
     },
 
@@ -157,18 +152,6 @@ export const AuthStore = {
         if (!user) return false;
         if (user.permissions.includes('*')) return true; // Toutes les permissions
         return user.permissions.includes(permission);
-    },
-
-    /**
-     * Récupère la liste des utilisateurs démo (pour affichage)
-     */
-    getDemoCredentials: (): { email: string; password: string; role: UserRole; name: string }[] => {
-        return Object.entries(DEMO_USERS).map(([email, data]) => ({
-            email,
-            password: data.password,
-            role: data.user.role,
-            name: data.user.name
-        }));
     }
 };
 

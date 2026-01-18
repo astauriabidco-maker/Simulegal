@@ -4,6 +4,7 @@ import React, { useState, useRef } from 'react';
 import { X, Lock, CheckCircle, FileText, CreditCard, Download, MessageCircle, ArrowRight, PenTool, ShieldCheck, RotateCcw, FolderOpen } from 'lucide-react';
 import { CRM } from '../services/crmStore';
 import { ServiceConfigStore } from '../services/ServiceConfigStore';
+import { LeadRouter } from '../services/LeadRouter';
 
 interface CheckoutFlowProps {
     isOpen: boolean;
@@ -29,7 +30,7 @@ export default function CheckoutFlow({
     if (!isOpen) return null;
 
     const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
-    const [formData, setFormData] = useState({ name: '', email: '', phone: '' });
+    const [formData, setFormData] = useState({ name: '', email: '', phone: '', zipCode: '' });
     const [isProcessing, setIsProcessing] = useState(false);
     const [hasAgreed, setHasAgreed] = useState(false);
     const [hasReadContract, setHasReadContract] = useState(false);
@@ -64,14 +65,14 @@ export default function CheckoutFlow({
     };
 
 
-    const handlePayment = () => {
+    const handlePayment = async () => {
         setIsProcessing(true);
 
         // Récupère la checklist dynamique pour ce service
         const checklist = ServiceConfigStore.getRequirements(serviceId);
 
-        setTimeout(() => {
-            const newLead = CRM.saveLead({
+        try {
+            const newLead = await CRM.saveLead({
                 name: formData.name,
                 email: formData.email,
                 phone: formData.phone,
@@ -80,6 +81,8 @@ export default function CheckoutFlow({
                 amountPaid: price,
                 // Checklist figée pour ce dossier
                 requiredDocuments: checklist,
+                // Routage intelligent du dossier
+                originAgencyId: LeadRouter.getOriginAgency(serviceId, formData.zipCode, partnerId),
                 // On attache la preuve ici
                 contract: {
                     signedAt: new Date().toISOString(),
@@ -90,10 +93,17 @@ export default function CheckoutFlow({
                 // Injection du partenaire pour le mode Kiosk
                 ...(partnerId && { originAgencyId: partnerId })
             } as any);
-            setCreatedLeadId(newLead.id);
+
+            if (newLead) {
+                setCreatedLeadId(newLead.id);
+            }
             setIsProcessing(false);
             setStep(4);
-        }, 2000);
+        } catch (error) {
+            console.error('[CheckoutFlow] Erreur paiement:', error);
+            setIsProcessing(false);
+            // Optionnel: afficher une erreur UI
+        }
     };
 
 
@@ -161,10 +171,19 @@ export default function CheckoutFlow({
                                         value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })}
                                     />
                                 </div>
+                                <div className="space-y-1.5 focus-within:translate-x-1 transition-transform">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Code Postal</label>
+                                    <input
+                                        type="text" placeholder="Ex: 75001"
+                                        maxLength={5}
+                                        className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-indigo-600 focus:bg-white outline-none transition-all font-bold"
+                                        value={formData.zipCode} onChange={e => setFormData({ ...formData, zipCode: e.target.value })}
+                                    />
+                                </div>
                             </div>
 
                             <button
-                                disabled={!formData.name || !formData.email || !formData.phone}
+                                disabled={!formData.name || !formData.email || !formData.phone || !formData.zipCode}
                                 onClick={handleNext}
                                 className="w-full bg-slate-900 text-white p-5 rounded-2xl font-black text-lg hover:bg-black transition-all shadow-xl shadow-slate-200 mt-4 disabled:opacity-30 disabled:shadow-none flex items-center justify-center gap-3 group"
                             >

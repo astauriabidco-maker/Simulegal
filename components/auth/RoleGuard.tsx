@@ -9,7 +9,7 @@ import AuthStore, { UserRole } from '../../services/authStore';
 // AGENCY -> AGENCY
 // CLIENT -> Session client (basée sur leadId)
 
-export type ProtectedRole = 'CLIENT' | 'AGENCY' | 'HQ_ADMIN';
+export type ProtectedRole = 'CLIENT' | 'AGENCY' | 'HQ_ADMIN' | 'SUPERADMIN' | 'AGENCY_MANAGER';
 
 interface RoleGuardProps {
     children: React.ReactNode;
@@ -29,8 +29,12 @@ export default function RoleGuard({ children, allowedRoles }: RoleGuardProps) {
                 const currentRole = user.role;
                 let normalizedRole: ProtectedRole;
 
-                if (currentRole === 'HQ' || currentRole === 'SUPERADMIN') {
+                if (currentRole === 'SUPERADMIN') {
+                    normalizedRole = 'SUPERADMIN';
+                } else if (currentRole === 'HQ' || currentRole === 'HQ_ADMIN') {
                     normalizedRole = 'HQ_ADMIN';
+                } else if (currentRole === 'AGENCY_MANAGER') {
+                    normalizedRole = 'AGENCY_MANAGER';
                 } else {
                     normalizedRole = 'AGENCY';
                 }
