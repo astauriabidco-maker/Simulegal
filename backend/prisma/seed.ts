@@ -1,5 +1,5 @@
-const { PrismaClient } = require('@prisma/client');
-const bcrypt = require('bcrypt');
+import { PrismaClient, Prisma } from '@prisma/client';
+import * as bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 
@@ -11,8 +11,8 @@ async function main() {
     await prisma.user.deleteMany({});
     await prisma.agency.deleteMany({});
 
-    const hashedPassword = await bcrypt.hash('demo123', 10);
-    const superAdminPassword = await bcrypt.hash('superadmin', 10);
+    const hashedPassword = await bcrypt.hash('demo', 10);
+    const superAdminPassword = await bcrypt.hash('demo', 10);
 
     // 2. Création des Agences
     const hq = await prisma.agency.create({
@@ -71,9 +71,9 @@ async function main() {
     await prisma.user.createMany({
         data: [
             {
-                email: 'hq@simulegal.fr',
+                email: 'hq.admin@simulegal.fr',
                 password: hashedPassword,
-                name: 'Admin Siège',
+                name: 'Sophie Martin (Siège)',
                 role: 'HQ_ADMIN',
                 permissions: 'view_all_leads,validate_documents,manage_agencies,view_reports'
             },
@@ -85,9 +85,9 @@ async function main() {
                 permissions: 'view_all_leads,validate_documents'
             },
             {
-                email: 'agence.paris@simulegal.fr',
+                email: 'agency.paris@simulegal.fr',
                 password: hashedPassword,
-                name: 'Pierre Martin',
+                name: 'Agence Paris Louvre',
                 role: 'AGENCY_MANAGER',
                 agencyId: 'HQ-001',
                 permissions: 'view_own_leads,add_notes'
@@ -109,17 +109,17 @@ async function main() {
                 permissions: 'view_own_leads'
             },
             {
-                email: 'admin@simulegal.fr',
+                email: 'super.admin@simulegal.fr',
                 password: superAdminPassword,
-                name: 'Super Admin',
-                role: 'SUPERADMIN',
+                name: 'Admin Système',
+                role: 'SUPER_ADMIN',
                 permissions: '*'
             }
         ]
     });
 
     // 4. Création de Dossiers Démo (pour l'accès candidat en conditions réelles)
-    const demoLeads = [
+    const demoLeads: Prisma.LeadCreateInput[] = [
         {
             id: 'DEMO-NAT-001',
             name: 'Jean Démo',
@@ -129,7 +129,7 @@ async function main() {
             serviceName: 'Naturalisation Française',
             status: 'PAID',
             amountPaid: 4900,
-            originAgencyId: 'HQ-001'
+            originAgency: { connect: { id: 'HQ-001' } }
         },
         {
             id: 'DEMO-VPF-001',
@@ -140,7 +140,7 @@ async function main() {
             serviceName: 'Titre de Séjour (Conjoint Français)',
             status: 'PAID',
             amountPaid: 3500,
-            originAgencyId: 'HQ-001'
+            originAgency: { connect: { id: 'HQ-001' } }
         },
         {
             id: 'DEMO-SAL-001',
@@ -151,7 +151,7 @@ async function main() {
             serviceName: 'Titre de Séjour (Salarié)',
             status: 'PAID',
             amountPaid: 3500,
-            originAgencyId: 'HQ-001'
+            originAgency: { connect: { id: 'HQ-001' } }
         },
         {
             id: 'DEMO-ETU-001',
@@ -162,7 +162,7 @@ async function main() {
             serviceName: 'Titre de Séjour (Étudiant)',
             status: 'PAID',
             amountPaid: 1500,
-            originAgencyId: 'HQ-001'
+            originAgency: { connect: { id: 'HQ-001' } }
         },
         {
             id: 'DEMO-TALENT-001',
@@ -173,7 +173,7 @@ async function main() {
             serviceName: 'Passeport Talent',
             status: 'PAID',
             amountPaid: 5900,
-            originAgencyId: 'HQ-001'
+            originAgency: { connect: { id: 'HQ-001' } }
         },
         {
             id: 'DEMO-PERMIS-001',
@@ -184,7 +184,7 @@ async function main() {
             serviceName: 'Échange de Permis',
             status: 'PAID',
             amountPaid: 900,
-            originAgencyId: 'HQ-001'
+            originAgency: { connect: { id: 'HQ-001' } }
         }
     ];
 

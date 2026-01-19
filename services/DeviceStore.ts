@@ -45,6 +45,25 @@ export const DeviceStore = {
     },
 
     /**
+     * Active le terminal avec un code unique
+     */
+    activateDevice: async (code: string): Promise<KioskDevice | null> => {
+        try {
+            const response = await fetch(`${API_URL}/activate`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ code })
+            });
+
+            if (!response.ok) return null;
+
+            return response.json();
+        } catch {
+            return null;
+        }
+    },
+
+    /**
      * Récupère un device par son ID (API)
      */
     getDeviceById: async (deviceId: string): Promise<KioskDevice | null> => {

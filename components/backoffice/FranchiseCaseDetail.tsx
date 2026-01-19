@@ -44,32 +44,36 @@ export default function FranchiseCaseDetail({
 
     useEffect(() => {
         if (isOpen && leadId) {
-            const foundLead = CRM.getLeadById(leadId);
-            setLead(foundLead);
+            const loadLead = async () => {
+                const foundLead = await CRM.getLeadById(leadId);
+                setLead(foundLead);
+            };
+            loadLead();
         }
     }, [isOpen, leadId]);
 
     if (!isOpen || !lead) return null;
 
-    const statusConfig = STATUS_CONFIG[lead.status] || STATUS_CONFIG.NEW;
+    const statusConfig = STATUS_CONFIG[lead.status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.NEW;
 
-    const handleSendNote = () => {
+    const handleSendNote = async () => {
         if (!newNote.trim()) return;
 
         setIsSending(true);
         // Simule un délai réseau
-        setTimeout(() => {
-            const updatedLead = CRM.addNote(leadId, {
-                author: 'AGENCY',
-                authorName: agencyName,
-                content: newNote.trim()
-            });
-            if (updatedLead) {
-                setLead(updatedLead);
-            }
-            setNewNote('');
-            setIsSending(false);
-        }, 500);
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        const updatedLead = await CRM.addNote(leadId, {
+            author: 'AGENCY',
+            authorName: agencyName,
+            content: newNote.trim()
+        });
+
+        if (updatedLead) {
+            setLead(updatedLead);
+        }
+        setNewNote('');
+        setIsSending(false);
     };
 
     return (
@@ -196,8 +200,8 @@ export default function FranchiseCaseDetail({
                                     <div
                                         key={note.id}
                                         className={`rounded-xl p-3 ${note.author === 'AGENCY'
-                                                ? 'bg-emerald-100 ml-4'
-                                                : 'bg-white border border-slate-200 mr-4'
+                                            ? 'bg-emerald-100 ml-4'
+                                            : 'bg-white border border-slate-200 mr-4'
                                             }`}
                                     >
                                         <div className="flex items-center justify-between mb-1">

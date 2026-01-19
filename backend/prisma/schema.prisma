@@ -61,6 +61,43 @@ enum LeadStatus {
   CANCELLED
 }
 
+enum ProspectStatus {
+  TO_CALL
+  IN_DISCUSSION
+  MEETING_BOOKED
+  LINK_SENT
+  CONVERTED
+  LOST
+}
+
+model Prospect {
+  id                String         @id @default(cuid())
+  firstName         String
+  lastName          String
+  phone             String
+  email             String?
+  source            String         @default("MANUAL")
+  campaignName      String?
+  interestServiceId String?
+  score             Int            @default(0)
+  agencyId          String
+  assignedToSalesId String?
+  status            ProspectStatus @default(TO_CALL)
+  notes             ProspectNote[]
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  lastContactAt     DateTime?
+}
+
+model ProspectNote {
+  id        String   @id @default(cuid())
+  text      String
+  authorId  String
+  prospectId String
+  prospect  Prospect @relation(fields: [prospectId], references: [id])
+  createdAt DateTime @default(now())
+}
+
 model User {
   id            String    @id @default(cuid())
   email         String    @unique

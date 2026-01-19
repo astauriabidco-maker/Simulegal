@@ -31,9 +31,9 @@ export default function RoleGuard({ children, allowedRoles }: RoleGuardProps) {
 
                 if (currentRole === 'SUPERADMIN') {
                     normalizedRole = 'SUPERADMIN';
-                } else if (currentRole === 'HQ' || currentRole === 'HQ_ADMIN') {
+                } else if (currentRole === 'HQ' || (currentRole as string) === 'HQ_ADMIN') {
                     normalizedRole = 'HQ_ADMIN';
-                } else if (currentRole === 'AGENCY_MANAGER') {
+                } else if ((currentRole as string) === 'AGENCY_MANAGER') {
                     normalizedRole = 'AGENCY_MANAGER';
                 } else {
                     normalizedRole = 'AGENCY';

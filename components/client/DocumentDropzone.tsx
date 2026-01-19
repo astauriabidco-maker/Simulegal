@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useRef, useState } from 'react';
-import { DocumentAnalysis, AnalysisResult } from '../../services/DocumentAnalysisService';
+import DocumentAnalysisService, { AnalysisResult, AnalysisResponse } from '../../services/DocumentAnalysisService';
 import {
     Upload,
     CheckCircle,
@@ -48,7 +48,7 @@ export default function DocumentDropzone({
     const inputRef = useRef<HTMLInputElement>(null);
     const [isDragging, setIsDragging] = useState(false);
     const [internalStatus, setInternalStatus] = useState<'IDLE' | 'UPLOADING' | 'ANALYZING'>('IDLE');
-    const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
+    const [analysisResult, setAnalysisResult] = useState<AnalysisResponse | null>(null);
     const [errorMessage, setErrorMessage] = useState<string>('');
     const [currentFile, setCurrentFile] = useState<File | null>(null);
 
@@ -92,15 +92,14 @@ export default function DocumentDropzone({
         await new Promise(r => setTimeout(r, 300));
         setInternalStatus('ANALYZING');
 
-        // Analyse IA
-        const result = await DocumentAnalysis.analyze(file);
-        setAnalysisResult(result);
+        const response = await DocumentAnalysisService.analyze(file);
+        setAnalysisResult(response);
 
-        if (result.isValid) {
+        if (DocumentAnalysisService.isValid(response.status)) {
             // Document validé par IA
             const verificationData: DocumentVerification = {
                 status: 'AUTO_VALIDATED',
-                aiConfidence: result.confidence,
+                aiConfidence: response.confidence,
                 analyzedAt: new Date().toISOString()
             };
             setInternalStatus('IDLE');
@@ -108,7 +107,7 @@ export default function DocumentDropzone({
         } else {
             // Document rejeté - NE PAS sauvegarder
             setInternalStatus('IDLE');
-            setErrorMessage(result.message);
+            setErrorMessage(response.message);
         }
     };
 
@@ -124,7 +123,7 @@ export default function DocumentDropzone({
 
     const getStatusConfig = () => {
         // État d'erreur après analyse
-        if (analysisResult && !analysisResult.isValid && internalStatus === 'IDLE') {
+        if (analysisResult && !DocumentAnalysisService.isValid(analysisResult.status) && internalStatus === 'IDLE') {
             return {
                 borderColor: 'border-red-400',
                 bgColor: 'bg-red-50',
@@ -199,7 +198,7 @@ export default function DocumentDropzone({
     };
 
     const config = getStatusConfig();
-    const showError = analysisResult && !analysisResult.isValid && internalStatus === 'IDLE';
+    const showError = analysisResult && !DocumentAnalysisService.isValid(analysisResult.status) && internalStatus === 'IDLE';
     const isAiValidated = verification?.status === 'AUTO_VALIDATED';
 
     return (
@@ -218,9 +217,9 @@ export default function DocumentDropzone({
                     {/* Badge statut */}
                     {status !== 'EMPTY' && !showError && (
                         <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${status === 'VALIDATED' ? 'bg-emerald-100 text-emerald-700' :
-                                status === 'REJECTED' ? 'bg-red-100 text-red-700' :
-                                    isAiValidated ? 'bg-emerald-100 text-emerald-700' :
-                                        'bg-amber-100 text-amber-700'
+                            status === 'REJECTED' ? 'bg-red-100 text-red-700' :
+                                isAiValidated ? 'bg-emerald-100 text-emerald-700' :
+                                    'bg-amber-100 text-amber-700'
                             }`}>
                             {status === 'VALIDATED' ? 'Validé' : status === 'REJECTED' ? 'Rejeté' : isAiValidated ? 'Pré-validé' : 'En attente'}
                         </span>

@@ -19,7 +19,8 @@ import {
     Brain,
     Eye,
     Tablet,
-    Calendar as CalendarIcon
+    Calendar as CalendarIcon,
+    TrendingUp
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePermission } from '../../hooks/usePermission';
@@ -59,6 +60,7 @@ const DEFAULT_MENU: MenuItem[] = [
     { id: 'audit-veille', label: '⚖️ Audit et Veille', icon: <Eye size={20} />, href: '/admin/audit', permission: 'settings.manage' },
     { id: 'roles', label: 'Rôles & Droits', icon: <Shield size={20} />, href: '/admin/rbac', permission: 'roles.manage' },
     { id: 'calendar', label: 'Agenda & RDV', icon: <CalendarIcon size={20} />, href: '/admin/calendar', permission: 'crm.view_agency' },
+    { id: 'sales', label: 'Sales Hub', icon: <TrendingUp size={20} />, href: '/admin/sales', permission: 'crm.view_agency' }, // Utilisation de permission existante pour l'instant
     { id: 'settings', label: 'Paramètres Généraux', icon: <Settings size={20} />, href: '/admin/settings', permission: 'settings.manage' },
 ];
 

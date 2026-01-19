@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { CRM, Lead, LeadDocument } from '../../services/crmStore';
 import { WorkflowService, WorkflowStage } from '../../services/WorkflowService';
-import { DocumentAnalysisService, AnalysisResponse } from '../../services/DocumentAnalysisService';
+import DocumentAnalysisService, { AnalysisResponse } from '../../services/DocumentAnalysisService';
 import GuidedScanner from './GuidedScanner';
 import {
     CheckCircle,
@@ -252,7 +252,7 @@ export default function ClientPortal({ leadId }: ClientPortalProps) {
                                 {/* Ligne verticale */}
                                 <div className="flex flex-col items-center">
                                     <div className={`w-8 h-8 rounded-full flex items-center justify-center ${isCompleted ? 'bg-emerald-500' :
-                                            isCurrent ? 'bg-indigo-600' : 'bg-slate-200'
+                                        isCurrent ? 'bg-indigo-600' : 'bg-slate-200'
                                         }`}>
                                         {isCompleted ? (
                                             <CheckCircle className="text-white" size={16} />
@@ -271,7 +271,7 @@ export default function ClientPortal({ leadId }: ClientPortalProps) {
                                 {/* Contenu */}
                                 <div className="pb-6">
                                     <p className={`font-medium ${isCompleted ? 'text-emerald-600' :
-                                            isCurrent ? 'text-indigo-600' : 'text-slate-400'
+                                        isCurrent ? 'text-indigo-600' : 'text-slate-400'
                                         }`}>
                                         {label}
                                     </p>
@@ -295,7 +295,7 @@ export default function ClientPortal({ leadId }: ClientPortalProps) {
                         {lead.documents.map((doc) => (
                             <div key={doc.id} className="bg-white rounded-xl p-4 flex items-center gap-3">
                                 <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${doc.status === 'VALID' ? 'bg-emerald-100' :
-                                        doc.status === 'REJECTED' ? 'bg-red-100' : 'bg-slate-100'
+                                    doc.status === 'REJECTED' ? 'bg-red-100' : 'bg-slate-100'
                                     }`}>
                                     <FileText className={
                                         doc.status === 'VALID' ? 'text-emerald-600' :

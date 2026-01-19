@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useCallback } from 'react';
-import { DocumentAnalysisService, AnalysisResponse } from '../../services/DocumentAnalysisService';
+import DocumentAnalysisService, { AnalysisResponse } from '../../services/DocumentAnalysisService';
 import { LeadDocument, DocumentStatus } from '../../services/crmStore';
 import {
     Camera,
@@ -141,7 +141,7 @@ export default function GuidedScanner({
                         >
                             <div
                                 className={`h-full rounded-full transition-all duration-500 ${index < currentStep ? 'bg-white w-full' :
-                                        index === currentStep ? 'bg-white' : 'w-0'
+                                    index === currentStep ? 'bg-white' : 'w-0'
                                     }`}
                                 style={{
                                     width: index === currentStep ? `${isCurrentValid ? 100 : 50}%` : undefined
@@ -188,8 +188,8 @@ export default function GuidedScanner({
                 {showResult && lastResult && !isAnalyzing && (
                     <div className="flex flex-col items-center">
                         <div className={`w-24 h-24 rounded-3xl flex items-center justify-center mb-6 ${lastResult.status === 'VALID'
-                                ? 'bg-emerald-500/20'
-                                : 'bg-red-500/20'
+                            ? 'bg-emerald-500/20'
+                            : 'bg-red-500/20'
                             }`}>
                             {lastResult.status === 'VALID' ? (
                                 <CheckCircle className="text-emerald-400" size={48} />
@@ -219,8 +219,8 @@ export default function GuidedScanner({
                     <div className="flex flex-col items-center">
                         {/* Icône du document */}
                         <div className={`w-32 h-32 rounded-3xl flex items-center justify-center mb-8 ${isCurrentValid
-                                ? 'bg-emerald-500/20 text-emerald-400'
-                                : 'bg-white/10 text-white'
+                            ? 'bg-emerald-500/20 text-emerald-400'
+                            : 'bg-white/10 text-white'
                             }`}>
                             {isCurrentValid ? (
                                 <CheckCircle size={48} />

@@ -174,7 +174,7 @@ export const CRM = {
     },
 
 
-    addNote: async (leadId: string, note: { content: string, author: string }): Promise<Lead | null> => {
+    addNote: async (leadId: string, note: { content: string, author: string, authorName?: string }): Promise<Lead | null> => {
         if (leadId.startsWith('DEMO-')) return CRM.getLeadById(leadId);
         try {
             const response = await fetch(`${API_URL}/${leadId}/notes`, {

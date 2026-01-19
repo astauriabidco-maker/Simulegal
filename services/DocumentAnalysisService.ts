@@ -24,7 +24,8 @@ const ANALYSIS_DELAY = () => Math.random() * 2000 + 1000;
  * Analyse un fichier uploadé et retourne le résultat de validation
  * Appel API vers /documents/analyze
  */
-analyze: async (file: File, docType?: string): Promise<AnalysisResponse> => {
+const DocumentAnalysisService = {
+    analyze: async (file: File, docType?: string): Promise<AnalysisResponse> => {
     const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
     try {

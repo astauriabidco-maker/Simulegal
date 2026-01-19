@@ -18,6 +18,7 @@ import { EligibilityModule } from './eligibility/eligibility.module';
 import { CatalogModule } from './catalog/catalog.module';
 import { SettingsModule } from './settings/settings.module';
 import { DashboardModule } from './dashboard/dashboard.module';
+import { SalesModule } from './sales/sales.module';
 
 @Module({
   imports: [
@@ -36,7 +37,8 @@ import { DashboardModule } from './dashboard/dashboard.module';
     EligibilityModule,
     CatalogModule,
     SettingsModule,
-    DashboardModule
+    DashboardModule,
+    SalesModule
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -53,7 +53,7 @@ export default function AdminLogin({ onLoginSuccess }: AdminLoginProps) {
         // Simule un délai réseau
         await new Promise(r => setTimeout(r, 800));
 
-        const result = AuthStore.login(email, password);
+        const result = await AuthStore.login(email, password);
 
         if (result.success && result.user) {
             onLoginSuccess(result.user);

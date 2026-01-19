@@ -152,6 +152,17 @@ export const AuthStore = {
         if (!user) return false;
         if (user.permissions.includes('*')) return true; // Toutes les permissions
         return user.permissions.includes(permission);
+    },
+
+    /**
+     * Récupère les identifiants de démo pour l'environnement de dev
+     */
+    getDemoCredentials: () => {
+        return [
+            { email: 'hq.admin@simulegal.fr', password: 'demo', role: 'HQ', name: 'Sophie Martin (Siège)' },
+            { email: 'agency.paris@simulegal.fr', password: 'demo', role: 'AGENCY', name: 'Agence Paris Louvre' },
+            { email: 'super.admin@simulegal.fr', password: 'demo', role: 'SUPERADMIN', name: 'Admin Système' }
+        ] as const;
     }
 };
 
