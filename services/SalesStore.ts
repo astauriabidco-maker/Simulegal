@@ -86,18 +86,24 @@ export const SalesStore = {
     },
 
     /**
-     * Récupère les prospects
+     * Fetch all prospects (Paginated)
      */
-    getProspects: async (): Promise<Prospect[]> => {
+    getProspects: async (page = 1, limit = 50, status?: string): Promise<{ data: Prospect[], meta: any }> => {
         try {
-            const response = await fetch(`${API_URL}/sales/prospects`, {
+            const params = new URLSearchParams({
+                page: page.toString(),
+                limit: limit.toString()
+            });
+            if (status) params.append('status', status);
+
+            const response = await fetch(`${API_URL}/sales/prospects?${params.toString()}`, {
                 headers: SalesStore.getHeaders()
             });
             if (!response.ok) throw new Error('Failed to fetch prospects');
             return await response.json();
         } catch (error) {
             console.error('[SalesStore] Error fetching prospects:', error);
-            return [];
+            return { data: [], meta: { total: 0, page: 1, limit: 50, totalPages: 0 } };
         }
     },
 
@@ -138,6 +144,27 @@ export const SalesStore = {
     },
 
     /**
+     * Fetch Analytics Stats
+     */
+    getAnalytics: async (period: 'TODAY' | 'WEEK' | 'MONTH'): Promise<any> => {
+        try {
+            const response = await fetch(`${API_URL}/sales/analytics?period=${period}`, {
+                headers: SalesStore.getHeaders()
+            });
+            if (!response.ok) throw new Error('Failed to fetch analytics');
+            return await response.json();
+        } catch (error) {
+            console.error('[SalesStore] Error fetching analytics:', error);
+            // Return safe default
+            return {
+                kpis: { totalLeads: 0, newLeads: 0, convertedLeads: 0, conversionRate: 0, pipelineValue: 0 },
+                funnel: [],
+                sources: []
+            };
+        }
+    },
+
+    /**
      * Ajoute une note à un prospect
      */
     addNote: async (prospectId: string, text: string): Promise<ProspectNote | null> => {
@@ -172,22 +199,33 @@ export const SalesStore = {
     },
 
     /**
-     * CSV Import Parser (Mock still used for local parsing before sending to backend)
+     * CSV Import - Real Upload
      */
     importProspectsFromCSV: async (file: File): Promise<number> => {
-        // Simulation parsing local simple
-        await new Promise(resolve => setTimeout(resolve, 500));
+        const formData = new FormData();
+        formData.append('file', file);
 
-        // En prod, on lirait le CSV et on appellerait addProspect pour chaque ligne
-        // Ici on mock l'envoi de 5 prospects
-        for (let i = 0; i < 5; i++) {
-            await SalesStore.addProspect({
-                firstName: `Imported${i}`,
-                lastName: `User`,
-                phone: `060000000${i}`,
-                source: 'CSV_IMPORT'
+        try {
+            const response = await fetch(`${API_URL}/sales/import`, {
+                method: 'POST',
+                // Note: Do NOT set Content-Type header manually when using FormData, 
+                // the browser sets it with the boundary automatically.
+                headers: {
+                    'Authorization': `Bearer ${AuthStore.getToken()}`
+                },
+                body: formData
             });
+
+            if (!response.ok) {
+                const err = await response.text();
+                throw new Error('Import failed: ' + err);
+            }
+
+            const data = await response.json();
+            return data.count;
+        } catch (error) {
+            console.error('[SalesStore] Import error:', error);
+            throw error;
         }
-        return 5;
     }
 };

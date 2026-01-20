@@ -1,5 +1,22 @@
 import AuthStore from './authStore';
 
+export interface ApiConfig {
+    provider: string; // ex: 'STRIPE'
+    enabled: boolean;
+    mode: 'SANDBOX' | 'LIVE';
+    credentials: Record<string, string>; // { publicKey: '...', secretKey: '...' }
+    status: 'CONNECTED' | 'ERROR' | 'UNKNOWN';
+    lastCheck?: string;
+}
+
+export interface IntegrationSettings {
+    payment: ApiConfig;      // Stripe
+    messaging: ApiConfig;    // Twilio / WhatsApp
+    ocr: ApiConfig;          // Google Vision / Mindee
+    storage: ApiConfig;      // AWS S3
+    maps: ApiConfig;         // Google Maps
+}
+
 export interface SystemSettings {
     company: {
         name: string;
@@ -35,11 +52,7 @@ export interface SystemSettings {
         whatsappToken?: string;
     };
 
-    integrations: {
-        ocrProvider: 'GOOGLE_VISION' | 'MINDEE';
-        ocrApiKey: string;
-        mapsApiKey: string;
-    };
+    integrations: IntegrationSettings;
 
     storage: {
         provider: 'AWS_S3' | 'LOCAL';
@@ -60,7 +73,13 @@ const DEFAULT_SETTINGS: SystemSettings = {
     },
     payment: { provider: 'STRIPE', mode: 'TEST', publicKey: '', secretKey: '', currency: 'EUR' },
     notifications: { smtpHost: '', smtpPort: 587, smtpUser: '', smtpPass: '', smsProvider: 'TWILIO', smsSid: '', smsToken: '', whatsappEnabled: false },
-    integrations: { ocrProvider: 'GOOGLE_VISION', ocrApiKey: '', mapsApiKey: '' },
+    integrations: {
+        payment: { provider: 'STRIPE', enabled: false, mode: 'SANDBOX', credentials: { publicKey: '', secretKey: '' }, status: 'UNKNOWN' },
+        messaging: { provider: 'TWILIO', enabled: false, mode: 'SANDBOX', credentials: { accountSid: '', authToken: '', fromNumber: '' }, status: 'UNKNOWN' },
+        ocr: { provider: 'GOOGLE_VISION', enabled: false, mode: 'SANDBOX', credentials: { apiKey: '' }, status: 'UNKNOWN' },
+        storage: { provider: 'AWS_S3', enabled: false, mode: 'SANDBOX', credentials: { bucketName: '', region: '', accessKey: '', secretKey: '' }, status: 'UNKNOWN' },
+        maps: { provider: 'GOOGLE_MAPS', enabled: false, mode: 'SANDBOX', credentials: { apiKey: '' }, status: 'UNKNOWN' },
+    },
     storage: { provider: 'LOCAL', bucketName: '', region: '', accessKey: '', secretKey: '' }
 };
 
@@ -73,7 +92,16 @@ export const SettingsStore = {
                 console.warn(`[SettingsStore] ⚠️ Backend returned ${response.status} for ${url}. Using fallback.`);
                 return DEFAULT_SETTINGS;
             }
-            return await response.json();
+            const data = await response.json();
+
+            // Forçage de la structure pour éviter les crashs si la base a l'ancienne structure
+            return {
+                ...DEFAULT_SETTINGS,
+                ...data,
+                company: { ...DEFAULT_SETTINGS.company, ...data.company },
+                integrations: { ...DEFAULT_SETTINGS.integrations, ...data.integrations },
+                storage: { ...DEFAULT_SETTINGS.storage, ...data.storage }
+            } as SystemSettings;
         } catch (error) {
             console.error('[SettingsStore] ❌ Connection error:', error);
             return DEFAULT_SETTINGS;

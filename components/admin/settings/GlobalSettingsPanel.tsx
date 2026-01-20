@@ -5,11 +5,13 @@ import {
     Building2, CreditCard, Bell, Cpu, Save,
     RefreshCcw, Eye, EyeOff, ShieldAlert,
     Mail, MessageSquare, HardDrive, Smartphone,
-    CheckCircle, AlertTriangle
+    CheckCircle, AlertTriangle, Users
 } from 'lucide-react';
-import { SettingsStore, SystemSettings } from '../../../services/SettingsStore';
+import { SettingsStore, SystemSettings, IntegrationSettings } from '../../../services/SettingsStore';
+import IntegrationsTab from './IntegrationsTab';
+import SystemUsersTab from './SystemUsersTab';
 
-type TabType = 'COMPANY' | 'PAYMENT' | 'NOTIFICATIONS' | 'INTEGRATIONS';
+type TabType = 'COMPANY' | 'PAYMENT' | 'NOTIFICATIONS' | 'INTEGRATIONS' | 'SYSTEM_USERS';
 
 export default function GlobalSettingsPanel() {
     const [settings, setSettings] = useState<SystemSettings | null>(null);
@@ -70,6 +72,7 @@ export default function GlobalSettingsPanel() {
                     { id: 'PAYMENT', label: 'Paiement', icon: CreditCard },
                     { id: 'NOTIFICATIONS', label: 'Notifications', icon: Bell },
                     { id: 'INTEGRATIONS', label: 'Intégrations', icon: Cpu },
+                    { id: 'SYSTEM_USERS', label: 'Système', icon: Users },
                 ].map(tab => (
                     <button
                         key={tab.id}
@@ -291,85 +294,21 @@ export default function GlobalSettingsPanel() {
                     )}
 
                     {activeTab === 'INTEGRATIONS' && (
-                        <div className="bg-white rounded-[2rem] p-8 border-2 border-slate-100 shadow-sm space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                            {/* OCR */}
-                            <div className="space-y-6">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-8 h-8 bg-purple-50 rounded-lg flex items-center justify-center text-purple-600">
-                                        <Smartphone size={18} />
-                                    </div>
-                                    <h3 className="font-black text-slate-900 uppercase text-xs tracking-widest">Vision & OCR (Lecture Documents)</h3>
-                                </div>
+                        <IntegrationsTab
+                            settings={settings.integrations}
+                            onUpdate={(val: IntegrationSettings) => {
+                                // Update local state immediately for responsive UI
+                                setSettings(prev => prev ? { ...prev, integrations: val } : prev);
+                                // Then save to backend in background (non-blocking)
+                                SettingsStore.saveSettings('integrations', val).catch(err => {
+                                    console.error('[IntegrationsTab] Backend save failed:', err);
+                                });
+                            }}
+                        />
+                    )}
 
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-1.5 col-span-2">
-                                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Fournisseur OCR</label>
-                                        <select
-                                            className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold focus:border-indigo-600 outline-none"
-                                            value={settings.integrations.ocrProvider}
-                                            onChange={e => handleSave('integrations', { ocrProvider: e.target.value })}
-                                        >
-                                            <option value="GOOGLE_VISION">Google Cloud Vision</option>
-                                            <option value="MINDEE">Mindee API</option>
-                                        </select>
-                                    </div>
-                                    <div className="col-span-2">
-                                        <SettingInput
-                                            label="Clé API OCR"
-                                            value={settings.integrations.ocrApiKey}
-                                            isSecret
-                                            showSecret={showSecrets['ocr_key']}
-                                            onToggleSecret={() => toggleSecret('ocr_key')}
-                                            onChange={(v) => handleSave('integrations', { ocrApiKey: v })}
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* STORAGE */}
-                            <div className="space-y-6 border-t border-slate-100 pt-8">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center text-blue-600">
-                                        <HardDrive size={18} />
-                                    </div>
-                                    <h3 className="font-black text-slate-900 uppercase text-xs tracking-widest">Stockage Sécurisé (S3)</h3>
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-4">
-                                    <SettingInput
-                                        label="Nom du Bucket"
-                                        value={settings.storage.bucketName}
-                                        onChange={(v) => handleSave('storage', { bucketName: v })}
-                                    />
-                                    <SettingInput
-                                        label="Région"
-                                        value={settings.storage.region}
-                                        onChange={(v) => handleSave('storage', { region: v })}
-                                    />
-                                    <SettingInput
-                                        label="AWS Access Key"
-                                        value={settings.storage.accessKey}
-                                        onChange={(v) => handleSave('storage', { accessKey: v })}
-                                    />
-                                    <SettingInput
-                                        label="AWS Secret Key"
-                                        value={settings.storage.secretKey}
-                                        isSecret
-                                        showSecret={showSecrets['s3_secret']}
-                                        onToggleSecret={() => toggleSecret('s3_secret')}
-                                        onChange={(v) => handleSave('storage', { secretKey: v })}
-                                    />
-                                </div>
-
-                                <div className="p-4 bg-amber-50 rounded-2xl border border-amber-100 flex gap-4">
-                                    <ShieldAlert className="text-amber-600 shrink-0" size={24} />
-                                    <p className="text-xs text-amber-800 font-medium italic">
-                                        Ces clés permettent l'accès aux documents confidentiels des clients.
-                                        Toute modification impacte immédiatement l'accessibilité des dossiers.
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
+                    {activeTab === 'SYSTEM_USERS' && (
+                        <SystemUsersTab />
                     )}
                 </div>
 

@@ -75,14 +75,16 @@ async function main() {
                 password: hashedPassword,
                 name: 'Sophie Martin (Siège)',
                 role: 'HQ_ADMIN',
-                permissions: 'view_all_leads,validate_documents,manage_agencies,view_reports'
+                permissions: 'view_all_leads,validate_documents,manage_agencies,view_reports',
+                expertises: '["cs_salarie", "cs_etudiant"]'
             },
             {
                 email: 'juridique@simulegal.fr',
                 password: hashedPassword,
                 name: 'Marie Dupont',
                 role: 'HQ_ADMIN',
-                permissions: 'view_all_leads,validate_documents'
+                permissions: 'view_all_leads,validate_documents',
+                expertises: '["naturalisation", "permis_conduire"]'
             },
             {
                 email: 'agency.paris@simulegal.fr',
@@ -98,7 +100,8 @@ async function main() {
                 name: 'Sophie Bernard',
                 role: 'AGENCY_MANAGER',
                 agencyId: 'OWN-001',
-                permissions: 'view_own_leads,add_notes'
+                permissions: 'view_own_leads,add_notes',
+                expertises: '["naturalisation"]'
             },
             {
                 email: 'relay.bordeaux@simulegal.fr',

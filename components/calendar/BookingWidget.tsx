@@ -10,12 +10,13 @@ import { fr } from 'date-fns/locale';
 
 interface BookingWidgetProps {
     lead: { id: string; name: string; email: string };
+    serviceId?: string;
     forcedAgencyId?: string;
     initialMode?: AppointmentType;
     onComplete: () => void;
 }
 
-export default function BookingWidget({ lead, forcedAgencyId, initialMode, onComplete }: BookingWidgetProps) {
+export default function BookingWidget({ lead, serviceId, forcedAgencyId, initialMode, onComplete }: BookingWidgetProps) {
     // State
     const [step, setStep] = useState<'MODE' | 'AGENCY' | 'DATE' | 'SLOT' | 'CONFIRM'>('MODE');
     const [mode, setMode] = useState<AppointmentType | null>(initialMode || null);
@@ -83,7 +84,7 @@ export default function BookingWidget({ lead, forcedAgencyId, initialMode, onCom
         try {
             // CRITICAL: If Visio, ignore agencyId constraints
             const agencyContext = mode === 'VISIO_JURISTE' ? undefined : selectedAgency?.id;
-            const slots = await CalendarStore.getAvailableSlots(date.toISOString(), agencyContext);
+            const slots = await CalendarStore.getAvailableSlots(date.toISOString(), agencyContext, serviceId);
             setAvailableSlots(slots);
             setStep('SLOT');
         } finally {
@@ -95,7 +96,7 @@ export default function BookingWidget({ lead, forcedAgencyId, initialMode, onCom
         if (!selectedSlot || !mode) return;
         setLoading(true);
         try {
-            await CalendarStore.bookAppointment(selectedSlot, lead, mode, selectedAgency?.id);
+            await CalendarStore.bookAppointment(selectedSlot, lead, mode, selectedAgency?.id, serviceId);
             onComplete();
         } catch (error) {
             console.error('Booking failed', error);

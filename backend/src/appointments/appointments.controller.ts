@@ -1,22 +1,28 @@
-import { Controller, Get, Post, Body, Query, UseGuards, Param } from '@nestjs/common';
+import { Controller, Get, Post, Body, Query, UseGuards, Param, BadRequestException, Patch } from '@nestjs/common';
 import { AppointmentsService } from './appointments.service';
 import { Appointment as AppointmentModel, Prisma } from '@prisma/client';
+import { MeetingsService } from './meetings.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Controller('appointments')
 export class AppointmentsController {
-    constructor(private readonly appointmentsService: AppointmentsService) { }
+    constructor(
+        private readonly appointmentsService: AppointmentsService,
+        private readonly meetingsService: MeetingsService,
+        private readonly notificationsService: NotificationsService
+    ) { }
 
     @Get('slots')
     async getSlots(
         @Query('date') date: string,
-        @Query('agencyId') agencyId?: string
+        @Query('agencyId') agencyId?: string,
+        @Query('serviceId') serviceId?: string
     ): Promise<string[]> {
-        // Public endpoint (or arguably protected)
         if (!date) return [];
-        return this.appointmentsService.getAvailableSlots(date, agencyId);
+        return this.appointmentsService.getAvailableSlots(date, agencyId, serviceId);
     }
 
     @UseGuards(JwtAuthGuard, RolesGuard)
@@ -48,27 +54,87 @@ export class AppointmentsController {
         lead: { id: string; name: string; email: string };
         type: 'VISIO_JURISTE' | 'PHYSICAL_AGENCY';
         agencyId?: string;
+        serviceId?: string;
+        hostUserId?: string;
     }): Promise<AppointmentModel> {
 
         const start = new Date(data.slotIso);
         const end = new Date(start);
         end.setMinutes(start.getMinutes() + 30);
 
-        // Simple round-robin or first available host assignment for Visio could happen here
-        // For now, we leave hostUserId null or assign a default HQ user if implemented
+        // Find an available host with the requested expertise, if not manually provided
+        let hostUserId = data.hostUserId;
+        if (!hostUserId) {
+            const foundHost = await this.appointmentsService.findAvailableHost(
+                data.slotIso,
+                data.agencyId,
+                data.serviceId
+            );
+            hostUserId = foundHost ?? undefined;
 
-        return this.appointmentsService.create({
+            if (!hostUserId && data.serviceId) {
+                throw new BadRequestException('No expert available for this service at the selected time');
+            }
+        }
+
+        const appointment = await this.appointmentsService.create({
             start,
             end,
             type: data.type,
-            leadId: data.lead.id,
+            lead: { connect: { id: data.lead.id } },
             leadName: data.lead.name,
             leadEmail: data.lead.email,
+            serviceId: data.serviceId,
             status: 'SCHEDULED',
             agency: data.agencyId ? { connect: { id: data.agencyId } } : undefined,
+            hostUser: hostUserId ? { connect: { id: hostUserId } } : undefined,
             meetingLink: data.type === 'VISIO_JURISTE'
-                ? `https://meet.google.com/sim-ule-gal-${data.lead.id.substring(0, 4)}`
+                ? await this.meetingsService.generateMeetingLink()
                 : undefined
         });
+
+        // Trigger notification
+        const lead = await this.appointmentsService.findLeadById(data.lead.id);
+        if (lead) {
+            await this.notificationsService.sendAppointmentConfirmation(lead, appointment);
+        }
+
+        return appointment;
+        return appointment;
+    }
+
+    @Patch(':id')
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles('SUPER_ADMIN', 'HQ_ADMIN', 'AGENCY_MANAGER', 'CASE_WORKER')
+    async update(
+        @Param('id') id: string,
+        @Body() body: { start?: string; end?: string; hostUserId?: string; agencyId?: string; status?: string; type?: string }
+    ) {
+        const data: any = { ...body };
+        if (body.start) data.start = new Date(body.start);
+        if (body.end) data.end = new Date(body.end);
+        return this.appointmentsService.update(id, data);
+    }
+
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles('SUPER_ADMIN', 'HQ_ADMIN', 'AGENCY_MANAGER', 'CASE_WORKER')
+    @Get('stats')
+    async getStats(
+        @Query('start') start: string,
+        @Query('end') end: string
+    ) {
+        const startDate = start ? new Date(start) : new Date();
+        const endDate = end ? new Date(end) : new Date();
+        return this.appointmentsService.getAgendaStats(startDate, endDate);
+    }
+
+    @Patch(':id/cancel')
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles('SUPER_ADMIN', 'HQ_ADMIN', 'AGENCY_MANAGER', 'CASE_WORKER')
+    async cancel(
+        @Param('id') id: string,
+        @Body() body: { reason: string }
+    ) {
+        return this.appointmentsService.cancel(id, body.reason);
     }
 }

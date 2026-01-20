@@ -37,6 +37,9 @@ export interface StaffUser {
     // - Si vide et role HQ : Voit TOUT (Super Admin).
     // - Si rempli : Ne voit QUE ces agences spécifiques.
     scopeAgencyIds?: string[];
+
+    // EXPERTISES (JSON string array of serviceIds)
+    expertises?: string;
 }
 
 // Extension du Lead pour le traçage Back-Office

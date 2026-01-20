@@ -332,6 +332,7 @@ export default function CheckoutFlow({
                                 React.lazy(() => import('./calendar/BookingWidget')),
                                 {
                                     lead: { id: createdLeadId || '', name: formData.name, email: formData.email },
+                                    serviceId: serviceId,
                                     forcedAgencyId: assignedAgency?.id,
                                     initialMode: getBookingMode(),
                                     onComplete: () => setStep(5)

@@ -1,21 +1,20 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Device, Call } from '@twilio/voice-sdk';
 import {
     Phone,
     PhoneOff,
     Mic,
     MicOff,
-    Volume2,
     User,
-    Clock,
-    MessageSquare,
-    X,
     Circle,
-    Play,
-    Pause
+    X,
+    MessageSquare,
+    Clock
 } from 'lucide-react';
-import { Prospect } from '../../services/SalesStore';
+import { SalesStore, Prospect } from '../../services/SalesStore';
+import { AuthStore } from '../../services/authStore';
 
 interface CallCockpitProps {
     prospect: Prospect;
@@ -24,20 +23,81 @@ interface CallCockpitProps {
 }
 
 export default function CallCockpit({ prospect, onClose, onSaveNote }: CallCockpitProps) {
-    const [status, setStatus] = useState<'IDLE' | 'CALLING' | 'CONNECTED' | 'ENDED'>('IDLE');
+    const [status, setStatus] = useState<'IDLE' | 'CALLING' | 'CONNECTED' | 'ENDED' | 'ERROR'>('IDLE');
     const [duration, setDuration] = useState(0);
     const [isMuted, setIsMuted] = useState(false);
     const [note, setNote] = useState('');
-    const [isRecording, setIsRecording] = useState(false);
+    const [device, setDevice] = useState<Device | null>(null);
+    const [activeConnection, setActiveConnection] = useState<Call | null>(null);
+    const [errorMessage, setErrorMessage] = useState('');
 
+    // Timer ref
+    const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+    // Initialisation Twilio Device
     useEffect(() => {
-        let timer: NodeJS.Timeout;
+        const initDevice = async () => {
+            try {
+                // 1. Récupérer le token depuis le backend
+                // Note: On utilise fetch direct ici car SalesStore n'a pas encore cette méthode
+                const tokenResponse = await fetch('http://localhost:3001/voice/token', {
+                    headers: {
+                        'Authorization': `Bearer ${AuthStore.getToken()}`
+                    }
+                });
+
+                if (!tokenResponse.ok) throw new Error('Impossible de récupérer le token Twilio');
+
+                const { token } = await tokenResponse.json();
+
+                // 2. Créer le Device
+                const newDevice = new Device(token, {
+                    logLevel: 1,
+                    codecPreferences: ['opus', 'pcmu']
+                });
+
+                // 3. Listeners
+                newDevice.on('ready', () => console.log('Twilio Device Ready'));
+                newDevice.on('error', (error) => {
+                    console.error('Twilio Error:', error);
+                    setErrorMessage(error.message);
+                    setStatus('ERROR');
+                });
+
+                // Pas besoin de newDevice.register() si on ne fait que des appels sortants
+                setDevice(newDevice);
+
+            } catch (err: any) {
+                console.error('Setup failed', err);
+                setErrorMessage(err.message);
+                setStatus('ERROR');
+            }
+        };
+
+        if (!prospect.phone) {
+            setErrorMessage("Le prospect n'a pas de numéro de téléphone.");
+            setStatus('ERROR');
+        } else {
+            initDevice();
+        }
+
+        // Cleanup
+        return () => {
+            if (device) device.destroy();
+            if (activeConnection) activeConnection.disconnect();
+            if (timerRef.current) clearInterval(timerRef.current);
+        };
+    }, [prospect.phone]);
+
+    // Timer logic
+    useEffect(() => {
         if (status === 'CONNECTED') {
-            timer = setInterval(() => {
+            timerRef.current = setInterval(() => {
                 setDuration(prev => prev + 1);
             }, 1000);
+        } else {
+            if (timerRef.current) clearInterval(timerRef.current);
         }
-        return () => clearInterval(timer);
     }, [status]);
 
     const formatDuration = (s: number) => {
@@ -46,15 +106,50 @@ export default function CallCockpit({ prospect, onClose, onSaveNote }: CallCockp
         return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
     };
 
-    const handleStartCall = () => {
+    const handleStartCall = async () => {
+        if (!device) return;
+
         setStatus('CALLING');
-        setTimeout(() => setStatus('CONNECTED'), 2000);
+
+        try {
+            const params = { To: prospect.phone };
+            const call = await device.connect({ params });
+
+            call.on('accept', () => {
+                setStatus('CONNECTED');
+                setActiveConnection(call);
+            });
+
+            call.on('disconnect', () => {
+                setStatus('ENDED');
+                setActiveConnection(null);
+            });
+
+            call.on('error', (err) => {
+                console.error('Call Error:', err);
+                setErrorMessage(err.message || 'Erreur lors de l\'appel');
+                setStatus('ERROR');
+            });
+
+        } catch (err: any) {
+            console.error('Connection failed', err);
+            setErrorMessage(err.message);
+            setStatus('ERROR');
+        }
     };
 
     const handleEndCall = () => {
-        setStatus('ENDED');
-        if (note.trim()) {
-            onSaveNote(note);
+        if (activeConnection) {
+            activeConnection.disconnect();
+        }
+        setStatus('ENDED'); // Force UI update just in case
+    };
+
+    const toggleMute = () => {
+        if (activeConnection) {
+            const newMuted = !isMuted;
+            activeConnection.mute(newMuted);
+            setIsMuted(newMuted);
         }
     };
 
@@ -80,10 +175,10 @@ export default function CallCockpit({ prospect, onClose, onSaveNote }: CallCockp
                     </div>
 
                     <div className="mb-12 text-center h-8">
-                        {status === 'IDLE' && <span className="text-slate-400 font-medium italic">Prêt pour l'appel</span>}
+                        {status === 'IDLE' && <span className="text-slate-400 font-medium italic">Prêt pour l'appel (Twilio Ready)</span>}
                         {status === 'CALLING' && (
                             <span className="flex items-center gap-2 text-indigo-600 font-semibold animate-pulse">
-                                <Circle size={8} fill="currentColor" /> Appel en cours...
+                                <Circle size={8} fill="currentColor" /> Appelle en cours...
                             </span>
                         )}
                         {status === 'CONNECTED' && (
@@ -96,20 +191,22 @@ export default function CallCockpit({ prospect, onClose, onSaveNote }: CallCockp
                             </div>
                         )}
                         {status === 'ENDED' && <span className="text-slate-400 font-bold">Appel terminé</span>}
+                        {status === 'ERROR' && <span className="text-red-500 font-bold text-sm max-w-[200px] truncate">{errorMessage || 'Erreur'}</span>}
                     </div>
 
                     <div className="flex items-center gap-6">
-                        {status === 'IDLE' ? (
+                        {status === 'IDLE' || status === 'ERROR' ? (
                             <button
                                 onClick={handleStartCall}
-                                className="w-16 h-16 bg-emerald-500 text-white rounded-full flex items-center justify-center shadow-lg shadow-emerald-200 hover:bg-emerald-600 transition-all hover:scale-110 active:scale-95"
+                                disabled={status === 'ERROR' && !device}
+                                className="w-16 h-16 bg-emerald-500 text-white rounded-full flex items-center justify-center shadow-lg shadow-emerald-200 hover:bg-emerald-600 transition-all hover:scale-110 active:scale-95 disabled:opacity-50 disabled:grayscale"
                             >
                                 <Phone size={28} />
                             </button>
-                        ) : status === 'CONNECTED' || status === 'CALLING' ? (
+                        ) : (status === 'CONNECTED' || status === 'CALLING') ? (
                             <>
                                 <button
-                                    onClick={() => setIsMuted(!isMuted)}
+                                    onClick={toggleMute}
                                     className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${isMuted ? 'bg-red-100 text-red-600' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
                                 >
                                     {isMuted ? <MicOff size={20} /> : <Mic size={20} />}
@@ -119,12 +216,6 @@ export default function CallCockpit({ prospect, onClose, onSaveNote }: CallCockp
                                     className="w-16 h-16 bg-red-500 text-white rounded-full flex items-center justify-center shadow-lg shadow-red-200 hover:bg-red-600 transition-all hover:scale-110 active:scale-95"
                                 >
                                     <PhoneOff size={28} />
-                                </button>
-                                <button
-                                    onClick={() => setIsRecording(!isRecording)}
-                                    className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${isRecording ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
-                                >
-                                    <Circle size={20} fill={isRecording ? "currentColor" : "none"} className={isRecording ? "animate-pulse" : ""} />
                                 </button>
                             </>
                         ) : (
@@ -158,7 +249,7 @@ export default function CallCockpit({ prospect, onClose, onSaveNote }: CallCockp
                             <span>Rappel automatique suggéré dans 2 jours</span>
                         </div>
                         <button
-                            disabled={status !== 'ENDED' && status !== 'IDLE'}
+                            disabled={status !== 'ENDED' && status !== 'IDLE' && status !== 'ERROR'}
                             onClick={() => {
                                 onSaveNote(note);
                                 onClose();

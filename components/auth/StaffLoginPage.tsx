@@ -195,7 +195,7 @@ export default function StaffLoginPage() {
 
                         <div className="grid grid-cols-1 gap-2">
                             <button
-                                onClick={() => handleQuickLogin('admin@simulegal.fr', 'superadmin')}
+                                onClick={() => handleQuickLogin('super.admin@simulegal.fr', 'demo')}
                                 className="w-full h-12 bg-white border-2 border-indigo-100 hover:border-indigo-600 hover:bg-indigo-50 text-indigo-900 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-between px-4 group"
                             >
                                 <span>Super Admin</span>
@@ -203,7 +203,7 @@ export default function StaffLoginPage() {
                             </button>
 
                             <button
-                                onClick={() => handleQuickLogin('hq@simulegal.fr', 'demo123')}
+                                onClick={() => handleQuickLogin('hq.admin@simulegal.fr', 'demo')}
                                 className="w-full h-12 bg-white border-2 border-emerald-100 hover:border-emerald-600 hover:bg-emerald-50 text-emerald-900 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-between px-4 group"
                             >
                                 <span>Admin Siège (HQ)</span>
@@ -211,7 +211,7 @@ export default function StaffLoginPage() {
                             </button>
 
                             <button
-                                onClick={() => handleQuickLogin('agence.paris@simulegal.fr', 'demo123')}
+                                onClick={() => handleQuickLogin('agency.paris@simulegal.fr', 'demo')}
                                 className="w-full h-12 bg-white border-2 border-slate-100 hover:border-slate-600 hover:bg-slate-50 text-slate-900 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-between px-4 group"
                             >
                                 <span>Manager Agence (Paris)</span>
@@ -219,7 +219,7 @@ export default function StaffLoginPage() {
                             </button>
 
                             <button
-                                onClick={() => handleQuickLogin('relay.bordeaux@simulegal.fr', 'demo123')}
+                                onClick={() => handleQuickLogin('relay.bordeaux@simulegal.fr', 'demo')}
                                 className="w-full h-12 bg-white border-2 border-amber-100 hover:border-amber-600 hover:bg-amber-50 text-amber-900 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-between px-4 group"
                             >
                                 <span>Point Relais (Bordeaux)</span>

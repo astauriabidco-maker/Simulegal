@@ -10,6 +10,7 @@ import { FinanceModule } from './finance/finance.module';
 import { DevicesModule } from './devices/devices.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { RolesModule } from './roles/roles.module';
+import { AbsencesModule } from './absences/absences.module';
 
 import { FranchiseLeadsModule } from './franchise-leads/franchise-leads.module';
 import { AppointmentsModule } from './appointments/appointments.module';
@@ -38,7 +39,8 @@ import { SalesModule } from './sales/sales.module';
     CatalogModule,
     SettingsModule,
     DashboardModule,
-    SalesModule
+    SalesModule,
+    AbsencesModule
   ],
   controllers: [AppController],
   providers: [AppService],

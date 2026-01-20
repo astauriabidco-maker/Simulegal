@@ -34,6 +34,7 @@ interface MenuItem {
     icon: ReactNode;
     href: string;
     permission?: PermissionKey;
+    category?: 'PILOTAGE' | 'COMMERCIAL' | 'RESEAU' | 'SYSTEME';
 }
 
 interface DashboardLayoutProps {
@@ -50,18 +51,26 @@ interface DashboardLayoutProps {
 
 // Menus selon le rôle (Servira de fallback si besoin, mais on filtre surtout par permission)
 const DEFAULT_MENU: MenuItem[] = [
-    { id: 'overview', label: 'Vue Globale', icon: <LayoutDashboard size={20} />, href: '/admin' },
-    { id: 'dossiers', label: 'Dossiers', icon: <FolderKanban size={20} />, href: '/admin/dossiers', permission: 'crm.view_agency' },
-    { id: 'network', label: 'Réseau Agences', icon: <Building2 size={20} />, href: '/admin/network', permission: 'network.manage' },
-    { id: 'franchise-leads', label: 'Franchises (CRM)', icon: <Users size={20} />, href: '/admin/franchise-leads', permission: 'network.manage' }, // TODO: permission dédiée
-    { id: 'staff', label: 'Gestion Équipe', icon: <Users size={20} />, href: '/admin/staff', permission: 'users.manage' },
-    { id: 'finances', label: 'Finances', icon: <Wallet size={20} />, href: '/admin/finances', permission: 'finance.view_agency' },
-    { id: 'devices', label: 'Terminaux', icon: <Tablet size={20} />, href: '/admin/devices', permission: 'fleet.manage' },
-    { id: 'audit-veille', label: '⚖️ Audit et Veille', icon: <Eye size={20} />, href: '/admin/audit', permission: 'settings.manage' },
-    { id: 'roles', label: 'Rôles & Droits', icon: <Shield size={20} />, href: '/admin/rbac', permission: 'roles.manage' },
-    { id: 'calendar', label: 'Agenda & RDV', icon: <CalendarIcon size={20} />, href: '/admin/calendar', permission: 'crm.view_agency' },
-    { id: 'sales', label: 'Sales Hub', icon: <TrendingUp size={20} />, href: '/admin/sales', permission: 'crm.view_agency' }, // Utilisation de permission existante pour l'instant
-    { id: 'settings', label: 'Paramètres Généraux', icon: <Settings size={20} />, href: '/admin/settings', permission: 'settings.manage' },
+    // BLOC 1: PILOTAGE
+    { id: 'overview', label: 'Vue Globale', icon: <LayoutDashboard size={20} />, href: '/admin', category: 'PILOTAGE' },
+    { id: 'agenda-dashboard', label: 'Cockpit Temporel', icon: <TrendingUp size={20} />, href: '/admin/dashboard-agenda', permission: 'crm.view_agency', category: 'PILOTAGE' },
+    { id: 'calendar', label: 'Agenda & RDV', icon: <CalendarIcon size={20} />, href: '/admin/calendar', permission: 'crm.view_agency', category: 'PILOTAGE' },
+
+    // BLOC 2: COMMERCIAL & CLIENTS
+    { id: 'sales', label: 'Sales Hub', icon: <TrendingUp size={20} />, href: '/admin/sales', permission: 'crm.view_agency', category: 'COMMERCIAL' },
+    { id: 'dossiers', label: 'Dossiers', icon: <FolderKanban size={20} />, href: '/admin/dossiers', permission: 'crm.view_agency', category: 'COMMERCIAL' },
+    { id: 'franchise-leads', label: 'Franchises (CRM)', icon: <Users size={20} />, href: '/admin/franchise-leads', permission: 'network.manage', category: 'COMMERCIAL' },
+
+    // BLOC 3: LOGISTIQUE RÉSEAU
+    { id: 'network', label: 'Réseau Agences', icon: <Building2 size={20} />, href: '/admin/network', permission: 'network.manage', category: 'RESEAU' },
+    { id: 'devices', label: 'Terminaux', icon: <Tablet size={20} />, href: '/admin/devices', permission: 'fleet.manage', category: 'RESEAU' },
+
+    // BLOC 4: CONFIGURATION & ADMIN
+    { id: 'staff', label: 'Gestion Équipe', icon: <Users size={20} />, href: '/admin/staff', permission: 'users.manage', category: 'SYSTEME' },
+    { id: 'finances', label: 'Finances', icon: <Wallet size={20} />, href: '/admin/finances', permission: 'finance.view_agency', category: 'SYSTEME' },
+    { id: 'roles', label: 'Rôles & Droits', icon: <Shield size={20} />, href: '/admin/rbac', permission: 'roles.manage', category: 'SYSTEME' },
+    { id: 'audit-veille', label: 'Audit et Veille', icon: <Eye size={20} />, href: '/admin/audit', permission: 'settings.manage', category: 'SYSTEME' },
+    { id: 'settings', label: 'Paramètres Généraux', icon: <Settings size={20} />, href: '/admin/settings', permission: 'settings.manage', category: 'SYSTEME' },
 ];
 
 export default function DashboardLayout({
@@ -88,6 +97,14 @@ export default function DashboardLayout({
 
     const badge = getRoleBadge(currentUser.role);
 
+    // Group items by category
+    const categories: { id: MenuItem['category']; label: string }[] = [
+        { id: 'PILOTAGE', label: 'Pilotage & RDV' },
+        { id: 'COMMERCIAL', label: 'Commercial & Clients' },
+        { id: 'RESEAU', label: 'Logistique Réseau' },
+        { id: 'SYSTEME', label: 'Système & Config' },
+    ];
+
     return (
         <div className="min-h-screen bg-slate-100 flex">
             {/* Sidebar */}
@@ -95,34 +112,50 @@ export default function DashboardLayout({
                 {/* Logo */}
                 <div className="p-6 border-b border-slate-700">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center font-black text-lg">
+                        <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center font-black text-lg shadow-lg shadow-indigo-600/20">
                             S
                         </div>
                         <div>
                             <h1 className="font-bold text-lg tracking-tight">SimuLegal</h1>
-                            <p className="text-[10px] text-slate-400 uppercase tracking-widest">Back-Office</p>
+                            <p className="text-[10px] text-slate-400 uppercase tracking-widest font-black">Back-Office</p>
                         </div>
                     </div>
                 </div>
 
                 {/* Menu */}
-                <nav className="flex-1 p-4 space-y-1">
-                    {menuItems.map((item) => (
-                        <Link
-                            key={item.id}
-                            href={item.href}
-                            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all group ${activeMenuItem === item.id
-                                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
-                                : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-                                }`}
-                        >
-                            {item.icon}
-                            <span className="font-medium flex-1">{item.label}</span>
-                            {activeMenuItem === item.id && (
-                                <ChevronRight size={16} className="opacity-60" />
-                            )}
-                        </Link>
-                    ))}
+                <nav className="flex-1 p-4 space-y-8 overflow-y-auto custom-scrollbar">
+                    {categories.map((cat) => {
+                        const itemsInCat = menuItems.filter(i => i.category === cat.id);
+                        if (itemsInCat.length === 0) return null;
+
+                        return (
+                            <div key={cat.id} className="space-y-2">
+                                <h3 className="px-4 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">
+                                    {cat.label}
+                                </h3>
+                                <div className="space-y-1">
+                                    {itemsInCat.map((item) => (
+                                        <Link
+                                            key={item.id}
+                                            href={item.href}
+                                            className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left transition-all group ${activeMenuItem === item.id
+                                                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
+                                                : 'text-slate-400 hover:bg-slate-800/50 hover:text-white'
+                                                }`}
+                                        >
+                                            <div className={`${activeMenuItem === item.id ? 'text-white' : 'text-slate-500 group-hover:text-indigo-400'} transition-colors`}>
+                                                {item.icon}
+                                            </div>
+                                            <span className="font-bold text-sm flex-1">{item.label}</span>
+                                            {activeMenuItem === item.id && (
+                                                <ChevronRight size={14} className="opacity-60" />
+                                            )}
+                                        </Link>
+                                    ))}
+                                </div>
+                            </div>
+                        );
+                    })}
                 </nav>
 
                 {/* User Info */}

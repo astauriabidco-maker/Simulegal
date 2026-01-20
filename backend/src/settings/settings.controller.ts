@@ -1,4 +1,4 @@
-import { Controller, Get, Patch, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Patch, Body, UseGuards, Param } from '@nestjs/common';
 import { SettingsService } from './settings.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
@@ -27,7 +27,7 @@ export class SettingsController {
     @UseGuards(JwtAuthGuard, RolesGuard)
     @Roles('SUPER_ADMIN')
     @Patch('update/:section')
-    async update(@Body() data: any, @Body('section') section: string) {
+    async update(@Body() data: any, @Param('section') section: string) {
         return this.settingsService.updateSection(section, data);
     }
 }

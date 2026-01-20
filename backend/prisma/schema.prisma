@@ -17,6 +17,7 @@ enum UserRole {
   AGENCY_MANAGER
   SALES
   KIOSK_AGENT
+  API_PARTNER
 }
 
 enum AgencyType {
@@ -117,6 +118,20 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   lastLogin     DateTime?
+  isSystemUser  Boolean   @default(false) // True for admins, API partners
+  expertises    String    @default("[]") // Liste des serviceId (JSON array: string[])
+  absences      Absence[]
+}
+
+model Absence {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  start     DateTime
+  end       DateTime
+  reason    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Role {
@@ -169,6 +184,7 @@ model Lead {
   requiredDocs   String?    // Checklist personnalisée (JSON stringé)
   
   notes          LeadNote[]
+  appointments   Appointment[]
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
 }
@@ -263,6 +279,7 @@ model Appointment {
   
   // Client Info (denormalized)
   leadId      String
+  lead        Lead             @relation(fields: [leadId], references: [id])
   leadName    String
   leadEmail   String?
 
@@ -274,6 +291,9 @@ model Appointment {
   hostUser    User?            @relation(fields: [hostUserId], references: [id])
 
   meetingLink String?
+  serviceId   String?
+
+  cancellationReason String?
 
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt

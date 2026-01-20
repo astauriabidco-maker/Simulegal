@@ -16,6 +16,24 @@ export class UsersService {
         }));
     }
 
+    async findSystemUsers() {
+        const systemRoles = ['SUPER_ADMIN', 'HQ_ADMIN', 'API_PARTNER'];
+        const users = await this.prisma.user.findMany({
+            where: {
+                OR: [
+                    { isSystemUser: true },
+                    { role: { in: systemRoles as any } }
+                ]
+            },
+            include: { agency: true, roleRef: true },
+            orderBy: { createdAt: 'desc' }
+        });
+        return users.map(u => ({
+            ...u,
+            scopeAgencyIds: u.scopeAgencyIds ? JSON.parse(u.scopeAgencyIds) : []
+        }));
+    }
+
     async findOneByEmail(email: string) {
         const user = await this.prisma.user.findUnique({
             where: { email },

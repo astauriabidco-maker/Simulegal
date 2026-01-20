@@ -7,6 +7,14 @@ import { AuthGuard } from '@nestjs/passport';
 export class UsersController {
     constructor(private readonly usersService: UsersService) { }
 
+    @Get('system')
+    findSystemUsers(@Request() req: any) {
+        if (req.user.role !== 'SUPER_ADMIN') {
+            throw new ForbiddenException('Accès réservé au Super Admin');
+        }
+        return this.usersService.findSystemUsers();
+    }
+
     @Get()
     findAll(@Request() req: any) {
         if (req.user.role !== 'SUPER_ADMIN' && req.user.role !== 'HQ_ADMIN') {

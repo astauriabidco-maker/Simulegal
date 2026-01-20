@@ -28,8 +28,8 @@ export class DevicesController {
      * POST /devices/activate - Activate a device with code (called by tablet)
      */
     @Post('activate')
-    async activate(@Body() body: { pairingCode: string }) {
-        const device = await this.devicesService.activate(body.pairingCode);
+    async activate(@Body() body: { code: string }) {
+        const device = await this.devicesService.activate(body.code);
         if (!device) {
             return { success: false, error: 'Code invalide' };
         }

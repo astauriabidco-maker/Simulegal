@@ -1,16 +1,138 @@
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import * as nodemailer from 'nodemailer';
+import Twilio from 'twilio';
 
 @Injectable()
 export class NotificationsService {
+    private twilioClient: Twilio.Twilio;
+    private mailTransporter: nodemailer.Transporter;
+
+    constructor(private configService: ConfigService) {
+        // Init Twilio
+        const accountSid = this.configService.get<string>('TWILIO_ACCOUNT_SID');
+        const authToken = this.configService.get<string>('TWILIO_AUTH_TOKEN');
+        if (accountSid && authToken) {
+            this.twilioClient = Twilio(accountSid, authToken);
+        }
+
+        // Init Nodemailer
+        const smtpHost = this.configService.get<string>('SMTP_HOST');
+        const smtpPort = this.configService.get<number>('SMTP_PORT');
+        const smtpUser = this.configService.get<string>('SMTP_USER');
+        const smtpPass = this.configService.get<string>('SMTP_PASS');
+
+        if (smtpHost && smtpUser) {
+            this.mailTransporter = nodemailer.createTransport({
+                host: smtpHost,
+                port: smtpPort || 587,
+                secure: false, // true for 465, false for other ports
+                auth: {
+                    user: smtpUser,
+                    pass: smtpPass,
+                },
+            });
+        }
+    }
+
     /**
-     * Simule l'envoi WhatsApp Business API côté Backend
+     * Envoi WhatsApp via Twilio
      */
     async sendWhatsApp(phone: string, template: string, params: any) {
-        console.log(`[BACKEND-WhatsApp] 🟢 Envoi à ${phone} | Template: ${template}`);
-        console.log(`[BACKEND-WhatsApp] Message: ${params.message}`);
+        if (!this.twilioClient) {
+            console.warn('[Twilio] Client not initialized. Check env vars.');
+            return { success: false };
+        }
 
-        // Ici on appellerait l'API Meta/Twilio en prod
-        return { success: true, messageId: `msg_${Math.random().toString(36).substr(2, 9)}` };
+        const from = this.configService.get<string>('TWILIO_WHATSAPP_NUMBER') || 'whatsapp:+14155238886'; // Default sandbox
+        // Ensure phone is in E.164 and prefixed with whatsapp:
+        const to = `whatsapp:${phone.replace(/^0/, '+33').replace(/\s/g, '')}`;
+
+        try {
+            const result = await this.twilioClient.messages.create({
+                body: params.message, // For sandbox, simpler to just send body. Templates are complex in Twilio.
+                from: from,
+                to: to
+            });
+            console.log(`[WhatsApp] 🟢 Sent to ${to}: ${result.sid}`);
+            return { success: true, messageId: result.sid };
+        } catch (error) {
+            console.error('[WhatsApp] Error:', error);
+            return { success: false, error };
+        }
+    }
+
+    async sendEmail(to: string, subject: string, body: string) {
+        if (!this.mailTransporter) {
+            console.warn('[Mailer] Transporter not initialized. Check env vars.');
+            return { success: false };
+        }
+
+        try {
+            const info = await this.mailTransporter.sendMail({
+                from: '"SimuLegal Notif" <no-reply@simulegal.fr>', // sender address
+                to: to, // list of receivers
+                subject: subject, // Subject line
+                text: body, // plain text body
+                html: body.replace(/\n/g, '<br>'), // simple html conversion
+            });
+            console.log(`[Email] 📧 Sent to ${to}: ${info.messageId}`);
+            return { success: true, messageId: info.messageId };
+        } catch (error) {
+            console.error('[Email] Error:', error);
+            return { success: false, error };
+        }
+    }
+
+    async sendSMS(phone: string, message: string) {
+        if (!this.twilioClient) {
+            console.warn('[Twilio] Client not initialized.');
+            return { success: false };
+        }
+
+        const from = this.configService.get<string>('TWILIO_CALLER_ID'); // Can use same number for Voice and SMS often
+        const to = phone.replace(/^0/, '+33').replace(/\s/g, '');
+
+        try {
+            const result = await this.twilioClient.messages.create({
+                body: message,
+                from: from,
+                to: to
+            });
+            console.log(`[SMS] 📱 Sent to ${to}: ${result.sid}`);
+            return { success: true, messageId: result.sid };
+        } catch (error) {
+            console.error('[SMS] Error:', error);
+            return { success: false, error };
+        }
+    }
+
+    async sendAppointmentConfirmation(lead: any, appointment: any) {
+        const dateStr = new Date(appointment.start).toLocaleString('fr-FR', {
+            weekday: 'long',
+            day: 'numeric',
+            month: 'long',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+
+        const meetingInfo = appointment.meetingLink
+            ? `\nLien Visio : ${appointment.meetingLink}`
+            : `\nLieu : En agence (${appointment.agencyId || 'Siège'})`;
+
+        const message = `Bonjour ${lead.name}, votre RDV SimuLegal est confirmé pour le ${dateStr}.${meetingInfo}`;
+
+        console.log(`[Notifications] Processing confirmation for ${lead.phone}/${lead.email}`);
+
+        // Send across all channels
+        await Promise.all([
+            // WhatsApp (fail silent)
+            this.sendWhatsApp(lead.phone || '0600000000', 'booking_confirmation', { message }),
+            // Email
+            lead.email ? this.sendEmail(lead.email, 'Confirmation de votre Rendez-vous SimuLegal', message) : Promise.resolve(),
+            // SMS
+            this.sendSMS(lead.phone || '0600000000', message)
+        ]);
     }
 
     /**

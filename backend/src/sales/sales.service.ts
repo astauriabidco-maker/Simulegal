@@ -6,11 +6,35 @@ import { Prospect, ProspectStatus } from '@prisma/client';
 export class SalesService {
     constructor(private prisma: PrismaService) { }
 
-    async findAll() {
-        return this.prisma.prospect.findMany({
-            include: { notes: true },
-            orderBy: { createdAt: 'desc' },
-        });
+    async findAll(params: { page: number; limit: number; status?: string }) {
+        const { page, limit, status } = params;
+        const skip = (page - 1) * limit;
+
+        const where: any = {};
+        if (status) {
+            where.status = status;
+        }
+
+        const [data, total] = await Promise.all([
+            this.prisma.prospect.findMany({
+                where,
+                skip,
+                take: limit,
+                include: { notes: true },
+                orderBy: { createdAt: 'desc' },
+            }),
+            this.prisma.prospect.count({ where })
+        ]);
+
+        return {
+            data,
+            meta: {
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit)
+            }
+        };
     }
 
     async findOne(id: string) {
@@ -94,5 +118,48 @@ export class SalesService {
                 text,
             },
         });
+    }
+
+    async importFromCSV(buffer: Buffer): Promise<number> {
+        const content = buffer.toString('utf-8');
+        const lines = content.split(/\r?\n/);
+
+        let count = 0;
+        const headers = lines[0]?.toLowerCase().split(/[;,]/).map(h => h.trim().replace(/"/g, ''));
+
+        // Basic validation
+        if (!headers || !headers.includes('firstname') || !headers.includes('lastname')) {
+            throw new Error('Invalid CSV headers. Expected firstName, lastName, phone, email');
+        }
+
+        for (let i = 1; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (!line) continue;
+
+            const values = line.split(/[;,]/).map(v => v.trim().replace(/"/g, ''));
+            const data: any = {};
+
+            headers.forEach((header, index) => {
+                const val = values[index];
+                if (header === 'firstname') data.firstName = val;
+                if (header === 'lastname') data.lastName = val;
+                if (header === 'email') data.email = val;
+                if (header === 'phone') data.phone = val;
+                if (header === 'source') data.source = val;
+            });
+
+            if (data.firstName && data.lastName) {
+                // Set defaults
+                data.source = data.source || 'CSV_IMPORT';
+                data.status = 'TO_CALL';
+                data.score = 10; // Base score for imported
+                data.agencyId = 'HQ-001'; // Default to HQ, or could be passed in params
+
+                await this.prisma.prospect.create({ data });
+                count++;
+            }
+        }
+
+        return count;
     }
 }
