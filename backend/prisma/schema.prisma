@@ -85,9 +85,28 @@ model Prospect {
   assignedToSalesId String?
   status            ProspectStatus @default(TO_CALL)
   notes             ProspectNote[]
+  callLogs          CallLog[]
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
   lastContactAt     DateTime?
+}
+
+model CallLog {
+  id            String   @id @default(cuid())
+  prospectId    String
+  prospect      Prospect @relation(fields: [prospectId], references: [id])
+  
+  userId        String   // Agent who made the call
+  direction     String   @default("OUTBOUND") // OUTBOUND | INBOUND
+  status        String   @default("INITIATED") // INITIATED, RINGING, IN_PROGRESS, COMPLETED, FAILED, NO_ANSWER
+  
+  duration      Int      @default(0) // Duration in seconds
+  twilioCallSid String?  // Twilio's unique call identifier
+  
+  startedAt     DateTime @default(now())
+  endedAt       DateTime?
+  
+  notes         String?  // Notes taken during the call
 }
 
 model ProspectNote {
@@ -121,6 +140,7 @@ model User {
   isSystemUser  Boolean   @default(false) // True for admins, API partners
   expertises    String    @default("[]") // Liste des serviceId (JSON array: string[])
   absences      Absence[]
+  leads         Lead[]
 }
 
 model Absence {
@@ -154,6 +174,7 @@ model Agency {
   city           String       @default("Paris")
   zipCodes       String       // Stocké sous forme de chaîne (ex: "75001,75002")
   commissionRate Float        @default(15)
+  serviceCommissionOverrides String? // JSON string (ex: {"naturalisation": 20, "recalculation": 10})
   contactEmail   String
   kioskUrl       String
   users          User[]
@@ -182,6 +203,9 @@ model Lead {
   contract       String?    // Stocké en JSON stringé pour SQLite
   documents      String     @default("[]") // Liste des documents (JSON stringé)
   requiredDocs   String?    // Checklist personnalisée (JSON stringé)
+  
+  assignedUserId String?
+  assignedUser   User?    @relation(fields: [assignedUserId], references: [id])
   
   notes          LeadNote[]
   appointments   Appointment[]
@@ -249,10 +273,14 @@ model FranchiseLead {
   
   // Détails du futur contrat (JSON)
   contractDetails String              @default("{}") // { commissionRate, type: 'CORNER'|'FRANCHISE', ... }
+  contractHistory String              @default("[]") // Historique des versions du contrat
+  documents       String              @default("[]") // Pièces jointes (ID, Kbis, etc.)
   
   // Lien vers l'agence une fois convertie
   convertedAgencyId String?             @unique
   convertedAgency   Agency?           @relation(fields: [convertedAgencyId], references: [id])
+  
+  rejectionReason String?             // Motif du rejet si status === REJECTED
   
   createdAt       DateTime            @default(now())
   updatedAt       DateTime            @updatedAt

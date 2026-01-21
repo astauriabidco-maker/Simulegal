@@ -46,4 +46,25 @@ export class FinanceController {
         }
         return this.financeService.createPayout(data);
     }
+
+    @Get('settlements')
+    getSettlements(@Request() req: any, @Query('month') month: string, @Query('year') year: string) {
+        if (req.user.role !== 'SUPER_ADMIN' && req.user.role !== 'HQ_ADMIN') {
+            throw new ForbiddenException('Accès réservé au siège');
+        }
+        return this.financeService.getMonthlySettlement(month, year);
+    }
+
+    @Get('performance-trends')
+    getPerformanceTrends(@Request() req: any, @Query('agencyId') agencyId?: string) {
+        const id = agencyId || req.user.agencyId;
+        if (!id) throw new ForbiddenException('ID Agence manquant');
+
+        // Une agence ne peut voir que ses propres trends
+        if (req.user.role === 'AGENCY_MANAGER' && id !== req.user.agencyId) {
+            throw new ForbiddenException('Accès refusé');
+        }
+
+        return this.financeService.getAgencyPerformanceTrends(id);
+    }
 }

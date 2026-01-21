@@ -11,13 +11,16 @@ const common_1 = require("@nestjs/common");
 const appointments_controller_1 = require("./appointments.controller");
 const appointments_service_1 = require("./appointments.service");
 const prisma_service_1 = require("../prisma/prisma.service");
+const meetings_service_1 = require("./meetings.service");
+const notifications_module_1 = require("../notifications/notifications.module");
 let AppointmentsModule = class AppointmentsModule {
 };
 exports.AppointmentsModule = AppointmentsModule;
 exports.AppointmentsModule = AppointmentsModule = __decorate([
     (0, common_1.Module)({
+        imports: [notifications_module_1.NotificationsModule],
         controllers: [appointments_controller_1.AppointmentsController],
-        providers: [appointments_service_1.AppointmentsService, prisma_service_1.PrismaService],
+        providers: [appointments_service_1.AppointmentsService, meetings_service_1.MeetingsService, prisma_service_1.PrismaService],
     })
 ], AppointmentsModule);
 //# sourceMappingURL=appointments.module.js.map

@@ -22,6 +22,7 @@ import {
     Download
 } from 'lucide-react';
 import { CRM } from '../../services/crmStore';
+import { getRequirementsForService } from '../../config/DocumentTemplates';
 import { SalesAnalyticsDashboard } from './SalesAnalyticsDashboard';
 
 const COLUMNS: { id: ProspectStatus; label: string; color: string }[] = [
@@ -40,6 +41,18 @@ export default function SalesDashboard() {
     const [selectedProspect, setSelectedProspect] = useState<Prospect | null>(null);
     const [showImportModal, setShowImportModal] = useState(false);
     const [showCallCockpit, setShowCallCockpit] = useState(false);
+    const [callHistory, setCallHistory] = useState<any[]>([]);
+
+    // Advanced Filters
+    const [filters, setFilters] = useState<{
+        agencyId?: string;
+        source?: string;
+        dateFrom?: string;
+        dateTo?: string;
+    }>({});
+    const [showFilters, setShowFilters] = useState(false);
+    const [hoveredColumnId, setHoveredColumnId] = useState<string | null>(null);
+
     const router = useRouter();
 
     // Initial load
@@ -47,13 +60,28 @@ export default function SalesDashboard() {
         loadProspects();
     }, []);
 
+    // Load call history when prospect is selected
+    useEffect(() => {
+        if (selectedProspect) {
+            SalesStore.getCallHistory(selectedProspect.id).then(setCallHistory);
+        } else {
+            setCallHistory([]);
+        }
+    }, [selectedProspect]);
+
+
     const loadProspects = async () => {
         setIsLoading(true);
-        const result = await SalesStore.getProspects();
+        const result = await SalesStore.getProspects(1, 100, filters);
         // Handle paginated response
         setProspects(Array.isArray(result) ? result : result.data || []);
         setIsLoading(false);
     };
+
+    // Reload when filters change
+    useEffect(() => {
+        loadProspects();
+    }, [filters]);
 
     const handleStatusChange = async (prospectId: string, newStatus: ProspectStatus) => {
         // Optimistic update
@@ -72,15 +100,26 @@ export default function SalesDashboard() {
     const handleConvert = async (prospect: Prospect) => {
         if (!confirm(`Confirmer la conversion de ${prospect.firstName} en dossier client ?`)) return;
 
+        // Initialiser les documents requis pour ce service
+        const requirements = getRequirementsForService(prospect.interestServiceId || 'default');
+        const initialDocs = requirements.map(req => ({
+            id: req.id,
+            docType: req.label,
+            status: 'EMPTY' as const,
+            required: req.required
+        }));
+
         // Create actual Lead in CRM
         await CRM.saveLead({
-            id: `LEAD-${Date.now()}`, // Simple ID gen
+            id: `LEAD-${Date.now()}`,
             name: `${prospect.firstName} ${prospect.lastName}`,
             email: prospect.email,
             phone: prospect.phone,
             serviceId: prospect.interestServiceId || 'unknown',
-            serviceName: 'Projet Client',
+            serviceName: prospect.interestService || 'Projet Client',
             status: 'NEW',
+            currentStage: 'NEW',
+            documents: initialDocs,
             originAgencyId: prospect.agencyId
         });
 
@@ -143,6 +182,14 @@ export default function SalesDashboard() {
                         <Plus size={18} />
                         Ajouter
                     </button>
+
+                    <button
+                        onClick={() => SalesStore.exportProspects(filters)}
+                        className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors font-medium"
+                    >
+                        <Download size={18} />
+                        Export CSV
+                    </button>
                 </div>
             </div>
 
@@ -152,6 +199,77 @@ export default function SalesDashboard() {
                 </div>
             ) : (
                 <>
+                    {/* Filters Bar */}
+                    <div className="bg-white border-b border-slate-100 px-6 py-3 flex items-center gap-4">
+                        <button
+                            onClick={() => setShowFilters(!showFilters)}
+                            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${showFilters ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                        >
+                            <Filter size={16} />
+                            Filtres
+                            {Object.values(filters).filter(Boolean).length > 0 && (
+                                <span className="bg-indigo-600 text-white text-xs px-1.5 rounded-full">
+                                    {Object.values(filters).filter(Boolean).length}
+                                </span>
+                            )}
+                        </button>
+
+                        {showFilters && (
+                            <>
+                                <select
+                                    value={filters.source || ''}
+                                    onChange={(e) => setFilters(prev => ({ ...prev, source: e.target.value || undefined }))}
+                                    className="px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                >
+                                    <option value="">Toutes sources</option>
+                                    <option value="GOOGLE_ADS">Google Ads</option>
+                                    <option value="META_ADS">Meta Ads</option>
+                                    <option value="TIKTOK_ADS">TikTok Ads</option>
+                                    <option value="CSV_IMPORT">Import CSV</option>
+                                    <option value="WEBSITE">Site Web</option>
+                                    <option value="REFERRAL">Parrainage</option>
+                                </select>
+
+                                <input
+                                    type="text"
+                                    placeholder="ID Agence"
+                                    value={filters.agencyId || ''}
+                                    onChange={(e) => setFilters(prev => ({ ...prev, agencyId: e.target.value || undefined }))}
+                                    className="px-3 py-2 border border-slate-200 rounded-lg text-sm w-32 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                />
+
+                                <div className="flex items-center gap-2 text-sm text-slate-500">
+                                    <span>Du</span>
+                                    <input
+                                        type="date"
+                                        value={filters.dateFrom || ''}
+                                        onChange={(e) => setFilters(prev => ({ ...prev, dateFrom: e.target.value || undefined }))}
+                                        className="px-2 py-1.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                    />
+                                    <span>au</span>
+                                    <input
+                                        type="date"
+                                        value={filters.dateTo || ''}
+                                        onChange={(e) => setFilters(prev => ({ ...prev, dateTo: e.target.value || undefined }))}
+                                        className="px-2 py-1.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                    />
+                                </div>
+
+                                {Object.values(filters).filter(Boolean).length > 0 && (
+                                    <button
+                                        onClick={() => setFilters({})}
+                                        className="text-sm text-red-600 hover:text-red-700 font-medium"
+                                    >
+                                        Réinitialiser
+                                    </button>
+                                )}
+                            </>
+                        )}
+
+                        <span className="ml-auto text-sm text-slate-400">
+                            {prospects.length} prospect{prospects.length !== 1 ? 's' : ''}
+                        </span>
+                    </div>
 
                     {/* Kanban Board */}
                     <div className="flex-1 overflow-x-auto overflow-y-hidden p-6">
@@ -170,7 +288,23 @@ export default function SalesDashboard() {
                                     </div>
 
                                     {/* Column Content */}
-                                    <div className="flex-1 bg-slate-100/50 rounded-xl p-2 overflow-y-auto">
+                                    <div
+                                        className={`flex-1 rounded-xl p-2 overflow-y-auto transition-colors ${hoveredColumnId === column.id ? 'bg-slate-200/70 border-2 border-dashed border-slate-300' : 'bg-slate-100/50 border-2 border-transparent'
+                                            }`}
+                                        onDragOver={(e) => {
+                                            e.preventDefault();
+                                            setHoveredColumnId(column.id);
+                                        }}
+                                        onDragLeave={() => setHoveredColumnId(null)}
+                                        onDrop={(e) => {
+                                            e.preventDefault();
+                                            setHoveredColumnId(null);
+                                            const prospectId = e.dataTransfer.getData('prospectId');
+                                            if (prospectId) {
+                                                handleStatusChange(prospectId, column.id as ProspectStatus);
+                                            }
+                                        }}
+                                    >
                                         <div className="space-y-3">
                                             {prospects
                                                 .filter(p => p.status === column.id)
@@ -185,8 +319,13 @@ export default function SalesDashboard() {
                                                 .map(prospect => (
                                                     <div
                                                         key={prospect.id}
+                                                        draggable={true}
+                                                        onDragStart={(e) => {
+                                                            e.dataTransfer.setData('prospectId', prospect.id);
+                                                            e.dataTransfer.effectAllowed = 'move';
+                                                        }}
                                                         onClick={() => setSelectedProspect(prospect)}
-                                                        className="bg-white p-4 rounded-lg shadow-sm border border-slate-200 cursor-pointer hover:shadow-md transition-all group relative"
+                                                        className="bg-white p-4 rounded-lg shadow-sm border border-slate-200 cursor-pointer hover:shadow-md transition-all group relative active:scale-[0.98] active:rotate-1"
                                                     >
                                                         {/* Hot Lead Badge */}
                                                         {prospect.score >= 50 && (
@@ -291,7 +430,20 @@ export default function SalesDashboard() {
                                         </button>
                                         <button
                                             className="col-span-2 flex items-center justify-center gap-2 py-3 px-4 bg-orange-50 border border-orange-200 text-orange-700 rounded-xl font-medium hover:bg-orange-100 transition-colors"
-                                            onClick={() => handleStatusChange(selectedProspect.id, 'LINK_SENT')}
+                                            onClick={async () => {
+                                                const result = await SalesStore.sendSimulationLink(
+                                                    selectedProspect.id,
+                                                    selectedProspect.phone,
+                                                    selectedProspect.firstName,
+                                                    'SMS'
+                                                );
+                                                if (result.success) {
+                                                    await handleStatusChange(selectedProspect.id, 'LINK_SENT');
+                                                    alert('✅ SMS envoyé avec succès !');
+                                                } else {
+                                                    alert('❌ Erreur: ' + (result.error || 'Envoi échoué'));
+                                                }
+                                            }}
                                         >
                                             <Mail size={18} />
                                             Envoyer le lien de simulation (SMS)
@@ -369,6 +521,58 @@ export default function SalesDashboard() {
                                             </div>
                                         </dl>
                                     </div>
+
+                                    {/* Historique des Appels */}
+                                    <div>
+                                        <h3 className="text-sm font-semibold text-slate-900 uppercase tracking-wider mb-3 flex items-center gap-2">
+                                            <Phone size={16} className="text-indigo-600" />
+                                            Historique Appels ({callHistory.length})
+                                        </h3>
+                                        {callHistory.length === 0 ? (
+                                            <p className="text-sm text-slate-400 italic">Aucun appel enregistré.</p>
+                                        ) : (
+                                            <div className="space-y-2 max-h-48 overflow-y-auto">
+                                                {callHistory.map((call: any) => (
+                                                    <div key={call.id} className="p-3 bg-slate-50 rounded-xl border border-slate-100 text-sm">
+                                                        <div className="flex justify-between items-center mb-1">
+                                                            <span className={`font-medium ${call.status === 'COMPLETED' ? 'text-emerald-600' : call.status === 'FAILED' ? 'text-red-500' : 'text-slate-600'}`}>
+                                                                {call.status === 'COMPLETED' ? '✅ Terminé' : call.status === 'FAILED' ? '❌ Échoué' : call.status === 'NO_ANSWER' ? '📵 Sans réponse' : '📞 ' + call.status}
+                                                            </span>
+                                                            <span className="text-slate-400 text-xs">
+                                                                {new Date(call.startedAt).toLocaleDateString('fr-FR')} {new Date(call.startedAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex items-center gap-4 text-slate-500 text-xs">
+                                                            <span>⏱️ {Math.floor(call.duration / 60)}:{(call.duration % 60).toString().padStart(2, '0')}</span>
+                                                            {call.notes && <span className="truncate">📝 {call.notes}</span>}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Historique des Notes */}
+                                    <div>
+                                        <h3 className="text-sm font-semibold text-slate-900 uppercase tracking-wider mb-3 flex items-center gap-2">
+                                            📝 Notes ({selectedProspect.notes?.length || 0})
+                                        </h3>
+                                        {(!selectedProspect.notes || selectedProspect.notes.length === 0) ? (
+                                            <p className="text-sm text-slate-400 italic">Aucune note enregistrée.</p>
+                                        ) : (
+                                            <div className="space-y-2 max-h-48 overflow-y-auto">
+                                                {selectedProspect.notes.map((note: any) => (
+                                                    <div key={note.id} className="p-3 bg-amber-50 rounded-xl border border-amber-100 text-sm">
+                                                        <p className="text-slate-700 whitespace-pre-wrap">{note.text}</p>
+                                                        <div className="flex justify-between items-center mt-2 text-xs text-slate-500">
+                                                            <span>👤 {note.authorId}</span>
+                                                            <span>{new Date(note.createdAt).toLocaleDateString('fr-FR')} à {new Date(note.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</span>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -402,7 +606,6 @@ export default function SalesDashboard() {
                             onClose={() => setShowCallCockpit(false)}
                             onSaveNote={handleSaveNote}
                         />
-                    )}
                     )}
                 </>
             )}

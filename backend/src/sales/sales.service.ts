@@ -1,18 +1,53 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prospect, ProspectStatus } from '@prisma/client';
+import { AssignmentService } from './assignment.service';
 
 @Injectable()
 export class SalesService {
-    constructor(private prisma: PrismaService) { }
+    constructor(
+        private prisma: PrismaService,
+        private assignmentService: AssignmentService
+    ) { }
 
-    async findAll(params: { page: number; limit: number; status?: string }) {
-        const { page, limit, status } = params;
+    async findAll(params: {
+        page: number;
+        limit: number;
+        status?: string;
+        agencyId?: string;
+        source?: string;
+        dateFrom?: string;
+        dateTo?: string;
+    }) {
+        const { page, limit, status, agencyId, source, dateFrom, dateTo } = params;
         const skip = (page - 1) * limit;
 
         const where: any = {};
+
+        // Status filter
         if (status) {
             where.status = status;
+        }
+
+        // Agency filter
+        if (agencyId) {
+            where.agencyId = agencyId;
+        }
+
+        // Source filter
+        if (source) {
+            where.source = source;
+        }
+
+        // Date range filter
+        if (dateFrom || dateTo) {
+            where.createdAt = {};
+            if (dateFrom) {
+                where.createdAt.gte = new Date(dateFrom);
+            }
+            if (dateTo) {
+                where.createdAt.lte = new Date(dateTo);
+            }
         }
 
         const [data, total] = await Promise.all([
@@ -37,6 +72,40 @@ export class SalesService {
         };
     }
 
+    async exportToCSV(filters?: { agencyId?: string; source?: string; dateFrom?: string; dateTo?: string }): Promise<string> {
+        const where: any = {};
+
+        if (filters?.agencyId) where.agencyId = filters.agencyId;
+        if (filters?.source) where.source = filters.source;
+        if (filters?.dateFrom || filters?.dateTo) {
+            where.createdAt = {};
+            if (filters.dateFrom) where.createdAt.gte = new Date(filters.dateFrom);
+            if (filters.dateTo) where.createdAt.lte = new Date(filters.dateTo);
+        }
+
+        const prospects = await this.prisma.prospect.findMany({
+            where,
+            orderBy: { createdAt: 'desc' },
+        });
+
+        // Build CSV
+        const headers = ['ID', 'Prénom', 'Nom', 'Téléphone', 'Email', 'Source', 'Agence', 'Statut', 'Score', 'Date création'];
+        const rows = prospects.map(p => [
+            p.id,
+            p.firstName,
+            p.lastName,
+            p.phone,
+            p.email || '',
+            p.source,
+            p.agencyId,
+            p.status,
+            p.score.toString(),
+            new Date(p.createdAt).toLocaleDateString('fr-FR')
+        ].map(v => `"${(v || '').replace(/"/g, '""')}"`).join(';'));
+
+        return [headers.join(';'), ...rows].join('\n');
+    }
+
     async findOne(id: string) {
         return this.prisma.prospect.findUnique({
             where: { id },
@@ -47,11 +116,15 @@ export class SalesService {
     async create(data: any) {
         const score = this.calculateScore(data);
 
+        // Round-robin assignment to a sales agent
+        const assignedToSalesId = await this.assignmentService.getNextSalesAgent(data.agencyId || null);
+
         const prospect = await this.prisma.prospect.create({
             data: {
                 ...data,
                 score,
                 status: 'TO_CALL',
+                assignedToSalesId,
             },
         });
 
@@ -153,7 +226,10 @@ export class SalesService {
                 data.source = data.source || 'CSV_IMPORT';
                 data.status = 'TO_CALL';
                 data.score = 10; // Base score for imported
-                data.agencyId = 'HQ-001'; // Default to HQ, or could be passed in params
+                data.agencyId = data.agencyId || 'HQ-001'; // Default to HQ
+
+                // Round-robin assignment
+                data.assignedToSalesId = await this.assignmentService.getNextSalesAgent(data.agencyId);
 
                 await this.prisma.prospect.create({ data });
                 count++;

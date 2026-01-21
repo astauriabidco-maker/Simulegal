@@ -13,6 +13,9 @@ export interface FranchiseLead {
     legalForm?: string;
     status: 'NEW' | 'CONTACTED' | 'MEETING' | 'VALIDATED' | 'CONTRACT_SENT' | 'SIGNED' | 'REJECTED';
     contractDetails: string; // JSON string
+    contractHistory?: string; // JSON string
+    documents?: string; // JSON string
+    rejectionReason?: string;
     convertedAgencyId?: string;
     createdAt: string;
     updatedAt: string;
@@ -96,6 +99,19 @@ export const FranchiseLeadStore = {
             console.error('Error updating franchise lead:', error);
             return null;
         }
+    },
+
+    updateDocuments: async (id: string, documents: any[]) => {
+        return (FranchiseLeadStore as any).updateLead(id, { documents: JSON.stringify(documents) });
+    },
+
+    logContractHistory: async (id: string, version: any, currentHistory: string = '[]') => {
+        const history = JSON.parse(currentHistory || '[]');
+        history.push({
+            ...version,
+            timestamp: new Date().toISOString()
+        });
+        return (FranchiseLeadStore as any).updateLead(id, { contractHistory: JSON.stringify(history) });
     },
 
     addNote: async (id: string, note: { content: string, author: string, type: 'NOTE' | 'CALL' | 'EMAIL' }) => {

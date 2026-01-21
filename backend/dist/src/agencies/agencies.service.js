@@ -50,6 +50,29 @@ let AgenciesService = class AgenciesService {
             data
         });
     }
+    async checkTerritoryAvailability(zipCode, excludeAgencyId) {
+        const agencies = await this.prisma.agency.findMany({
+            where: {
+                status: 'ACTIVE',
+                id: { not: excludeAgencyId }
+            },
+            select: { id: true, name: true, zipCodes: true }
+        });
+        for (const agency of agencies) {
+            try {
+                const codes = JSON.parse(agency.zipCodes || '[]');
+                if (codes.includes(zipCode)) {
+                    return { available: false, agencyId: agency.id, agencyName: agency.name };
+                }
+            }
+            catch (e) {
+                if (agency.zipCodes.split(',').includes(zipCode)) {
+                    return { available: false, agencyId: agency.id, agencyName: agency.name };
+                }
+            }
+        }
+        return { available: true };
+    }
 };
 exports.AgenciesService = AgenciesService;
 exports.AgenciesService = AgenciesService = __decorate([

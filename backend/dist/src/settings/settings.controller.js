@@ -54,7 +54,7 @@ __decorate([
     (0, roles_decorator_1.Roles)('SUPER_ADMIN'),
     (0, common_1.Patch)('update/:section'),
     __param(0, (0, common_1.Body)()),
-    __param(1, (0, common_1.Body)('section')),
+    __param(1, (0, common_1.Param)('section')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object, String]),
     __metadata("design:returntype", Promise)

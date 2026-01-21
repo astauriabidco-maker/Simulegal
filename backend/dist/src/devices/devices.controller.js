@@ -30,7 +30,7 @@ let DevicesController = class DevicesController {
         return this.devicesService.findById(id);
     }
     async activate(body) {
-        const device = await this.devicesService.activate(body.pairingCode);
+        const device = await this.devicesService.activate(body.code);
         if (!device) {
             return { success: false, error: 'Code invalide' };
         }

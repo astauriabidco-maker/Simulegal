@@ -42,6 +42,12 @@ let LeadsController = class LeadsController {
     addNote(id, data) {
         return this.leadsService.addNote(id, data);
     }
+    assignUser(id, userId) {
+        return this.leadsService.assignUser(id, userId);
+    }
+    updateDocuments(id, documents) {
+        return this.leadsService.updateDocuments(id, documents);
+    }
 };
 exports.LeadsController = LeadsController;
 __decorate([
@@ -82,6 +88,22 @@ __decorate([
     __metadata("design:paramtypes", [String, Object]),
     __metadata("design:returntype", void 0)
 ], LeadsController.prototype, "addNote", null);
+__decorate([
+    (0, common_1.Patch)(':id/assign'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)('userId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String]),
+    __metadata("design:returntype", void 0)
+], LeadsController.prototype, "assignUser", null);
+__decorate([
+    (0, common_1.Patch)(':id/documents'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)('documents')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Array]),
+    __metadata("design:returntype", void 0)
+], LeadsController.prototype, "updateDocuments", null);
 exports.LeadsController = LeadsController = __decorate([
     (0, common_1.Controller)('leads'),
     (0, common_1.UseGuards)((0, passport_1.AuthGuard)('jwt')),

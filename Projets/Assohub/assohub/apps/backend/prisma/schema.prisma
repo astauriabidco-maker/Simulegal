@@ -1,0 +1,218 @@
+generator client {
+  provider = "prisma-client-js"
+  engineType = "library"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// Association (Tenant)
+model Association {
+  id                String        @id @default(uuid())
+  name              String
+  settings          Json          // Logo, devises, SMTP
+  subscription_plan String        @default("FREE")
+  is_active         Boolean       @default(true)
+  
+  users             User[]
+  groups            Group[]
+  campaigns         Campaign[]
+  transactions      Transaction[]
+  events            Event[]
+  documents         Document[]
+  
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+}
+
+// User (Members)
+model User {
+  id            String      @id @default(uuid())
+  associationId String
+  association   Association @relation(fields: [associationId], references: [id])
+  
+  email         String
+  password_hash String
+  firstName     String?
+  lastName      String?
+  phone         String?
+  
+  role          Role        @default(MEMBER)
+  status        UserStatus  @default(ACTIVE)
+  
+  // Relations
+  fees               Fee[]
+  ledGroups          Group[]             @relation("GroupLeader")
+  memberOfGroups     Group[]             @relation("GroupMembers") // CORRECTION : Relation Many-to-Many
+  eventRegistrations EventRegistration[] // CORRECTION : Inscriptions aux événements
+  
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@unique([email, associationId])
+}
+
+enum Role {
+  ADMIN
+  TREASURER
+  SECRETARY
+  MEMBER
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  PENDING
+  SUSPENDED
+}
+
+// Group (Commissions)
+model Group {
+  id            String      @id @default(uuid())
+  associationId String
+  association   Association @relation(fields: [associationId], references: [id])
+  name          String
+  
+  leaderId      String?
+  leader        User?       @relation("GroupLeader", fields: [leaderId], references: [id])
+  
+  members       User[]      @relation("GroupMembers") // CORRECTION : Les membres du groupe
+  
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+// Campaign (Appels de fonds)
+model Campaign {
+  id            String      @id @default(uuid())
+  associationId String
+  association   Association @relation(fields: [associationId], references: [id])
+  
+  name          String
+  amount        Float
+  due_date      DateTime
+  auto_reminder Boolean     @default(false)
+  
+  fees          Fee[]
+  
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+// Fee (Dettes/Cotisations)
+model Fee {
+  id                 String      @id @default(uuid())
+  userId             String
+  user               User        @relation(fields: [userId], references: [id])
+  campaignId         String
+  campaign           Campaign    @relation(fields: [campaignId], references: [id])
+  
+  status             FeeStatus   @default(PENDING)
+  payment_link_token String?     @unique
+  last_reminder_at   DateTime?
+  reminder_count     Int         @default(0)
+  
+  transaction        Transaction?
+  
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+}
+
+enum FeeStatus {
+  PENDING
+  PAID
+  OVERDUE
+}
+
+// Transaction (Livre de compte)
+model Transaction {
+  id              String          @id @default(uuid())
+  associationId   String
+  association     Association     @relation(fields: [associationId], references: [id])
+  
+  amount          Float
+  type            TransactionType
+  description     String?
+  date            DateTime        @default(now())
+  
+  feeId           String?         @unique
+  fee             Fee?            @relation(fields: [feeId], references: [id])
+  
+  proofDocumentId String?         @unique // CORRECTION : Lien vers le document
+  proofDocument   Document?       @relation(fields: [proofDocumentId], references: [id])
+
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+}
+
+// Event
+model Event {
+  id            String      @id @default(uuid())
+  associationId String
+  association   Association @relation(fields: [associationId], references: [id])
+  
+  title         String
+  description   String?
+  location      String?
+  start_date    DateTime
+  end_date      DateTime?
+  
+  is_paid       Boolean     @default(false)
+  price         Float?
+  
+  registrations EventRegistration[] // CORRECTION
+  
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+// CORRECTION : Table de liaison pour les inscriptions
+model EventRegistration {
+  id        String   @id @default(uuid())
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id])
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  
+  status    String   @default("REGISTERED") // REGISTERED, ATTENDED, CANCELLED
+  has_paid  Boolean  @default(false)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Document (GED)
+model Document {
+  id            String      @id @default(uuid())
+  associationId String
+  association   Association @relation(fields: [associationId], references: [id])
+  
+  name          String
+  file_path     String
+  category      DocCategory
+  access_level  AccessLevel @default(ADMIN_ONLY) // CORRECTION: Enum plutôt que Int
+  
+  transaction   Transaction? // Relation inverse
+  
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+enum DocCategory {
+  AG_REPORT
+  INVOICE
+  STATUTS
+  OTHER
+}
+
+enum AccessLevel {
+  PUBLIC
+  MEMBERS_ONLY
+  ADMIN_ONLY
+}

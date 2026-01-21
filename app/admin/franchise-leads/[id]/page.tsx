@@ -6,7 +6,7 @@ import { FranchiseLead, FranchiseLeadStore } from '../../../../services/Franchis
 import DashboardLayout from '../../../../components/admin/DashboardLayout';
 import LeadActivityFeed from '../../../../components/admin/LeadActivityFeed';
 import { AuthStore } from '../../../../services/authStore';
-import { ArrowLeft, Save, FileSignature, CheckCircle, AlertCircle, Building2, User, MapPin, FileUser } from 'lucide-react';
+import { ArrowLeft, Save, FileSignature, CheckCircle, AlertCircle, Building2, User, MapPin, FileUser, Mail } from 'lucide-react';
 
 export default function FranchiseLeadDetailPage() {
     const params = useParams();
@@ -16,10 +16,10 @@ export default function FranchiseLeadDetailPage() {
     const [saving, setSaving] = useState(false);
     const [formData, setFormData] = useState<Partial<FranchiseLead>>({});
     const [contractConfig, setContractConfig] = useState({
-        type: 'FRANCHISE',
-        commissionRate: 15,
         isExclusive: true
     });
+    const [documents, setDocuments] = useState<any[]>([]);
+    const [contractHistory, setContractHistory] = useState<any[]>([]);
 
     const currentUser = AuthStore.getCurrentUser() || { name: 'Admin', role: 'HQ' };
 
@@ -47,18 +47,104 @@ export default function FranchiseLeadDetailPage() {
             if (data.contractDetails) {
                 try {
                     const savedConfig = JSON.parse(data.contractDetails);
-                    setContractConfig(prev => ({ ...prev, ...savedConfig }));
+                    setContractConfig((prev: any) => ({ ...prev, ...savedConfig }));
                 } catch (e) {
                     console.error("Error parsing contract details", e);
                 }
+            }
+            if (data.documents) {
+                try {
+                    setDocuments(JSON.parse(data.documents));
+                } catch (e) { console.error(e); }
+            }
+            if (data.contractHistory) {
+                try {
+                    setContractHistory(JSON.parse(data.contractHistory));
+                } catch (e) { console.error(e); }
+            }
+            if (data.rejectionReason) {
+                setFormData((prev: any) => ({ ...prev, rejectionReason: data.rejectionReason }));
             }
         }
         setLoading(false);
     };
 
+    const handleRelancer = async () => {
+        if (!lead) return;
+        setSaving(true);
+        // On simule l'envoi d'un email de relance
+        await FranchiseLeadStore.addNote(lead.id, {
+            content: "📧 Email de relance envoyé automatiquement : 'SimuLegal - Votre projet de franchise est toujours en cours d'étude.'",
+            author: currentUser.name,
+            type: 'EMAIL'
+        });
+        alert('Email de relance envoyé au candidat.');
+        setSaving(false);
+    };
+
+    const handleReject = async () => {
+        const reason = prompt("Motif du rejet (obligatoire) :");
+        if (!reason || !lead) return;
+
+        setSaving(true);
+        const updatedLead = await FranchiseLeadStore.update(lead.id, {
+            status: 'REJECTED',
+            rejectionReason: reason
+        });
+
+        if (updatedLead) {
+            setLead(updatedLead);
+            setFormData((prev: any) => ({ ...prev, rejectionReason: reason }));
+            alert('Candidature rejetée.');
+        }
+        setSaving(false);
+    };
+
+    const handleAddDocument = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file || !lead) return;
+
+        setSaving(true);
+        const newDoc = {
+            id: Date.now().toString(),
+            label: file.name,
+            status: 'RECEIVED',
+            uploadedAt: new Date().toISOString(),
+            size: `${(file.size / 1024).toFixed(0)} KB`
+        };
+
+        const updatedDocs = [...documents, newDoc];
+        const res = await FranchiseLeadStore.updateDocuments(lead.id, updatedDocs);
+        if (res) {
+            setDocuments(updatedDocs);
+            setLead(res);
+            // On log l'ajout dans l'activité
+            await FranchiseLeadStore.addNote(lead.id, {
+                content: `📎 Nouveau document importé : ${file.name}`,
+                author: currentUser.name,
+                type: 'NOTE'
+            });
+        }
+        setSaving(false);
+    };
+
+    const handleLogContractVersion = async (versionLabel: string) => {
+        if (!lead) return;
+        const res = await FranchiseLeadStore.logContractHistory(lead.id, {
+            label: versionLabel,
+            details: contractConfig
+        }, lead.contractHistory);
+
+        if (res) {
+            setLead(res);
+            setContractHistory(JSON.parse(res.contractHistory || '[]'));
+            alert('Version du contrat archivée.');
+        }
+    };
+
     const handleContractTypeChange = (type: string) => {
         const newRate = type === 'CORNER' ? 5 : 15;
-        setContractConfig(prev => ({
+        setContractConfig((prev: any) => ({
             ...prev,
             type,
             commissionRate: newRate
@@ -109,7 +195,6 @@ export default function FranchiseLeadDetailPage() {
     return (
         <>
             <div className="max-w-5xl mx-auto p-8">
-                {/* Header */}
                 {/* Stepper Pipeline */}
                 <div className="mb-8">
                     <div className="flex items-center justify-between relative">
@@ -237,8 +322,44 @@ export default function FranchiseLeadDetailPage() {
                                 Contrat Signé & Agence Active
                             </div>
                         )}
+
+                        {lead.status !== 'SIGNED' && lead.status !== 'REJECTED' && (
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={handleRelancer}
+                                    className="px-4 py-2 bg-amber-50 text-amber-700 border border-amber-200 rounded-lg font-medium hover:bg-amber-100 flex items-center gap-2"
+                                >
+                                    <Mail size={18} />
+                                    Relancer
+                                </button>
+                                <button
+                                    onClick={handleReject}
+                                    className="px-4 py-2 bg-red-50 text-red-700 border border-red-200 rounded-lg font-medium hover:bg-red-100 flex items-center gap-2"
+                                >
+                                    <AlertCircle size={18} />
+                                    Rejeter
+                                </button>
+                            </div>
+                        )}
+
+                        {lead.status === 'REJECTED' && (
+                            <div className="px-4 py-2 bg-red-50 border border-red-200 rounded-lg text-red-700 flex items-center gap-2">
+                                <AlertCircle size={18} />
+                                Candidature Rejetée
+                            </div>
+                        )}
                     </div>
                 </div>
+
+                {lead.status === 'REJECTED' && (
+                    <div className="mb-8 p-6 bg-red-50 border border-red-100 rounded-2xl">
+                        <h3 className="text-red-800 font-bold mb-1 flex items-center gap-2">
+                            <AlertCircle size={18} />
+                            Motif du rejet
+                        </h3>
+                        <p className="text-red-700 text-sm italic">{lead.rejectionReason || 'Aucun motif renseigné'}</p>
+                    </div>
+                )}
 
                 <div className="grid grid-cols-3 gap-8">
                     {/* Colonne Gauche : Info Candidat */}
@@ -359,6 +480,58 @@ export default function FranchiseLeadDetailPage() {
                                 </div>
                             </div>
                         </div>
+
+                        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                            <div className="flex items-center justify-between mb-4">
+                                <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                                    <FileUser className="text-indigo-500" size={20} />
+                                    Documents & Justificatifs
+                                </h2>
+                                <div>
+                                    <input
+                                        type="file"
+                                        id="doc-upload"
+                                        className="hidden"
+                                        onChange={handleAddDocument}
+                                        disabled={saving}
+                                    />
+                                    <label
+                                        htmlFor="doc-upload"
+                                        className="text-xs font-bold text-indigo-600 hover:text-indigo-700 bg-indigo-50 px-3 py-1 rounded-full transition-colors cursor-pointer"
+                                    >
+                                        + Ajouter
+                                    </label>
+                                </div>
+                            </div>
+
+                            {documents.length === 0 ? (
+                                <div className="text-center py-8 bg-slate-50 rounded-xl border border-dashed border-slate-300">
+                                    <p className="text-slate-400 text-sm italic">Aucun document importé</p>
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-2 gap-3">
+                                    {documents.map(doc => (
+                                        <div key={doc.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-200">
+                                            <div className="flex items-center gap-3">
+                                                <div className="p-2 bg-indigo-100 text-indigo-600 rounded-lg">
+                                                    <FileUser size={16} />
+                                                </div>
+                                                <div>
+                                                    <div className="text-sm font-bold text-slate-700 truncate max-w-[150px]">{doc.label}</div>
+                                                    <div className="text-[10px] text-slate-400">
+                                                        {new Date(doc.uploadedAt).toLocaleDateString()} {doc.size && `• ${doc.size}`}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className={`text-[10px] font-bold px-2 py-1 rounded-full border border-slate-200 uppercase ${doc.status === 'RECEIVED' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-white text-slate-500'
+                                                }`}>
+                                                {doc.status}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
                     </div>
 
                     {/* Colonne Droite : Configuration Contrat */}
@@ -413,6 +586,23 @@ export default function FranchiseLeadDetailPage() {
                                     </p>
                                 </div>
 
+                                <div className="p-4 bg-indigo-50 rounded-xl border border-indigo-100">
+                                    <h3 className="text-xs font-bold text-indigo-700 mb-2 uppercase tracking-wider">Projections Financières (Est.)</h3>
+                                    <div className="space-y-2">
+                                        <div className="flex justify-between text-sm">
+                                            <span className="text-indigo-600">CA Mensuel Cible</span>
+                                            <span className="font-bold text-indigo-900">45 000 €</span>
+                                        </div>
+                                        <div className="flex justify-between text-sm">
+                                            <span className="text-indigo-600">Com. Partenaire ({contractConfig.commissionRate}%)</span>
+                                            <span className="font-bold text-indigo-900">{(45000 * contractConfig.commissionRate / 100).toLocaleString()} €</span>
+                                        </div>
+                                    </div>
+                                    <div className="mt-3 pt-3 border-t border-indigo-100 text-[10px] text-indigo-500 italic">
+                                        Basé sur la moyenne du réseau SimuLegal.
+                                    </div>
+                                </div>
+
                                 <div className="pt-4 border-t border-slate-200">
                                     <div className="flex items-center gap-2 p-3 bg-yellow-50 text-yellow-800 rounded-lg text-xs">
                                         <AlertCircle size={16} className="shrink-0" />
@@ -422,8 +612,39 @@ export default function FranchiseLeadDetailPage() {
                             </div>
                         </div>
 
+                        {/* Contract History */}
+                        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-6">
+                            <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                                <FileSignature className="text-slate-600" size={20} />
+                                Historique des Contrats
+                            </h2>
+                            <div className="space-y-3">
+                                {contractHistory.length === 0 ? (
+                                    <p className="text-xs text-slate-400 italic">Aucune archive</p>
+                                ) : (
+                                    contractHistory.slice().reverse().map((h, i) => (
+                                        <div key={i} className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs">
+                                            <div className="flex justify-between font-bold text-slate-700 mb-1">
+                                                <span>{h.label}</span>
+                                                <span className="text-slate-400 font-normal">{new Date(h.timestamp).toLocaleDateString()}</span>
+                                            </div>
+                                            <div className="text-slate-500">
+                                                Taux : {h.details?.commissionRate}% | Type : {h.details?.type}
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                                <button
+                                    onClick={() => handleLogContractVersion(`Version ${contractHistory.length + 1}`)}
+                                    className="w-full mt-2 py-2 text-xs font-bold text-slate-600 border border-dashed border-slate-300 rounded-lg hover:bg-slate-50"
+                                >
+                                    Archiver la configuration actuelle
+                                </button>
+                            </div>
+                        </div>
+
                         {/* Activity Feed */}
-                        <div className="h-[500px]">
+                        <div className="h-[400px]">
                             <LeadActivityFeed
                                 lead={lead}
                                 onUpdate={() => loadLead(lead.id)}

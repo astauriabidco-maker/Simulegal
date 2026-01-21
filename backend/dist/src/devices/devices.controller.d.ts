@@ -6,22 +6,23 @@ export declare class DevicesController {
         assignedAgency: {
             id: string;
             name: string;
-            createdAt: Date;
-            updatedAt: Date;
             type: import(".prisma/client").$Enums.AgencyType;
             status: import(".prisma/client").$Enums.AgencyStatus;
             region: string;
             city: string;
             zipCodes: string;
             commissionRate: number;
+            serviceCommissionOverrides: string | null;
             contactEmail: string;
             kioskUrl: string;
+            createdAt: Date;
+            updatedAt: Date;
         } | null;
     } & {
         id: string;
         name: string;
-        createdAt: Date;
         status: string;
+        createdAt: Date;
         pairingCode: string;
         appVersion: string;
         lastHeartbeat: Date;
@@ -31,29 +32,30 @@ export declare class DevicesController {
         assignedAgency: {
             id: string;
             name: string;
-            createdAt: Date;
-            updatedAt: Date;
             type: import(".prisma/client").$Enums.AgencyType;
             status: import(".prisma/client").$Enums.AgencyStatus;
             region: string;
             city: string;
             zipCodes: string;
             commissionRate: number;
+            serviceCommissionOverrides: string | null;
             contactEmail: string;
             kioskUrl: string;
+            createdAt: Date;
+            updatedAt: Date;
         } | null;
     } & {
         id: string;
         name: string;
-        createdAt: Date;
         status: string;
+        createdAt: Date;
         pairingCode: string;
         appVersion: string;
         lastHeartbeat: Date;
         assignedAgencyId: string | null;
     }) | null>;
     activate(body: {
-        pairingCode: string;
+        code: string;
     }): Promise<{
         success: boolean;
         error: string;
@@ -64,22 +66,23 @@ export declare class DevicesController {
             assignedAgency: {
                 id: string;
                 name: string;
-                createdAt: Date;
-                updatedAt: Date;
                 type: import(".prisma/client").$Enums.AgencyType;
                 status: import(".prisma/client").$Enums.AgencyStatus;
                 region: string;
                 city: string;
                 zipCodes: string;
                 commissionRate: number;
+                serviceCommissionOverrides: string | null;
                 contactEmail: string;
                 kioskUrl: string;
+                createdAt: Date;
+                updatedAt: Date;
             } | null;
         } & {
             id: string;
             name: string;
-            createdAt: Date;
             status: string;
+            createdAt: Date;
             pairingCode: string;
             appVersion: string;
             lastHeartbeat: Date;
@@ -90,8 +93,8 @@ export declare class DevicesController {
     register(): Promise<{
         id: string;
         name: string;
-        createdAt: Date;
         status: string;
+        createdAt: Date;
         pairingCode: string;
         appVersion: string;
         lastHeartbeat: Date;
@@ -111,22 +114,23 @@ export declare class DevicesController {
             assignedAgency: {
                 id: string;
                 name: string;
-                createdAt: Date;
-                updatedAt: Date;
                 type: import(".prisma/client").$Enums.AgencyType;
                 status: import(".prisma/client").$Enums.AgencyStatus;
                 region: string;
                 city: string;
                 zipCodes: string;
                 commissionRate: number;
+                serviceCommissionOverrides: string | null;
                 contactEmail: string;
                 kioskUrl: string;
+                createdAt: Date;
+                updatedAt: Date;
             } | null;
         } & {
             id: string;
             name: string;
-            createdAt: Date;
             status: string;
+            createdAt: Date;
             pairingCode: string;
             appVersion: string;
             lastHeartbeat: Date;
@@ -144,8 +148,8 @@ export declare class DevicesController {
     reset(id: string): Promise<{
         id: string;
         name: string;
-        createdAt: Date;
         status: string;
+        createdAt: Date;
         pairingCode: string;
         appVersion: string;
         lastHeartbeat: Date;
@@ -154,8 +158,8 @@ export declare class DevicesController {
     remove(id: string): Promise<{
         id: string;
         name: string;
-        createdAt: Date;
         status: string;
+        createdAt: Date;
         pairingCode: string;
         appVersion: string;
         lastHeartbeat: Date;

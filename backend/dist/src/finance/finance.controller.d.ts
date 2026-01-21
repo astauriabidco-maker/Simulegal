@@ -3,36 +3,37 @@ export declare class FinanceController {
     private readonly financeService;
     constructor(financeService: FinanceService);
     getStats(req: any): Promise<{
-        totalGMV: number;
+        totalGMV: any;
         totalPartnerDebt: number;
-        totalCommissionsPaid: number;
+        totalCommissionsPaid: any;
         netRevenue: number;
     }>;
     getBalance(req: any, agencyId?: string): Promise<{
         balance: number;
         totalEarned: number;
-        totalPaid: number;
+        totalPaid: any;
     }>;
     getPayouts(req: any): Promise<({
         agency: {
             id: string;
             name: string;
-            createdAt: Date;
-            updatedAt: Date;
             type: import(".prisma/client").$Enums.AgencyType;
             status: import(".prisma/client").$Enums.AgencyStatus;
             region: string;
             city: string;
             zipCodes: string;
             commissionRate: number;
+            serviceCommissionOverrides: string | null;
             contactEmail: string;
             kioskUrl: string;
+            createdAt: Date;
+            updatedAt: Date;
         };
     } & {
         id: string;
-        agencyId: string;
-        createdAt: Date;
         status: string;
+        createdAt: Date;
+        agencyId: string;
         amount: number;
         period: string;
         paidAt: Date | null;
@@ -44,12 +45,19 @@ export declare class FinanceController {
         period: string;
     }): Promise<{
         id: string;
-        agencyId: string;
-        createdAt: Date;
         status: string;
+        createdAt: Date;
+        agencyId: string;
         amount: number;
         period: string;
         paidAt: Date | null;
         reference: string;
     }>;
+    getSettlements(req: any, month: string, year: string): Promise<unknown[]>;
+    getPerformanceTrends(req: any, agencyId?: string): Promise<{
+        period: string;
+        gmv: any;
+        commission: number;
+        count: number;
+    }[]>;
 }

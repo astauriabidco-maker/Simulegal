@@ -47,6 +47,21 @@ let FinanceController = class FinanceController {
         }
         return this.financeService.createPayout(data);
     }
+    getSettlements(req, month, year) {
+        if (req.user.role !== 'SUPER_ADMIN' && req.user.role !== 'HQ_ADMIN') {
+            throw new common_1.ForbiddenException('Accès réservé au siège');
+        }
+        return this.financeService.getMonthlySettlement(month, year);
+    }
+    getPerformanceTrends(req, agencyId) {
+        const id = agencyId || req.user.agencyId;
+        if (!id)
+            throw new common_1.ForbiddenException('ID Agence manquant');
+        if (req.user.role === 'AGENCY_MANAGER' && id !== req.user.agencyId) {
+            throw new common_1.ForbiddenException('Accès refusé');
+        }
+        return this.financeService.getAgencyPerformanceTrends(id);
+    }
 };
 exports.FinanceController = FinanceController;
 __decorate([
@@ -79,6 +94,23 @@ __decorate([
     __metadata("design:paramtypes", [Object, Object]),
     __metadata("design:returntype", void 0)
 ], FinanceController.prototype, "createPayout", null);
+__decorate([
+    (0, common_1.Get)('settlements'),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Query)('month')),
+    __param(2, (0, common_1.Query)('year')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, String]),
+    __metadata("design:returntype", void 0)
+], FinanceController.prototype, "getSettlements", null);
+__decorate([
+    (0, common_1.Get)('performance-trends'),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Query)('agencyId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", void 0)
+], FinanceController.prototype, "getPerformanceTrends", null);
 exports.FinanceController = FinanceController = __decorate([
     (0, common_1.Controller)('finance'),
     (0, common_1.UseGuards)((0, passport_1.AuthGuard)('jwt')),

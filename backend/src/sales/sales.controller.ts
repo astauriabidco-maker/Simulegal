@@ -4,13 +4,15 @@ import { SalesService } from './sales.service';
 import { AuthGuard } from '@nestjs/passport';
 
 import { SalesAnalyticsService } from './sales-analytics.service';
+import { AssignmentService } from './assignment.service';
 
 @Controller('sales')
 @UseGuards(AuthGuard('jwt'))
 export class SalesController {
     constructor(
         private readonly salesService: SalesService,
-        private readonly analyticsService: SalesAnalyticsService
+        private readonly analyticsService: SalesAnalyticsService,
+        private readonly assignmentService: AssignmentService
     ) { }
 
     @Get('analytics')
@@ -22,13 +24,36 @@ export class SalesController {
     async findAll(
         @Query('page') page: number = 1,
         @Query('limit') limit: number = 50,
-        @Query('status') status?: string
+        @Query('status') status?: string,
+        @Query('agencyId') agencyId?: string,
+        @Query('source') source?: string,
+        @Query('dateFrom') dateFrom?: string,
+        @Query('dateTo') dateTo?: string
     ) {
         return this.salesService.findAll({
             page: Number(page),
             limit: Number(limit),
-            status
+            status,
+            agencyId,
+            source,
+            dateFrom,
+            dateTo
         });
+    }
+
+    @Get('export')
+    async exportProspects(
+        @Query('agencyId') agencyId?: string,
+        @Query('source') source?: string,
+        @Query('dateFrom') dateFrom?: string,
+        @Query('dateTo') dateTo?: string
+    ) {
+        const csv = await this.salesService.exportToCSV({ agencyId, source, dateFrom, dateTo });
+        return {
+            filename: `prospects_export_${new Date().toISOString().split('T')[0]}.csv`,
+            content: csv,
+            contentType: 'text/csv'
+        };
     }
 
     @Get('prospects/:id')
@@ -53,6 +78,31 @@ export class SalesController {
         @Body() data: { text: string }
     ) {
         return this.salesService.addNote(id, req.user.id, data.text);
+    }
+
+    @Post('prospects/:id/reassign')
+    async reassignProspect(
+        @Param('id') id: string,
+        @Body() data: { salesUserId?: string }
+    ) {
+        // If salesUserId is provided, assign to that user. Otherwise, trigger round-robin.
+        const prospect = await this.salesService.findOne(id);
+        if (!prospect) {
+            return { success: false, error: 'Prospect not found' };
+        }
+
+        let newSalesId: string | null | undefined = data.salesUserId;
+        if (!newSalesId) {
+            // Trigger round-robin
+            newSalesId = await this.assignmentService.getNextSalesAgent(prospect.agencyId);
+        }
+
+        if (!newSalesId) {
+            return { success: false, error: 'No sales agents available' };
+        }
+
+        const updated = await this.salesService.update(id, { assignedToSalesId: newSalesId });
+        return { success: true, assignedTo: newSalesId, prospect: updated };
     }
 
     @Post('import')

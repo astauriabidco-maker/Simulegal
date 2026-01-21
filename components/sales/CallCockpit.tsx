@@ -30,6 +30,7 @@ export default function CallCockpit({ prospect, onClose, onSaveNote }: CallCockp
     const [device, setDevice] = useState<Device | null>(null);
     const [activeConnection, setActiveConnection] = useState<Call | null>(null);
     const [errorMessage, setErrorMessage] = useState('');
+    const [callLogId, setCallLogId] = useState<string | null>(null);
 
     // Timer ref
     const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -112,6 +113,12 @@ export default function CallCockpit({ prospect, onClose, onSaveNote }: CallCockp
         setStatus('CALLING');
 
         try {
+            // Create call log entry
+            const callLog = await SalesStore.startCall(prospect.id);
+            if (callLog) {
+                setCallLogId(callLog.id);
+            }
+
             const params = { To: prospect.phone };
             const call = await device.connect({ params });
 
@@ -250,7 +257,11 @@ export default function CallCockpit({ prospect, onClose, onSaveNote }: CallCockp
                         </div>
                         <button
                             disabled={status !== 'ENDED' && status !== 'IDLE' && status !== 'ERROR'}
-                            onClick={() => {
+                            onClick={async () => {
+                                // Save call log with duration and notes
+                                if (callLogId) {
+                                    await SalesStore.endCall(callLogId, duration, note, status === 'ENDED' ? 'COMPLETED' : 'FAILED');
+                                }
                                 onSaveNote(note);
                                 onClose();
                             }}

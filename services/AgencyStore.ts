@@ -87,5 +87,29 @@ export const AgencyStore = {
         } catch {
             return { totalCA: 0, totalCommission: 0, dealsCount: 0 };
         }
+    },
+
+    async checkTerritoryAvailability(zipCode: string): Promise<{ available: boolean, agencyId?: string, agencyName?: string }> {
+        try {
+            const response = await fetch(`${API_URL}/check-availability/${zipCode}`, {
+                headers: getHeaders()
+            });
+            return response.json();
+        } catch {
+            return { available: true };
+        }
+    },
+
+    async getPerformanceTrends(agencyId: string): Promise<any[]> {
+        try {
+            const response = await fetch(`http://localhost:3001/finance/performance-trends?agencyId=${agencyId}`, {
+                headers: getHeaders()
+            });
+            if (!response.ok) throw new Error('Erreur chargement trends');
+            return response.json();
+        } catch (error) {
+            console.error('[AgencyStore] Erreur trends:', error);
+            return [];
+        }
     }
 };

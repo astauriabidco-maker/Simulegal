@@ -6,8 +6,8 @@ export declare class DevicesService {
     register(): Promise<{
         id: string;
         name: string;
-        createdAt: Date;
         status: string;
+        createdAt: Date;
         pairingCode: string;
         appVersion: string;
         lastHeartbeat: Date;
@@ -16,8 +16,8 @@ export declare class DevicesService {
     createProvisioned(agencyId: string, agencyName: string): Promise<{
         id: string;
         name: string;
-        createdAt: Date;
         status: string;
+        createdAt: Date;
         pairingCode: string;
         appVersion: string;
         lastHeartbeat: Date;
@@ -27,22 +27,23 @@ export declare class DevicesService {
         assignedAgency: {
             id: string;
             name: string;
-            createdAt: Date;
-            updatedAt: Date;
             type: import(".prisma/client").$Enums.AgencyType;
             status: import(".prisma/client").$Enums.AgencyStatus;
             region: string;
             city: string;
             zipCodes: string;
             commissionRate: number;
+            serviceCommissionOverrides: string | null;
             contactEmail: string;
             kioskUrl: string;
+            createdAt: Date;
+            updatedAt: Date;
         } | null;
     } & {
         id: string;
         name: string;
-        createdAt: Date;
         status: string;
+        createdAt: Date;
         pairingCode: string;
         appVersion: string;
         lastHeartbeat: Date;
@@ -52,22 +53,23 @@ export declare class DevicesService {
         assignedAgency: {
             id: string;
             name: string;
-            createdAt: Date;
-            updatedAt: Date;
             type: import(".prisma/client").$Enums.AgencyType;
             status: import(".prisma/client").$Enums.AgencyStatus;
             region: string;
             city: string;
             zipCodes: string;
             commissionRate: number;
+            serviceCommissionOverrides: string | null;
             contactEmail: string;
             kioskUrl: string;
+            createdAt: Date;
+            updatedAt: Date;
         } | null;
     } & {
         id: string;
         name: string;
-        createdAt: Date;
         status: string;
+        createdAt: Date;
         pairingCode: string;
         appVersion: string;
         lastHeartbeat: Date;
@@ -77,22 +79,23 @@ export declare class DevicesService {
         assignedAgency: {
             id: string;
             name: string;
-            createdAt: Date;
-            updatedAt: Date;
             type: import(".prisma/client").$Enums.AgencyType;
             status: import(".prisma/client").$Enums.AgencyStatus;
             region: string;
             city: string;
             zipCodes: string;
             commissionRate: number;
+            serviceCommissionOverrides: string | null;
             contactEmail: string;
             kioskUrl: string;
+            createdAt: Date;
+            updatedAt: Date;
         } | null;
     } & {
         id: string;
         name: string;
-        createdAt: Date;
         status: string;
+        createdAt: Date;
         pairingCode: string;
         appVersion: string;
         lastHeartbeat: Date;
@@ -102,22 +105,23 @@ export declare class DevicesService {
         assignedAgency: {
             id: string;
             name: string;
-            createdAt: Date;
-            updatedAt: Date;
             type: import(".prisma/client").$Enums.AgencyType;
             status: import(".prisma/client").$Enums.AgencyStatus;
             region: string;
             city: string;
             zipCodes: string;
             commissionRate: number;
+            serviceCommissionOverrides: string | null;
             contactEmail: string;
             kioskUrl: string;
+            createdAt: Date;
+            updatedAt: Date;
         } | null;
     } & {
         id: string;
         name: string;
-        createdAt: Date;
         status: string;
+        createdAt: Date;
         pairingCode: string;
         appVersion: string;
         lastHeartbeat: Date;
@@ -127,22 +131,23 @@ export declare class DevicesService {
         assignedAgency: {
             id: string;
             name: string;
-            createdAt: Date;
-            updatedAt: Date;
             type: import(".prisma/client").$Enums.AgencyType;
             status: import(".prisma/client").$Enums.AgencyStatus;
             region: string;
             city: string;
             zipCodes: string;
             commissionRate: number;
+            serviceCommissionOverrides: string | null;
             contactEmail: string;
             kioskUrl: string;
+            createdAt: Date;
+            updatedAt: Date;
         } | null;
     } & {
         id: string;
         name: string;
-        createdAt: Date;
         status: string;
+        createdAt: Date;
         pairingCode: string;
         appVersion: string;
         lastHeartbeat: Date;
@@ -151,8 +156,8 @@ export declare class DevicesService {
     heartbeat(id: string): Promise<{
         id: string;
         name: string;
-        createdAt: Date;
         status: string;
+        createdAt: Date;
         pairingCode: string;
         appVersion: string;
         lastHeartbeat: Date;
@@ -161,8 +166,8 @@ export declare class DevicesService {
     reset(id: string): Promise<{
         id: string;
         name: string;
-        createdAt: Date;
         status: string;
+        createdAt: Date;
         pairingCode: string;
         appVersion: string;
         lastHeartbeat: Date;
@@ -171,8 +176,8 @@ export declare class DevicesService {
     remove(id: string): Promise<{
         id: string;
         name: string;
-        createdAt: Date;
         status: string;
+        createdAt: Date;
         pairingCode: string;
         appVersion: string;
         lastHeartbeat: Date;
@@ -182,22 +187,23 @@ export declare class DevicesService {
         assignedAgency: {
             id: string;
             name: string;
-            createdAt: Date;
-            updatedAt: Date;
             type: import(".prisma/client").$Enums.AgencyType;
             status: import(".prisma/client").$Enums.AgencyStatus;
             region: string;
             city: string;
             zipCodes: string;
             commissionRate: number;
+            serviceCommissionOverrides: string | null;
             contactEmail: string;
             kioskUrl: string;
+            createdAt: Date;
+            updatedAt: Date;
         } | null;
     } & {
         id: string;
         name: string;
-        createdAt: Date;
         status: string;
+        createdAt: Date;
         pairingCode: string;
         appVersion: string;
         lastHeartbeat: Date;

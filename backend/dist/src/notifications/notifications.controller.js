@@ -16,13 +16,30 @@ exports.NotificationsController = void 0;
 const common_1 = require("@nestjs/common");
 const notifications_service_1 = require("./notifications.service");
 const jwt_auth_guard_1 = require("../auth/jwt-auth.guard");
+const config_1 = require("@nestjs/config");
 let NotificationsController = class NotificationsController {
     notificationsService;
-    constructor(notificationsService) {
+    configService;
+    constructor(notificationsService, configService) {
         this.notificationsService = notificationsService;
+        this.configService = configService;
     }
     async sendWhatsApp(data) {
         return this.notificationsService.sendWhatsApp(data.phone, data.template, data.params);
+    }
+    async sendSms(data) {
+        return this.notificationsService.sendSMS(data.phone, data.message);
+    }
+    async sendProspectLink(data) {
+        const baseUrl = this.configService.get('FRONTEND_URL') || 'https://app.simulegal.fr';
+        const link = `${baseUrl}/simulation?ref=${data.prospectId}`;
+        const message = `Bonjour ${data.prospectFirstName}, voici votre lien de simulation personnalisé SimuLegal :\n${link}\n\nCe lien est valable 48h.`;
+        if (data.channel === 'WHATSAPP') {
+            return this.notificationsService.sendWhatsApp(data.prospectPhone, 'simulation_link', { message });
+        }
+        else {
+            return this.notificationsService.sendSMS(data.prospectPhone, message);
+        }
     }
     async triggerStageChange(data) {
         return this.notificationsService.onStageChange(data.lead, data.oldStage, data.newStage);
@@ -38,6 +55,22 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], NotificationsController.prototype, "sendWhatsApp", null);
 __decorate([
+    (0, common_1.Post)('send-sms'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], NotificationsController.prototype, "sendSms", null);
+__decorate([
+    (0, common_1.Post)('send-prospect-link'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], NotificationsController.prototype, "sendProspectLink", null);
+__decorate([
     (0, common_1.Post)('trigger-stage-change'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     __param(0, (0, common_1.Body)()),
@@ -47,6 +80,7 @@ __decorate([
 ], NotificationsController.prototype, "triggerStageChange", null);
 exports.NotificationsController = NotificationsController = __decorate([
     (0, common_1.Controller)('notifications'),
-    __metadata("design:paramtypes", [notifications_service_1.NotificationsService])
+    __metadata("design:paramtypes", [notifications_service_1.NotificationsService,
+        config_1.ConfigService])
 ], NotificationsController);
 //# sourceMappingURL=notifications.controller.js.map

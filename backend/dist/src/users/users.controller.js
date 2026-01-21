@@ -21,6 +21,12 @@ let UsersController = class UsersController {
     constructor(usersService) {
         this.usersService = usersService;
     }
+    findSystemUsers(req) {
+        if (req.user.role !== 'SUPER_ADMIN') {
+            throw new common_1.ForbiddenException('Accès réservé au Super Admin');
+        }
+        return this.usersService.findSystemUsers();
+    }
     findAll(req) {
         if (req.user.role !== 'SUPER_ADMIN' && req.user.role !== 'HQ_ADMIN') {
             throw new common_1.ForbiddenException('Accès réservé au siège');
@@ -50,6 +56,13 @@ let UsersController = class UsersController {
     }
 };
 exports.UsersController = UsersController;
+__decorate([
+    (0, common_1.Get)('system'),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], UsersController.prototype, "findSystemUsers", null);
 __decorate([
     (0, common_1.Get)(),
     __param(0, (0, common_1.Request)()),

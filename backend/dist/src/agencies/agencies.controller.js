@@ -33,6 +33,9 @@ let AgenciesController = class AgenciesController {
     update(id, data) {
         return this.agenciesService.update(id, data);
     }
+    checkAvailability(zipCode) {
+        return this.agenciesService.checkTerritoryAvailability(zipCode);
+    }
 };
 exports.AgenciesController = AgenciesController;
 __decorate([
@@ -63,6 +66,13 @@ __decorate([
     __metadata("design:paramtypes", [String, Object]),
     __metadata("design:returntype", void 0)
 ], AgenciesController.prototype, "update", null);
+__decorate([
+    (0, common_1.Get)('check-availability/:zipCode'),
+    __param(0, (0, common_1.Param)('zipCode')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], AgenciesController.prototype, "checkAvailability", null);
 exports.AgenciesController = AgenciesController = __decorate([
     (0, common_1.Controller)('agencies'),
     (0, common_1.UseGuards)((0, passport_1.AuthGuard)('jwt')),

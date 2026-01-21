@@ -42,11 +42,39 @@ let LeadsService = class LeadsService {
     async updateStatus(id, status) {
         const lead = await this.prisma.lead.findUnique({ where: { id } });
         if (lead) {
+            console.log(`[LeadsService] Updating lead ${id} status from ${lead.status} to ${status}`);
             await this.notifications.onStageChange(lead, lead.status, status);
         }
         return this.prisma.lead.update({
             where: { id },
             data: { status }
+        });
+    }
+    async assignUser(id, userId) {
+        const lead = await this.prisma.lead.findUnique({ where: { id } });
+        const user = await this.prisma.user.findUnique({ where: { id: userId } });
+        if (lead && user) {
+            await this.notifications.onJuristAssigned(lead, user.name);
+        }
+        return this.prisma.lead.update({
+            where: { id },
+            data: { assignedUserId: userId }
+        });
+    }
+    async updateDocuments(id, documents) {
+        const lead = await this.prisma.lead.findUnique({ where: { id } });
+        if (lead) {
+            const oldDocs = JSON.parse(lead.documents || '[]');
+            for (const newDoc of documents) {
+                const oldDoc = oldDocs.find((d) => d.id === newDoc.id);
+                if (newDoc.status === 'REJECTED' && oldDoc?.status !== 'REJECTED') {
+                    await this.notifications.onDocumentRejected(lead, newDoc.docType);
+                }
+            }
+        }
+        return this.prisma.lead.update({
+            where: { id },
+            data: { documents: JSON.stringify(documents) }
         });
     }
     async addNote(leadId, data) {

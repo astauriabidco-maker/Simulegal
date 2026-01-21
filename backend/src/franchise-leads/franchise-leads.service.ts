@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { AgenciesService } from '../agencies/agencies.service';
 import { UsersService } from '../users/users.service';
 import { DevicesService } from '../devices/devices.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { AgencyType, UserRole, FranchiseLeadStatus } from '@prisma/client';
 
 @Injectable()
@@ -11,7 +12,8 @@ export class FranchiseLeadsService {
         private prisma: PrismaService,
         private agenciesService: AgenciesService,
         private usersService: UsersService,
-        private devicesService: DevicesService
+        private devicesService: DevicesService,
+        private notificationsService: NotificationsService
     ) { }
 
     async findAll() {
@@ -125,14 +127,32 @@ export class FranchiseLeadsService {
             }
         });
 
+        // 6. Envoyer le mail de bienvenue
+        await this.notificationsService.onFranchiseOnboarding(lead, password);
+
         // Log System Action
-        await this.addNote(id, '✅ Contrat signé électroniquement. Agence et accès créés.', 'Système', 'SYSTEM' as any);
+        await this.addNote(id, '✅ Contrat signé. Agence créée et e-mail de bienvenue envoyé.', 'Système', 'SYSTEM' as any);
 
         return {
             lead: updatedLead,
             agency,
             user: { ...user, tempPassword: password }
         };
+    }
+
+    async updateDocuments(id: string, documents: any[]) {
+        return this.update(id, { documents: JSON.stringify(documents) });
+    }
+
+    async logContractHistory(id: string, version: any) {
+        const lead = await this.prisma.franchiseLead.findUnique({ where: { id }, select: { contractHistory: true } });
+        if (!lead) throw new BadRequestException('Lead not found');
+        const history = JSON.parse(lead.contractHistory || '[]');
+        history.push({
+            ...version,
+            timestamp: new Date().toISOString()
+        });
+        return this.update(id, { contractHistory: JSON.stringify(history) });
     }
 
     async generateContract(id: string): Promise<Buffer> {

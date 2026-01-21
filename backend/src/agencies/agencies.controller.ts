@@ -26,4 +26,9 @@ export class AgenciesController {
     update(@Param('id') id: string, @Body() data: any) {
         return this.agenciesService.update(id, data);
     }
+
+    @Get('check-availability/:zipCode')
+    checkAvailability(@Param('zipCode') zipCode: string) {
+        return this.agenciesService.checkTerritoryAvailability(zipCode);
+    }
 }

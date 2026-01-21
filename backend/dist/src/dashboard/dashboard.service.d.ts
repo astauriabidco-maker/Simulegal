@@ -15,12 +15,12 @@ export declare class DashboardService {
         network: {
             id: string;
             name: string;
+            type: import(".prisma/client").$Enums.AgencyType;
+            region: string;
+            city: string;
             _count: {
                 leads: number;
             };
-            region: string;
-            type: import(".prisma/client").$Enums.AgencyType;
-            city: string;
         }[];
         serviceDistribution: {
             id: string;

@@ -7,18 +7,18 @@ export declare class RolesService implements OnModuleInit {
     private seedDefaultRoles;
     findAll(): Promise<{
         id: string;
-        permissions: string;
         createdAt: Date;
         updatedAt: Date;
+        permissions: string;
         label: string;
         description: string;
         isSystem: boolean;
     }[]>;
     findOne(id: string): Promise<{
         id: string;
-        permissions: string;
         createdAt: Date;
         updatedAt: Date;
+        permissions: string;
         label: string;
         description: string;
         isSystem: boolean;
@@ -29,9 +29,9 @@ export declare class RolesService implements OnModuleInit {
         permissions: string;
     }): Promise<{
         id: string;
-        permissions: string;
         createdAt: Date;
         updatedAt: Date;
+        permissions: string;
         label: string;
         description: string;
         isSystem: boolean;
@@ -42,18 +42,18 @@ export declare class RolesService implements OnModuleInit {
         permissions?: string;
     }): Promise<{
         id: string;
-        permissions: string;
         createdAt: Date;
         updatedAt: Date;
+        permissions: string;
         label: string;
         description: string;
         isSystem: boolean;
     }>;
     remove(id: string): Promise<{
         id: string;
-        permissions: string;
         createdAt: Date;
         updatedAt: Date;
+        permissions: string;
         label: string;
         description: string;
         isSystem: boolean;

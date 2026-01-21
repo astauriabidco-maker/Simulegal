@@ -14,9 +14,9 @@ export declare class SettingsController {
     update(data: any, section: string): Promise<{
         id: string;
         updatedAt: Date;
+        notifications: string;
         company: string;
         payment: string;
-        notifications: string;
         integrations: string;
         storage: string;
     }>;

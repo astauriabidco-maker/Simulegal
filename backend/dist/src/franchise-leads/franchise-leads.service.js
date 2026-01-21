@@ -15,16 +15,19 @@ const prisma_service_1 = require("../prisma/prisma.service");
 const agencies_service_1 = require("../agencies/agencies.service");
 const users_service_1 = require("../users/users.service");
 const devices_service_1 = require("../devices/devices.service");
+const notifications_service_1 = require("../notifications/notifications.service");
 let FranchiseLeadsService = class FranchiseLeadsService {
     prisma;
     agenciesService;
     usersService;
     devicesService;
-    constructor(prisma, agenciesService, usersService, devicesService) {
+    notificationsService;
+    constructor(prisma, agenciesService, usersService, devicesService, notificationsService) {
         this.prisma = prisma;
         this.agenciesService = agenciesService;
         this.usersService = usersService;
         this.devicesService = devicesService;
+        this.notificationsService = notificationsService;
     }
     async findAll() {
         return this.prisma.franchiseLead.findMany({
@@ -113,12 +116,27 @@ let FranchiseLeadsService = class FranchiseLeadsService {
                 convertedAgencyId: agency.id
             }
         });
-        await this.addNote(id, '✅ Contrat signé électroniquement. Agence et accès créés.', 'Système', 'SYSTEM');
+        await this.notificationsService.onFranchiseOnboarding(lead, password);
+        await this.addNote(id, '✅ Contrat signé. Agence créée et e-mail de bienvenue envoyé.', 'Système', 'SYSTEM');
         return {
             lead: updatedLead,
             agency,
             user: { ...user, tempPassword: password }
         };
+    }
+    async updateDocuments(id, documents) {
+        return this.update(id, { documents: JSON.stringify(documents) });
+    }
+    async logContractHistory(id, version) {
+        const lead = await this.prisma.franchiseLead.findUnique({ where: { id }, select: { contractHistory: true } });
+        if (!lead)
+            throw new common_1.BadRequestException('Lead not found');
+        const history = JSON.parse(lead.contractHistory || '[]');
+        history.push({
+            ...version,
+            timestamp: new Date().toISOString()
+        });
+        return this.update(id, { contractHistory: JSON.stringify(history) });
     }
     async generateContract(id) {
         const lead = await this.prisma.franchiseLead.findUnique({ where: { id } });
@@ -220,6 +238,7 @@ exports.FranchiseLeadsService = FranchiseLeadsService = __decorate([
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
         agencies_service_1.AgenciesService,
         users_service_1.UsersService,
-        devices_service_1.DevicesService])
+        devices_service_1.DevicesService,
+        notifications_service_1.NotificationsService])
 ], FranchiseLeadsService);
 //# sourceMappingURL=franchise-leads.service.js.map

@@ -45,4 +45,35 @@ export class AgenciesService {
             data
         });
     }
+
+    /**
+     * Vérifie si un code postal est déjà couvert par une agence exclusive.
+     * @param zipCode Le code postal à vérifier
+     * @param excludeAgencyId Optionnel, ID d'agence à exclure (pour les mises à jour)
+     */
+    async checkTerritoryAvailability(zipCode: string, excludeAgencyId?: string) {
+        const agencies = await this.prisma.agency.findMany({
+            where: {
+                status: 'ACTIVE',
+                id: { not: excludeAgencyId }
+            },
+            select: { id: true, name: true, zipCodes: true }
+        });
+
+        for (const agency of agencies) {
+            try {
+                const codes = JSON.parse(agency.zipCodes || '[]');
+                if (codes.includes(zipCode)) {
+                    return { available: false, agencyId: agency.id, agencyName: agency.name };
+                }
+            } catch (e) {
+                // Silently skip malformed JSON
+                if (agency.zipCodes.split(',').includes(zipCode)) {
+                    return { available: false, agencyId: agency.id, agencyName: agency.name };
+                }
+            }
+        }
+
+        return { available: true };
+    }
 }

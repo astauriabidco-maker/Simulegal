@@ -24,17 +24,26 @@ const REGION_PATHS = [
 interface FranceMapProps {
     agencies: Agency[];
     onAgencyClick?: (agency: Agency) => void;
+    customHighlights?: Record<string, string>; // Mapping of regionId to color (hex/tailwind class)
+    className?: string;
 }
 
-export default function FranceMap({ agencies, onAgencyClick }: FranceMapProps) {
+export default function FranceMap({ agencies, onAgencyClick, customHighlights, className = "" }: FranceMapProps) {
     const [hoveredRegion, setHoveredRegion] = useState<string | null>(null);
 
     const getAgenciesInRegion = (regionId: string) => {
         return agencies.filter(a => a.region === regionId);
     };
 
+    const getRegionFill = (region: typeof REGION_PATHS[0], isHovered: boolean) => {
+        if (customHighlights && customHighlights[region.id]) {
+            return customHighlights[region.id];
+        }
+        return isHovered ? region.color : '#f1f5f9';
+    };
+
     return (
-        <div className="relative w-full aspect-square max-w-[500px] mx-auto bg-white rounded-[3rem] p-8 shadow-inner border border-slate-100 overflow-hidden group/map">
+        <div className={`relative w-full aspect-square max-w-[500px] mx-auto bg-white rounded-[3rem] p-8 shadow-inner border border-slate-100 overflow-hidden group/map ${className}`}>
             {/* Background pattern */}
             <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(#6366f1 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
 
@@ -43,6 +52,7 @@ export default function FranceMap({ agencies, onAgencyClick }: FranceMapProps) {
                     {REGION_PATHS.map((region) => {
                         const regionAgencies = getAgenciesInRegion(region.id);
                         const isHovered = hoveredRegion === region.id;
+                        const fill = getRegionFill(region, isHovered);
 
                         return (
                             <g
@@ -53,7 +63,7 @@ export default function FranceMap({ agencies, onAgencyClick }: FranceMapProps) {
                             >
                                 <path
                                     d={region.d}
-                                    fill={isHovered ? region.color : '#f1f5f9'}
+                                    fill={fill}
                                     stroke={isHovered ? 'white' : '#e2e8f0'}
                                     strokeWidth={isHovered ? 3 : 1}
                                     className="transition-all duration-500 ease-out"

@@ -41,4 +41,14 @@ export class LeadsController {
     addNote(@Param('id') id: string, @Body() data: { content: string, author: string }) {
         return this.leadsService.addNote(id, data);
     }
+
+    @Patch(':id/assign')
+    assignUser(@Param('id') id: string, @Body('userId') userId: string) {
+        return this.leadsService.assignUser(id, userId);
+    }
+
+    @Patch(':id/documents')
+    updateDocuments(@Param('id') id: string, @Body('documents') documents: any[]) {
+        return this.leadsService.updateDocuments(id, documents);
+    }
 }

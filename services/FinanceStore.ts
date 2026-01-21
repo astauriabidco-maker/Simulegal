@@ -99,5 +99,19 @@ export const FinanceStore = {
         // mais on pourrait l'ajouter. Je vais utiliser l'API globale et filtrer.
         const all = await FinanceStore.getAllPayouts();
         return all.filter(p => p.agencyId === agencyId);
+    },
+
+    // Récupérer les règlements mensuels (breakdown par agence)
+    getSettlements: async (month: string, year: string): Promise<any[]> => {
+        try {
+            const response = await fetch(`${API_URL}/settlements?month=${month}&year=${year}`, {
+                headers: getHeaders()
+            });
+            if (!response.ok) throw new Error('Erreur chargement règlements');
+            return response.json();
+        } catch (error) {
+            console.error('[Finance] ❌ Erreur API règlements:', error);
+            return [];
+        }
     }
 };

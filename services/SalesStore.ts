@@ -86,15 +86,29 @@ export const SalesStore = {
     },
 
     /**
-     * Fetch all prospects (Paginated)
+     * Fetch all prospects (Paginated with filters)
      */
-    getProspects: async (page = 1, limit = 50, status?: string): Promise<{ data: Prospect[], meta: any }> => {
+    getProspects: async (
+        page = 1,
+        limit = 50,
+        filters?: {
+            status?: string;
+            agencyId?: string;
+            source?: string;
+            dateFrom?: string;
+            dateTo?: string;
+        }
+    ): Promise<{ data: Prospect[], meta: any }> => {
         try {
             const params = new URLSearchParams({
                 page: page.toString(),
                 limit: limit.toString()
             });
-            if (status) params.append('status', status);
+            if (filters?.status) params.append('status', filters.status);
+            if (filters?.agencyId) params.append('agencyId', filters.agencyId);
+            if (filters?.source) params.append('source', filters.source);
+            if (filters?.dateFrom) params.append('dateFrom', filters.dateFrom);
+            if (filters?.dateTo) params.append('dateTo', filters.dateTo);
 
             const response = await fetch(`${API_URL}/sales/prospects?${params.toString()}`, {
                 headers: SalesStore.getHeaders()
@@ -104,6 +118,40 @@ export const SalesStore = {
         } catch (error) {
             console.error('[SalesStore] Error fetching prospects:', error);
             return { data: [], meta: { total: 0, page: 1, limit: 50, totalPages: 0 } };
+        }
+    },
+
+    /**
+     * Export prospects as CSV download
+     */
+    exportProspects: async (filters?: { agencyId?: string; source?: string; dateFrom?: string; dateTo?: string }): Promise<void> => {
+        try {
+            const params = new URLSearchParams();
+            if (filters?.agencyId) params.append('agencyId', filters.agencyId);
+            if (filters?.source) params.append('source', filters.source);
+            if (filters?.dateFrom) params.append('dateFrom', filters.dateFrom);
+            if (filters?.dateTo) params.append('dateTo', filters.dateTo);
+
+            const response = await fetch(`${API_URL}/sales/export?${params.toString()}`, {
+                headers: SalesStore.getHeaders()
+            });
+            if (!response.ok) throw new Error('Failed to export prospects');
+
+            const result = await response.json();
+
+            // Create and trigger download
+            const blob = new Blob([result.content], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = result.filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error('[SalesStore] Error exporting prospects:', error);
+            alert('Erreur lors de l\'export');
         }
     },
 
@@ -226,6 +274,93 @@ export const SalesStore = {
         } catch (error) {
             console.error('[SalesStore] Import error:', error);
             throw error;
+        }
+    },
+
+    // ============================================
+    // CALL HISTORY METHODS
+    // ============================================
+
+    /**
+     * Start a new call log entry
+     */
+    startCall: async (prospectId: string, twilioCallSid?: string): Promise<any> => {
+        try {
+            const response = await fetch(`${API_URL}/sales/calls`, {
+                method: 'POST',
+                headers: SalesStore.getHeaders(),
+                body: JSON.stringify({ prospectId, twilioCallSid })
+            });
+            if (!response.ok) throw new Error('Failed to start call log');
+            return await response.json();
+        } catch (error) {
+            console.error('[SalesStore] Error starting call:', error);
+            return null;
+        }
+    },
+
+    /**
+     * End a call and update its log
+     */
+    endCall: async (callId: string, duration: number, notes?: string, status: string = 'COMPLETED'): Promise<any> => {
+        try {
+            const response = await fetch(`${API_URL}/sales/calls/${callId}`, {
+                method: 'PATCH',
+                headers: SalesStore.getHeaders(),
+                body: JSON.stringify({ status, duration, notes })
+            });
+            if (!response.ok) throw new Error('Failed to end call log');
+            return await response.json();
+        } catch (error) {
+            console.error('[SalesStore] Error ending call:', error);
+            return null;
+        }
+    },
+
+    /**
+     * Get call history for a prospect
+     */
+    getCallHistory: async (prospectId: string): Promise<any[]> => {
+        try {
+            const response = await fetch(`${API_URL}/sales/calls/prospect/${prospectId}`, {
+                headers: SalesStore.getHeaders()
+            });
+            if (!response.ok) throw new Error('Failed to fetch call history');
+            return await response.json();
+        } catch (error) {
+            console.error('[SalesStore] Error fetching call history:', error);
+            return [];
+        }
+    },
+
+    /**
+     * Send simulation link to prospect via SMS or WhatsApp
+     */
+    sendSimulationLink: async (
+        prospectId: string,
+        prospectPhone: string,
+        prospectFirstName: string,
+        channel: 'SMS' | 'WHATSAPP' = 'SMS'
+    ): Promise<{ success: boolean; messageId?: string; error?: string }> => {
+        try {
+            const response = await fetch(`${API_URL}/notifications/send-prospect-link`, {
+                method: 'POST',
+                headers: SalesStore.getHeaders(),
+                body: JSON.stringify({
+                    prospectId,
+                    prospectPhone,
+                    prospectFirstName,
+                    channel
+                })
+            });
+            if (!response.ok) {
+                const err = await response.text();
+                throw new Error('Failed to send link: ' + err);
+            }
+            return await response.json();
+        } catch (error: any) {
+            console.error('[SalesStore] Error sending simulation link:', error);
+            return { success: false, error: error.message };
         }
     }
 };

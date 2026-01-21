@@ -1,7 +1,9 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { CRM, Lead } from '../../services/crmStore';
+import { Lead, LeadDocument, LeadNote } from '../../services/crmStore';
+import { DossierStore } from '../../services/DossierStore';
+import { UserStore, StaffUser } from '../../services/UserStore';
 import { WorkflowService, WorkflowStage } from '../../services/WorkflowService';
 import { NotificationService } from '../../services/NotificationService';
 import {
@@ -25,7 +27,8 @@ import {
     Search,
     Clock,
     Home,
-    SearchCheck
+    SearchCheck,
+    Plus
 } from 'lucide-react';
 
 // Services disponibles pour le filtre
@@ -43,7 +46,9 @@ interface HQDashboardProps {
 
 export default function HQDashboard({ onViewDossier }: HQDashboardProps) {
     const [leads, setLeads] = useState<Lead[]>([]);
+    const [staff, setStaff] = useState<StaffUser[]>([]);
     const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+    const [isUpdating, setIsUpdating] = useState(false);
     const [serviceFilter, setServiceFilter] = useState('all');
     const [searchQuery, setSearchQuery] = useState('');
     const [activeTab, setActiveTab] = useState<'PRODUCTION' | 'QUALIFICATION'>('PRODUCTION');
@@ -54,12 +59,22 @@ export default function HQDashboard({ onViewDossier }: HQDashboardProps) {
 
     const loadLeads = async () => {
         try {
-            const allLeads = await CRM.getAllLeads();
+            const allLeads = await DossierStore.getAll();
             setLeads(allLeads);
         } catch (error) {
             console.error('[HQ] Erreur chargement leads:', error);
         }
     };
+
+    const loadStaff = async () => {
+        const users = await UserStore.getAllUsers();
+        setStaff(users);
+    };
+
+    useEffect(() => {
+        loadLeads();
+        loadStaff();
+    }, []);
 
     // Déterminer les colonnes à afficher
     const columns = useMemo(() => {
@@ -98,18 +113,71 @@ export default function HQDashboard({ onViewDossier }: HQDashboardProps) {
     };
 
     const handleUpdateStage = async (leadId: string, newStage: WorkflowStage) => {
-        // En prod, appel API
-        console.log(`[HQ] Passage du dossier ${leadId} à l'étape ${newStage}`);
-
-        const leadToUpdate = leads.find(l => l.id === leadId);
-        if (leadToUpdate) {
-            NotificationService.onStageChange(leadToUpdate, leadToUpdate.currentStage, newStage);
+        setIsUpdating(true);
+        try {
+            const updated = await DossierStore.updateStatus(leadId, newStage);
+            if (updated) {
+                setLeads(prev => prev.map(l => l.id === leadId ? updated : l));
+                if (selectedLead?.id === leadId) setSelectedLead(updated);
+            }
+        } finally {
+            setIsUpdating(false);
         }
+    };
 
-        const updatedLeads = leads.map(l =>
-            l.id === leadId ? { ...l, currentStage: newStage, updatedAt: new Date().toISOString() } : l
-        );
-        setLeads(updatedLeads);
+    const handleAssign = async (leadId: string, userId: string) => {
+        setIsUpdating(true);
+        try {
+            const updated = await DossierStore.assignJurist(leadId, userId);
+            if (updated) {
+                setLeads(prev => prev.map(l => l.id === leadId ? updated : l));
+                if (selectedLead?.id === leadId) setSelectedLead(updated);
+            }
+        } finally {
+            setIsUpdating(false);
+        }
+    };
+
+    const handleDocAction = async (leadId: string, docId: string, newStatus: 'VALID' | 'REJECTED') => {
+        if (!selectedLead) return;
+        setIsUpdating(true);
+        try {
+            const updatedDocs = (selectedLead.documents || []).map(doc =>
+                doc.id === docId ? { ...doc, status: newStatus, validatedAt: new Date().toISOString() } : doc
+            );
+            const updated = await DossierStore.updateDocuments(leadId, updatedDocs);
+            if (updated) {
+                setLeads(prev => prev.map(l => l.id === leadId ? updated : l));
+                setSelectedLead(updated);
+
+                // Auto-advance logic: If all docs are VALID and we are in COLLECTING stage, move to REVIEW
+                const allValid = updated.documents.every(d => d.status === 'VALID');
+                if (allValid && updated.currentStage === 'COLLECTING') {
+                    console.log('[AutoAdvance] All documents valid, moving to REVIEW');
+                    const nextStepLead = await DossierStore.updateStatus(leadId, 'REVIEW' as any);
+                    if (nextStepLead) {
+                        setLeads(prev => prev.map(l => l.id === leadId ? nextStepLead : l));
+                        setSelectedLead(nextStepLead);
+                        alert('Dossier complet ! Passage automatique en Vérification.');
+                    }
+                }
+            }
+        } finally {
+            setIsUpdating(false);
+        }
+    };
+
+    const handleAddNote = async (leadId: string, text: string) => {
+        setIsUpdating(true);
+        try {
+            const updated = await DossierStore.addNote(leadId, text);
+            if (updated) {
+                setLeads(prev => prev.map(l => l.id === leadId ? updated : l));
+                setSelectedLead(updated);
+            }
+        } finally {
+            setIsUpdating(false);
+        }
     };
 
     return (
@@ -242,7 +310,16 @@ export default function HQDashboard({ onViewDossier }: HQDashboardProps) {
             {selectedLead && (
                 <LeadDetailModal
                     lead={selectedLead}
+                    staff={staff}
+                    isUpdating={isUpdating}
                     onClose={() => setSelectedLead(null)}
+                    onAssign={(userId) => handleAssign(selectedLead.id, userId)}
+                    onDocAction={(docId, status) => handleDocAction(selectedLead.id, docId, status)}
+                    onNext={() => {
+                        const next = WorkflowService.getNextStage(selectedLead.serviceId, selectedLead.currentStage);
+                        if (next) handleUpdateStage(selectedLead.id, next);
+                    }}
+                    onAddNote={(text) => handleAddNote(selectedLead.id, text)}
                 />
             )}
         </div>
@@ -351,66 +428,209 @@ function LeadCard({
     );
 }
 
-// Modal Détail Lead (Simplifié)
-function LeadDetailModal({ lead, onClose }: { lead: Lead; onClose: () => void }) {
+// Modal Détail Lead (Complété pour Juriste)
+function LeadDetailModal({
+    lead,
+    staff,
+    isUpdating,
+    onClose,
+    onAssign,
+    onDocAction,
+    onNext,
+    onAddNote
+}: {
+    lead: Lead;
+    staff: StaffUser[];
+    isUpdating: boolean;
+    onClose: () => void;
+    onAssign: (userId: string) => void;
+    onDocAction: (docId: string, status: 'VALID' | 'REJECTED') => void;
+    onNext: () => void;
+    onAddNote: (text: string) => void;
+}) {
+    const nextStage = WorkflowService.getNextStage(lead.serviceId, lead.currentStage);
+    const [noteText, setNoteText] = React.useState('');
+
     return (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
-                <div className="p-8">
-                    <div className="flex items-center justify-between mb-8">
-                        <div>
-                            <h2 className="text-3xl font-black text-slate-900">{lead.name}</h2>
-                            <p className="text-slate-500 font-medium">#{lead.id} • {lead.serviceName}</p>
-                        </div>
-                        <button onClick={onClose} className="p-2 bg-slate-100 hover:bg-slate-200 rounded-2xl transition-colors">
-                            <X size={24} />
-                        </button>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-8 mb-8">
-                        <div>
-                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-2">Informations</label>
-                            <div className="bg-slate-50 rounded-2xl p-4 space-y-3">
-                                <p className="text-sm font-bold text-slate-700 flex items-center gap-2">
-                                    <FileText size={16} /> {lead.email}
-                                </p>
-                                <p className="text-sm font-bold text-slate-700 flex items-center gap-2">
-                                    <MapPin size={16} /> Web Direct
-                                </p>
-                            </div>
-                        </div>
-                        <div>
-                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-2">Paiement</label>
-                            <div className="bg-emerald-50 rounded-2xl p-4">
-                                <p className="text-lg font-black text-emerald-700">{(lead.amountPaid / 100).toFixed(0)} € Payé</p>
-                                <p className="text-xs font-bold text-emerald-600/60 uppercase">Détails de la transaction</p>
-                            </div>
-                        </div>
-                    </div>
-
+            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden animate-in fade-in zoom-in duration-200 flex flex-col">
+                {/* Header */}
+                <div className="p-8 border-b border-slate-100 flex items-center justify-between">
                     <div>
-                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-2">Documents</label>
-                        <div className="grid grid-cols-2 gap-4">
-                            {lead.documents?.map(doc => (
-                                <div key={doc.id} className="flex items-center justify-between p-3 bg-slate-50 hover:bg-slate-100 rounded-xl transition-colors">
-                                    <span className="text-xs font-bold text-slate-700">{doc.docType}</span>
-                                    <div className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${doc.status === 'VALID' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
-                                        }`}>
-                                        {doc.status}
-                                    </div>
+                        <div className="flex items-center gap-3 mb-2">
+                            <span className={`text-[10px] font-black px-2 py-1 rounded-lg uppercase tracking-wider bg-indigo-100 text-indigo-700`}>
+                                {lead.serviceName}
+                            </span>
+                            <span className="text-[10px] text-slate-400 font-mono italic">#{lead.id}</span>
+                        </div>
+                        <h2 className="text-3xl font-black text-slate-900 leading-none">{lead.name}</h2>
+                    </div>
+                    <button onClick={onClose} className="p-3 bg-slate-100 hover:bg-slate-200 rounded-2xl transition-all">
+                        <X size={20} />
+                    </button>
+                </div>
+
+                <div className="flex-1 overflow-y-auto p-8">
+                    <div className="grid grid-cols-3 gap-8 mb-8">
+                        {/* Infos Contact */}
+                        <div className="col-span-1 space-y-6">
+                            <div>
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-3">Client</label>
+                                <div className="bg-slate-50 rounded-2xl p-4 space-y-3">
+                                    <p className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                                        <FileText size={16} className="text-slate-400" /> {lead.email}
+                                    </p>
+                                    <p className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                                        <TrendingUp size={16} className="text-slate-400" /> {lead.phone}
+                                    </p>
+                                    <p className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                                        <Building2 size={16} className="text-slate-400" /> {lead.originAgency?.name || 'Vente Directe'}
+                                    </p>
                                 </div>
-                            ))}
+                            </div>
+
+                            {/* Assignation Juriste */}
+                            <div className="pt-4 border-t border-slate-100">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-3">Juriste Assigné</label>
+                                <div className="space-y-3">
+                                    <select
+                                        value={lead.assignedUserId || ''}
+                                        onChange={(e) => onAssign(e.target.value)}
+                                        disabled={isUpdating}
+                                        className="w-full pl-4 pr-10 py-3 bg-slate-50 border-none rounded-2xl text-sm font-bold text-slate-700 appearance-none focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer"
+                                    >
+                                        <option value="">Non assigné</option>
+                                        {staff.filter(u => u.role === 'HQ_ADMIN' || u.role === 'SUPER_ADMIN').map(u => (
+                                            <option key={u.id} value={u.id}>{u.name}</option>
+                                        ))}
+                                    </select>
+                                    {lead.assignedUser && (
+                                        <div className="flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-700 rounded-xl text-[11px] font-bold">
+                                            <CheckCircle2 size={14} />
+                                            Dossier pris en charge
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Notes Internes */}
+                            <div className="pt-4 border-t border-slate-100">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-3">Notes Internes</label>
+                                <div className="space-y-4 max-h-[250px] overflow-y-auto mb-4 pr-2">
+                                    {lead.notes && lead.notes.length > 0 ? (
+                                        lead.notes.map((note, idx) => (
+                                            <div key={idx} className="bg-slate-50 p-4 rounded-2xl relative group">
+                                                <p className="text-xs text-slate-700 font-medium leading-relaxed">{note.content}</p>
+                                                <div className="mt-2 flex items-center justify-between">
+                                                    <span className="text-[9px] font-black text-indigo-400 uppercase tracking-wider">{note.authorName || note.author}</span>
+                                                    <span className="text-[9px] text-slate-400 font-mono italic">{new Date(note.createdAt).toLocaleDateString('fr-FR')}</span>
+                                                </div>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <p className="text-xs text-slate-400 italic text-center py-4">Aucune note pour le moment</p>
+                                    )}
+                                </div>
+                                <div className="relative">
+                                    <textarea
+                                        value={noteText}
+                                        onChange={(e) => setNoteText(e.target.value)}
+                                        placeholder="Ajouter une instruction..."
+                                        className="w-full p-4 bg-slate-50 border-none rounded-2xl text-sm font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none resize-none h-24 placeholder:text-slate-300"
+                                    />
+                                    <button
+                                        onClick={() => {
+                                            if (noteText.trim()) {
+                                                onAddNote(noteText);
+                                                setNoteText('');
+                                            }
+                                        }}
+                                        disabled={!noteText.trim() || isUpdating}
+                                        className="absolute bottom-3 right-3 p-2 bg-indigo-500 text-white rounded-xl shadow-lg shadow-indigo-200 hover:bg-indigo-600 transition-all disabled:opacity-50"
+                                    >
+                                        <Plus size={16} />
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Documents */}
+                        <div className="col-span-2">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-3">Dossier Digital ({lead.documents?.length || 0} pièces)</label>
+                            <div className="space-y-3 shadow-inner bg-slate-50/50 p-4 rounded-3xl min-h-[300px]">
+                                {lead.documents && lead.documents.length > 0 ? (
+                                    lead.documents.map(doc => (
+                                        <div key={doc.id} className="group bg-white p-4 rounded-2xl border border-slate-100 flex items-center justify-between hover:shadow-md transition-all">
+                                            <div className="flex items-center gap-4">
+                                                <div className={`p-3 rounded-xl ${doc.status === 'VALID' ? 'bg-emerald-100 text-emerald-600' : doc.status === 'REJECTED' ? 'bg-rose-100 text-rose-600' : 'bg-slate-100 text-slate-400'}`}>
+                                                    <FileText size={20} />
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-black text-slate-800">{doc.docType}</p>
+                                                    <p className="text-[11px] text-slate-400 font-medium">Reçu le 12/01 • PDF (1.2MB)</p>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <button
+                                                    onClick={() => onDocAction(doc.id, 'VALID')}
+                                                    disabled={isUpdating || doc.status === 'VALID'}
+                                                    className={`p-2 rounded-xl transition-all ${doc.status === 'VALID' ? 'bg-emerald-500 text-white' : 'bg-slate-50 text-slate-400 hover:bg-emerald-50 hover:text-emerald-600'}`}
+                                                >
+                                                    <CheckCircle2 size={18} />
+                                                </button>
+                                                <button
+                                                    onClick={() => onDocAction(doc.id, 'REJECTED')}
+                                                    disabled={isUpdating || doc.status === 'REJECTED'}
+                                                    className={`p-2 rounded-xl transition-all ${doc.status === 'REJECTED' ? 'bg-rose-500 text-white' : 'bg-slate-50 text-slate-400 hover:bg-rose-50 hover:text-rose-600'}`}
+                                                >
+                                                    <X size={18} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="flex flex-col items-center justify-center h-full text-slate-400 italic text-sm">
+                                        Aucun document téléversé
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <div className="p-6 bg-slate-50 border-t border-slate-100 flex gap-4">
-                    <button onClick={onClose} className="flex-1 py-4 bg-white hover:bg-slate-100 text-slate-600 rounded-2xl font-bold transition-all border border-slate-200">
-                        Fermer le dossier
-                    </button>
-                    <button className="flex-1 py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-bold transition-all shadow-lg shadow-indigo-600/20">
-                        Ouvrir dans le CRM
-                    </button>
+                {/* Footer Actions */}
+                <div className="p-8 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <div className="text-center">
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Paiement</p>
+                            <p className="text-xl font-black text-emerald-600">{(lead.amountPaid / 100).toFixed(0)} €</p>
+                        </div>
+                        <div className="h-10 w-[1px] bg-slate-200" />
+                        <div>
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Statut Actuel</p>
+                            <p className="text-sm font-bold text-slate-700">{WorkflowService.getStageLabel(lead.currentStage)}</p>
+                        </div>
+                    </div>
+
+                    <div className="flex gap-4">
+                        <button
+                            onClick={onClose}
+                            className="px-8 py-4 bg-white hover:bg-slate-100 text-slate-600 rounded-2xl font-black text-sm transition-all border border-slate-200"
+                        >
+                            Fermer
+                        </button>
+                        {nextStage && (
+                            <button
+                                onClick={onNext}
+                                disabled={isUpdating}
+                                className="px-8 py-4 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-black text-sm transition-all flex items-center gap-2 shadow-xl shadow-slate-900/20"
+                            >
+                                Passer à : {WorkflowService.getStageLabel(nextStage)}
+                                <ArrowRight size={18} />
+                            </button>
+                        )}
+                    </div>
                 </div>
             </div>
         </div>

@@ -162,4 +162,42 @@ export class NotificationsService {
             });
         }
     }
+
+    /**
+     * Trigger lors du rejet d'un document
+     */
+    async onDocumentRejected(lead: any, docLabel: string) {
+        console.log(`[Notifications] Document rejected for ${lead.name}: ${docLabel}`);
+        await this.sendWhatsApp(lead.phone, 'document_rejected', {
+            name: lead.name,
+            message: `⚠️ Attention ${lead.name} : Votre document "${docLabel}" a été refusé par nos services. Merci de vous connecter à votre espace client pour le renvoyer.`
+        });
+    }
+
+    /**
+     * Trigger lors de l'assignation d'un juriste
+     */
+    async onJuristAssigned(lead: any, juristName: string) {
+        console.log(`[Notifications] Jurist assigned to ${lead.name}: ${juristName}`);
+        await this.sendWhatsApp(lead.phone, 'jurist_assigned', {
+            name: lead.name,
+            message: `💼 Bonne nouvelle ${lead.name} : Votre dossier est maintenant pris en charge par ${juristName}. Vous pouvez suivre l'avancement dans votre espace.`
+        });
+    }
+
+    /**
+     * Trigger lors de l'onboarding d'une nouvelle franchise
+     */
+    async onFranchiseOnboarding(lead: any, tempPassword: string) {
+        const message = `Félicitations ${lead.name} ! Votre agence SimuLegal est maintenant active.\n\n` +
+            `Vos accès :\n` +
+            `Email : ${lead.email}\n` +
+            `Mot de passe temporaire : ${tempPassword}\n\n` +
+            `Connectez-vous sur : https://admin.simulegal.fr`;
+
+        await Promise.all([
+            this.sendEmail(lead.email, 'Bienvenue chez SimuLegal - Vos accès Gérant', message),
+            this.sendWhatsApp(lead.phone, 'franchise_welcome', { message })
+        ]);
+    }
 }
