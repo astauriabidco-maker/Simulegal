@@ -20,7 +20,10 @@ import {
     Eye,
     Tablet,
     Calendar as CalendarIcon,
-    TrendingUp
+    TrendingUp,
+    FileText,
+    ArrowRightLeft,
+    MessageSquare
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePermission } from '../../hooks/usePermission';
@@ -32,9 +35,10 @@ interface MenuItem {
     id: string;
     label: string;
     icon: ReactNode;
-    href: string;
+    href?: string;
     permission?: PermissionKey;
     category?: 'PILOTAGE' | 'COMMERCIAL' | 'RESEAU' | 'SYSTEME';
+    subItems?: MenuItem[];
 }
 
 interface DashboardLayoutProps {
@@ -60,6 +64,7 @@ const DEFAULT_MENU: MenuItem[] = [
     { id: 'sales', label: 'Sales Hub', icon: <TrendingUp size={20} />, href: '/admin/sales', permission: 'crm.view_agency', category: 'COMMERCIAL' },
     { id: 'dossiers', label: 'Dossiers', icon: <FolderKanban size={20} />, href: '/admin/dossiers', permission: 'crm.view_agency', category: 'COMMERCIAL' },
     { id: 'franchise-leads', label: 'Franchises (CRM)', icon: <Users size={20} />, href: '/admin/franchise-leads', permission: 'network.manage', category: 'COMMERCIAL' },
+    { id: 'inbox', label: 'WhatsApp Inbox', icon: <MessageSquare size={20} />, href: '/admin/inbox', permission: 'crm.view_agency', category: 'COMMERCIAL' },
 
     // BLOC 3: LOGISTIQUE RÉSEAU
     { id: 'network', label: 'Réseau Agences', icon: <Building2 size={20} />, href: '/admin/network', permission: 'network.manage', category: 'RESEAU' },
@@ -67,7 +72,20 @@ const DEFAULT_MENU: MenuItem[] = [
 
     // BLOC 4: CONFIGURATION & ADMIN
     { id: 'staff', label: 'Gestion Équipe', icon: <Users size={20} />, href: '/admin/staff', permission: 'users.manage', category: 'SYSTEME' },
-    { id: 'finances', label: 'Finances', icon: <Wallet size={20} />, href: '/admin/finances', permission: 'finance.view_agency', category: 'SYSTEME' },
+    {
+        id: 'finances',
+        label: 'Finances',
+        icon: <Wallet size={20} />,
+        permission: 'finance.view_agency',
+        category: 'SYSTEME',
+        subItems: [
+            { id: 'finances-overview', label: 'Synthèse', icon: <TrendingUp size={16} />, href: '/admin/finances', permission: 'finance.view_agency' },
+            { id: 'finances-invoices', label: 'Factures', icon: <FileText size={16} />, href: '/admin/finances/invoices', permission: 'finance.view_agency' },
+            { id: 'finances-transactions', label: 'Règlements', icon: <ArrowRightLeft size={16} />, href: '/admin/finances/transactions', permission: 'finance.view_agency' },
+            { id: 'finances-credit-notes', label: 'Avoirs', icon: <ArrowRightLeft size={16} className="rotate-180" />, href: '/admin/finances/credit-notes', permission: 'finance.view_agency' },
+            { id: 'finances-payouts', label: 'Reversements', icon: <Building2 size={16} />, href: '/admin/finances/payouts', permission: 'finance.view_agency' },
+        ]
+    },
     { id: 'roles', label: 'Rôles & Droits', icon: <Shield size={20} />, href: '/admin/rbac', permission: 'roles.manage', category: 'SYSTEME' },
     { id: 'audit-veille', label: 'Audit et Veille', icon: <Eye size={20} />, href: '/admin/audit', permission: 'settings.manage', category: 'SYSTEME' },
     { id: 'settings', label: 'Paramètres Généraux', icon: <Settings size={20} />, href: '/admin/settings', permission: 'settings.manage', category: 'SYSTEME' },
@@ -135,22 +153,53 @@ export default function DashboardLayout({
                                 </h3>
                                 <div className="space-y-1">
                                     {itemsInCat.map((item) => (
-                                        <Link
-                                            key={item.id}
-                                            href={item.href}
-                                            className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left transition-all group ${activeMenuItem === item.id
-                                                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
-                                                : 'text-slate-400 hover:bg-slate-800/50 hover:text-white'
-                                                }`}
-                                        >
-                                            <div className={`${activeMenuItem === item.id ? 'text-white' : 'text-slate-500 group-hover:text-indigo-400'} transition-colors`}>
-                                                {item.icon}
-                                            </div>
-                                            <span className="font-bold text-sm flex-1">{item.label}</span>
-                                            {activeMenuItem === item.id && (
-                                                <ChevronRight size={14} className="opacity-60" />
+                                        <div key={item.id}>
+                                            {item.subItems ? (
+                                                // Parent item with subitems
+                                                <div className="space-y-1">
+                                                    <div className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left transition-all ${activeMenuItem?.startsWith(item.id)
+                                                        ? 'text-white'
+                                                        : 'text-slate-400'
+                                                        }`}>
+                                                        <div className={`${activeMenuItem?.startsWith(item.id) ? 'text-indigo-400' : 'text-slate-500'} transition-colors`}>
+                                                            {item.icon}
+                                                        </div>
+                                                        <span className="font-bold text-sm flex-1">{item.label}</span>
+                                                    </div>
+                                                    <div className="pl-11 space-y-1">
+                                                        {item.subItems.map((subItem) => (
+                                                            <Link
+                                                                key={subItem.id}
+                                                                href={subItem.href!}
+                                                                className={`block text-xs font-bold py-2 px-3 rounded-lg transition-colors ${activeMenuItem === subItem.id || (subItem.id === 'finances-overview' && activeMenuItem === 'finances')
+                                                                    ? 'bg-indigo-600/10 text-indigo-400' // Active subitem
+                                                                    : 'text-slate-500 hover:text-slate-300'
+                                                                    }`}
+                                                            >
+                                                                {subItem.label}
+                                                            </Link>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                // Standard item
+                                                <Link
+                                                    href={item.href!}
+                                                    className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left transition-all group ${activeMenuItem === item.id
+                                                        ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
+                                                        : 'text-slate-400 hover:bg-slate-800/50 hover:text-white'
+                                                        }`}
+                                                >
+                                                    <div className={`${activeMenuItem === item.id ? 'text-white' : 'text-slate-500 group-hover:text-indigo-400'} transition-colors`}>
+                                                        {item.icon}
+                                                    </div>
+                                                    <span className="font-bold text-sm flex-1">{item.label}</span>
+                                                    {activeMenuItem === item.id && (
+                                                        <ChevronRight size={14} className="opacity-60" />
+                                                    )}
+                                                </Link>
                                             )}
-                                        </Link>
+                                        </div>
                                     ))}
                                 </div>
                             </div>

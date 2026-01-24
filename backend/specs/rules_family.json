@@ -1,0 +1,69 @@
+[
+    {
+        "id": "family_reunification_eligibility",
+        "name": "Éligibilité Regroupement Familial",
+        "description": "Vérifie les conditions de durée de séjour, de ressources et de logement pour le regroupement familial.",
+        "priority": 100,
+        "source_ref": "CESEDA L434-1",
+        "conditions": {
+            "AND": [
+                {
+                    "OR": [
+                        {
+                            "var": "family.presence_duration",
+                            "op": "EQ",
+                            "val": "MORE_18"
+                        },
+                        {
+                            "AND": [
+                                {
+                                    "var": "family.presence_duration",
+                                    "op": "EQ",
+                                    "val": "12_18"
+                                },
+                                {
+                                    "var": "family.sponsor_nationality",
+                                    "op": "EQ",
+                                    "val": "ALGERIAN"
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "OR": [
+                        {
+                            "var": "family.has_handicap_allowance",
+                            "op": "EQ",
+                            "val": true
+                        },
+                        {
+                            "AND": [
+                                {
+                                    "var": "financial.resources_monthly_average",
+                                    "op": "GTE",
+                                    "val": 1398
+                                },
+                                {
+                                    "var": "family.income_source",
+                                    "op": "NEQ",
+                                    "val": "RSA_ALOWANCE"
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "var": "family.housing_status",
+                    "op": "NEQ",
+                    "val": "UNKNOWN"
+                },
+                {
+                    "var": "family.housing_status",
+                    "op": "NEQ",
+                    "val": "SEARCHING"
+                }
+            ]
+        }
+    }
+]

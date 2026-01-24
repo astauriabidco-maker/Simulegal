@@ -4,129 +4,13 @@ export declare class LeadsService {
     private prisma;
     private notifications;
     constructor(prisma: PrismaService, notifications: NotificationsService);
-    findAll(): Promise<({
-        originAgency: {
-            id: string;
-            name: string;
-            type: import(".prisma/client").$Enums.AgencyType;
-            status: import(".prisma/client").$Enums.AgencyStatus;
-            region: string;
-            city: string;
-            zipCodes: string;
-            commissionRate: number;
-            serviceCommissionOverrides: string | null;
-            contactEmail: string;
-            kioskUrl: string;
-            createdAt: Date;
-            updatedAt: Date;
-        } | null;
-        notes: {
-            id: string;
-            createdAt: Date;
-            content: string;
-            author: string;
-            leadId: string;
-        }[];
-    } & {
-        id: string;
-        name: string;
-        status: import(".prisma/client").$Enums.LeadStatus;
-        createdAt: Date;
-        updatedAt: Date;
-        email: string;
-        phone: string;
-        serviceId: string;
-        serviceName: string;
-        amountPaid: number;
-        contract: string | null;
-        documents: string;
-        requiredDocs: string | null;
-        originAgencyId: string | null;
-        assignedUserId: string | null;
-    })[]>;
-    findByAgency(agencyId: string): Promise<({
-        notes: {
-            id: string;
-            createdAt: Date;
-            content: string;
-            author: string;
-            leadId: string;
-        }[];
-    } & {
-        id: string;
-        name: string;
-        status: import(".prisma/client").$Enums.LeadStatus;
-        createdAt: Date;
-        updatedAt: Date;
-        email: string;
-        phone: string;
-        serviceId: string;
-        serviceName: string;
-        amountPaid: number;
-        contract: string | null;
-        documents: string;
-        requiredDocs: string | null;
-        originAgencyId: string | null;
-        assignedUserId: string | null;
-    })[]>;
-    findOne(id: string): Promise<({
-        originAgency: {
-            id: string;
-            name: string;
-            type: import(".prisma/client").$Enums.AgencyType;
-            status: import(".prisma/client").$Enums.AgencyStatus;
-            region: string;
-            city: string;
-            zipCodes: string;
-            commissionRate: number;
-            serviceCommissionOverrides: string | null;
-            contactEmail: string;
-            kioskUrl: string;
-            createdAt: Date;
-            updatedAt: Date;
-        } | null;
-        notes: {
-            id: string;
-            createdAt: Date;
-            content: string;
-            author: string;
-            leadId: string;
-        }[];
-    } & {
-        id: string;
-        name: string;
-        status: import(".prisma/client").$Enums.LeadStatus;
-        createdAt: Date;
-        updatedAt: Date;
-        email: string;
-        phone: string;
-        serviceId: string;
-        serviceName: string;
-        amountPaid: number;
-        contract: string | null;
-        documents: string;
-        requiredDocs: string | null;
-        originAgencyId: string | null;
-        assignedUserId: string | null;
-    }) | null>;
-    updateStatus(id: string, status: any): Promise<{
-        id: string;
-        name: string;
-        status: import(".prisma/client").$Enums.LeadStatus;
-        createdAt: Date;
-        updatedAt: Date;
-        email: string;
-        phone: string;
-        serviceId: string;
-        serviceName: string;
-        amountPaid: number;
-        contract: string | null;
-        documents: string;
-        requiredDocs: string | null;
-        originAgencyId: string | null;
-        assignedUserId: string | null;
-    }>;
+    findAll(): Promise<any[]>;
+    findByAgency(agencyId: string): Promise<any[]>;
+    findOne(id: string): Promise<any>;
+    private mapLead;
+    updateStatus(id: string, status: any): Promise<any>;
     assignUser(id: string, userId: string): Promise<{
+        data: string;
         id: string;
         name: string;
         status: import(".prisma/client").$Enums.LeadStatus;
@@ -137,29 +21,17 @@ export declare class LeadsService {
         serviceId: string;
         serviceName: string;
         amountPaid: number;
+        paymentMethod: string | null;
+        paymentDate: Date | null;
+        paymentRef: string | null;
+        invoiceNumber: string | null;
         contract: string | null;
         documents: string;
         requiredDocs: string | null;
         originAgencyId: string | null;
         assignedUserId: string | null;
     }>;
-    updateDocuments(id: string, documents: any[]): Promise<{
-        id: string;
-        name: string;
-        status: import(".prisma/client").$Enums.LeadStatus;
-        createdAt: Date;
-        updatedAt: Date;
-        email: string;
-        phone: string;
-        serviceId: string;
-        serviceName: string;
-        amountPaid: number;
-        contract: string | null;
-        documents: string;
-        requiredDocs: string | null;
-        originAgencyId: string | null;
-        assignedUserId: string | null;
-    }>;
+    updateDocuments(id: string, documents: any[]): Promise<any>;
     addNote(leadId: string, data: {
         content: string;
         author: string;
@@ -170,7 +42,14 @@ export declare class LeadsService {
         author: string;
         leadId: string;
     }>;
-    create(data: any): Promise<{
+    create(data: any): Promise<any>;
+    recordPayment(id: string, data: {
+        amount: number;
+        method: string;
+        reference?: string;
+    }): Promise<any>;
+    delete(id: string): Promise<{
+        data: string;
         id: string;
         name: string;
         status: import(".prisma/client").$Enums.LeadStatus;
@@ -181,6 +60,10 @@ export declare class LeadsService {
         serviceId: string;
         serviceName: string;
         amountPaid: number;
+        paymentMethod: string | null;
+        paymentDate: Date | null;
+        paymentRef: string | null;
+        invoiceNumber: string | null;
         contract: string | null;
         documents: string;
         requiredDocs: string | null;

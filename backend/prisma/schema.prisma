@@ -1,13 +1,271 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
+generator client {
+  provider = "prisma-client-js"
+}
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-generator client {
-  provider = "prisma-client-js"
+model Prospect {
+  id                String         @id @default(cuid())
+  firstName         String
+  lastName          String
+  phone             String
+  email             String?
+  source            String         @default("MANUAL")
+  campaignName      String?
+  interestServiceId String?
+  score             Int            @default(0)
+  agencyId          String
+  assignedToSalesId String?
+  status            ProspectStatus @default(TO_CALL)
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  lastContactAt     DateTime?
+  callLogs          CallLog[]
+  notes             ProspectNote[]
+  communications    Communication[]
+}
+
+model CallLog {
+  id            String    @id @default(cuid())
+  prospectId    String
+  userId        String
+  direction     String    @default("OUTBOUND")
+  status        String    @default("INITIATED")
+  duration      Int       @default(0)
+  twilioCallSid String?
+  startedAt     DateTime  @default(now())
+  endedAt       DateTime?
+  notes         String?
+  prospect      Prospect  @relation(fields: [prospectId], references: [id])
+}
+
+model ProspectNote {
+  id         String   @id @default(cuid())
+  text       String
+  authorId   String
+  prospectId String
+  createdAt  DateTime @default(now())
+  prospect   Prospect @relation(fields: [prospectId], references: [id])
+}
+
+model User {
+  id             String        @id @default(cuid())
+  email          String        @unique
+  password       String
+  name           String
+  role           UserRole      @default(KIOSK_AGENT)
+  roleId         String?
+  agencyId       String?
+  homeAgencyId   String?
+  scopeAgencyIds String        @default("[]")
+  permissions    String
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  lastLogin      DateTime?
+  isSystemUser   Boolean       @default(false)
+  expertises     String        @default("[]")
+  absences       Absence[]
+  appointments   Appointment[]
+  leads          Lead[]
+  agency         Agency?       @relation(fields: [agencyId], references: [id])
+  roleRef        Role?         @relation(fields: [roleId], references: [id])
+}
+
+model Absence {
+  id        String   @id @default(cuid())
+  userId    String
+  start     DateTime
+  end       DateTime
+  reason    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model Role {
+  id          String   @id @default(cuid())
+  label       String
+  description String
+  permissions String
+  isSystem    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  users       User[]
+}
+
+model Agency {
+  id                         String         @id
+  name                       String
+  type                       AgencyType
+  status                     AgencyStatus   @default(ACTIVE)
+  region                     String         @default("IDF")
+  city                       String         @default("Paris")
+  zipCodes                   String
+  commissionRate             Float          @default(15)
+  serviceCommissionOverrides String?
+  contactEmail               String
+  iban                       String?
+  bic                        String?
+  kioskUrl                   String
+  createdAt                  DateTime       @default(now())
+  updatedAt                  DateTime       @updatedAt
+  appointments               Appointment[]
+  devices                    Device[]
+  franchiseOrigin            FranchiseLead?
+  leads                      Lead[]
+  payouts                    Payout[]
+  users                      User[]
+}
+
+model Lead {
+  id             String        @id
+  name           String
+  email          String
+  phone          String
+  serviceId      String
+  serviceName    String
+  amountPaid     Int           @default(0)
+  paymentMethod  String?       @default("UNPAID")
+  paymentDate    DateTime?
+  paymentRef     String?
+  invoiceNumber  String?
+  status         LeadStatus    @default(NEW)
+  originAgencyId String?
+  contract       String?
+  documents      String        @default("[]")
+  requiredDocs   String?
+  assignedUserId String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  data           String        @default("{}")
+  appointments   Appointment[]
+  creditNotes    CreditNote[]
+  assignedUser   User?         @relation(fields: [assignedUserId], references: [id])
+  originAgency   Agency?       @relation(fields: [originAgencyId], references: [id])
+  notes          LeadNote[]
+  transactions   Transaction[]
+  communications Communication[]
+}
+
+model LeadNote {
+  id        String   @id @default(cuid())
+  content   String
+  author    String
+  leadId    String
+  createdAt DateTime @default(now())
+  lead      Lead     @relation(fields: [leadId], references: [id])
+}
+
+model Payout {
+  id        String    @id @default(cuid())
+  agencyId  String
+  amount    Float
+  period    String
+  status    String    @default("PAID")
+  paidAt    DateTime? @default(now())
+  reference String    @default("VIR-SIMULEGAL")
+  createdAt DateTime  @default(now())
+  agency    Agency    @relation(fields: [agencyId], references: [id])
+}
+
+model Device {
+  id               String   @id @default(cuid())
+  pairingCode      String   @unique
+  status           String   @default("UNPAIRED")
+  name             String   @default("Nouveau Terminal")
+  assignedAgencyId String?
+  appVersion       String   @default("1.0.0")
+  lastHeartbeat    DateTime @default(now())
+  createdAt        DateTime @default(now())
+  assignedAgency   Agency?  @relation(fields: [assignedAgencyId], references: [id])
+}
+
+model FranchiseLead {
+  id                String              @id @default(cuid())
+  name              String
+  email             String              @unique
+  phone             String
+  targetCity        String
+  region            String              @default("IDF")
+  status            FranchiseLeadStatus @default(NEW)
+  companyName       String?
+  siret             String?
+  legalForm         String?
+  contractDetails   String              @default("{}")
+  contractHistory   String              @default("[]")
+  documents         String              @default("[]")
+  convertedAgencyId String?             @unique
+  rejectionReason   String?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  convertedAgency   Agency?             @relation(fields: [convertedAgencyId], references: [id])
+  notes             FranchiseLeadNote[]
+}
+
+model FranchiseLeadNote {
+  id        String        @id @default(cuid())
+  content   String
+  type      String        @default("NOTE")
+  author    String
+  leadId    String
+  createdAt DateTime      @default(now())
+  lead      FranchiseLead @relation(fields: [leadId], references: [id])
+}
+
+model Appointment {
+  id                 String            @id @default(cuid())
+  start              DateTime
+  end                DateTime
+  type               AppointmentType
+  status             AppointmentStatus @default(SCHEDULED)
+  leadId             String
+  leadName           String
+  leadEmail          String?
+  agencyId           String?
+  hostUserId         String?
+  meetingLink        String?
+  serviceId          String?
+  cancellationReason String?
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  agency             Agency?           @relation(fields: [agencyId], references: [id])
+  hostUser           User?             @relation(fields: [hostUserId], references: [id])
+  lead               Lead              @relation(fields: [leadId], references: [id])
+}
+
+model SystemSettings {
+  id            String   @id @default("GLOBAL")
+  company       String   @default("{}")
+  payment       String   @default("{}")
+  notifications String   @default("{}")
+  integrations  String   @default("{}")
+  storage       String   @default("{}")
+  updatedAt     DateTime @updatedAt
+}
+
+model Transaction {
+  id            String   @id @default(cuid())
+  type          String   @default("PAYMENT")
+  amount        Int
+  method        String?
+  reference     String?
+  leadId        String
+  invoiceNumber String?
+  createdAt     DateTime @default(now())
+  lead          Lead     @relation(fields: [leadId], references: [id])
+}
+
+model CreditNote {
+  id        String   @id @default(cuid())
+  number    String   @unique
+  amount    Int
+  reason    String
+  leadId    String
+  createdAt DateTime @default(now())
+  lead      Lead     @relation(fields: [leadId], references: [id])
 }
 
 enum UserRole {
@@ -21,11 +279,11 @@ enum UserRole {
 }
 
 enum AgencyType {
-  OWNED      // Agence Intégrée
-  FRANCHISE  // Partenaire indépendant
-  CORNER     // Point relais / Borne
-  HQ         // Siège
-  PHYSICAL   // Legacy
+  OWNED
+  FRANCHISE
+  CORNER
+  HQ
+  PHYSICAL
 }
 
 enum AgencyStatus {
@@ -52,7 +310,6 @@ enum LeadStatus {
   DONE
   ARCHIVED
   CLOSED
-  // Legacy
   LEAD
   CONTACTED
   SIGNED
@@ -71,181 +328,6 @@ enum ProspectStatus {
   LOST
 }
 
-model Prospect {
-  id                String         @id @default(cuid())
-  firstName         String
-  lastName          String
-  phone             String
-  email             String?
-  source            String         @default("MANUAL")
-  campaignName      String?
-  interestServiceId String?
-  score             Int            @default(0)
-  agencyId          String
-  assignedToSalesId String?
-  status            ProspectStatus @default(TO_CALL)
-  notes             ProspectNote[]
-  callLogs          CallLog[]
-  createdAt         DateTime       @default(now())
-  updatedAt         DateTime       @updatedAt
-  lastContactAt     DateTime?
-}
-
-model CallLog {
-  id            String   @id @default(cuid())
-  prospectId    String
-  prospect      Prospect @relation(fields: [prospectId], references: [id])
-  
-  userId        String   // Agent who made the call
-  direction     String   @default("OUTBOUND") // OUTBOUND | INBOUND
-  status        String   @default("INITIATED") // INITIATED, RINGING, IN_PROGRESS, COMPLETED, FAILED, NO_ANSWER
-  
-  duration      Int      @default(0) // Duration in seconds
-  twilioCallSid String?  // Twilio's unique call identifier
-  
-  startedAt     DateTime @default(now())
-  endedAt       DateTime?
-  
-  notes         String?  // Notes taken during the call
-}
-
-model ProspectNote {
-  id        String   @id @default(cuid())
-  text      String
-  authorId  String
-  prospectId String
-  prospect  Prospect @relation(fields: [prospectId], references: [id])
-  createdAt DateTime @default(now())
-}
-
-model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  password      String
-  name          String
-  role          UserRole  @default(KIOSK_AGENT)
-  roleId        String?
-  roleRef       Role?     @relation(fields: [roleId], references: [id])
-  agencyId      String?   // @deprecated: utilise homeAgencyId à la place
-  agency        Agency?   @relation(fields: [agencyId], references: [id])
-  
-  // Scoping & Rattachement
-  homeAgencyId  String?   // Rattachement physique (null = HQ)
-  scopeAgencyIds String   @default("[]") // Périmètre de supervision (JSON stringé: string[])
-  permissions   String    // À migrer vers Role.permissions
-  appointments  Appointment[]
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  lastLogin     DateTime?
-  isSystemUser  Boolean   @default(false) // True for admins, API partners
-  expertises    String    @default("[]") // Liste des serviceId (JSON array: string[])
-  absences      Absence[]
-  leads         Lead[]
-}
-
-model Absence {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
-  start     DateTime
-  end       DateTime
-  reason    String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model Role {
-  id          String   @id @default(cuid())
-  label       String
-  description String
-  permissions String   // Stocké sous forme de chaîne (ex: "crm.view_all,finance.view_global")
-  isSystem    Boolean  @default(false)
-  users       User[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-model Agency {
-  id             String       @id
-  name           String
-  type           AgencyType
-  status         AgencyStatus @default(ACTIVE)
-  region         String       @default("IDF") // Région (ex: IDF, PACA, AURA)
-  city           String       @default("Paris")
-  zipCodes       String       // Stocké sous forme de chaîne (ex: "75001,75002")
-  commissionRate Float        @default(15)
-  serviceCommissionOverrides String? // JSON string (ex: {"naturalisation": 20, "recalculation": 10})
-  contactEmail   String
-  kioskUrl       String
-  users          User[]
-  appointments   Appointment[]
-  leads          Lead[]
-  payouts        Payout[]
-  devices        Device[]
-  franchiseOrigin FranchiseLead? // Relation inverse : le lead qui a donné naissance à cette agence
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-}
-
-model Lead {
-  id             String     @id
-  name           String
-  email          String
-  phone          String
-  serviceId      String
-  serviceName    String
-  amountPaid     Int        @default(0)
-  status         LeadStatus @default(NEW)
-  originAgencyId String?
-  originAgency   Agency?    @relation(fields: [originAgencyId], references: [id])
-  
-  // Nouveaux champs pour la persistence complète
-  contract       String?    // Stocké en JSON stringé pour SQLite
-  documents      String     @default("[]") // Liste des documents (JSON stringé)
-  requiredDocs   String?    // Checklist personnalisée (JSON stringé)
-  
-  assignedUserId String?
-  assignedUser   User?    @relation(fields: [assignedUserId], references: [id])
-  
-  notes          LeadNote[]
-  appointments   Appointment[]
-  createdAt      DateTime   @default(now())
-  updatedAt      DateTime   @updatedAt
-}
-
-model LeadNote {
-  id        String   @id @default(cuid())
-  content   String
-  author    String
-  leadId    String
-  lead      Lead     @relation(fields: [leadId], references: [id])
-  createdAt DateTime @default(now())
-}
-
-model Payout {
-  id        String   @id @default(cuid())
-  agencyId  String
-  agency    Agency   @relation(fields: [agencyId], references: [id])
-  amount    Float
-  period    String
-  status    String   @default("PAID")
-  paidAt    DateTime? @default(now())
-  reference String   @default("VIR-SIMULEGAL")
-  createdAt DateTime @default(now())
-}
-
-model Device {
-  id               String   @id @default(cuid())
-  pairingCode      String   @unique
-  status           String   @default("UNPAIRED") // UNPAIRED, ACTIVE, OFFLINE
-  name             String   @default("Nouveau Terminal")
-  assignedAgencyId String?
-  assignedAgency   Agency?  @relation(fields: [assignedAgencyId], references: [id])
-  appVersion       String   @default("1.0.0")
-  lastHeartbeat    DateTime @default(now())
-  createdAt        DateTime @default(now())
-}
-
 enum FranchiseLeadStatus {
   NEW
   CONTACTED
@@ -254,77 +336,6 @@ enum FranchiseLeadStatus {
   CONTRACT_SENT
   SIGNED
   REJECTED
-}
-
-model FranchiseLead {
-  id              String              @id @default(cuid())
-  name            String
-  email           String              @unique
-  phone           String
-  targetCity      String
-  region          String              @default("IDF")
-  
-  status          FranchiseLeadStatus @default(NEW)
-  
-  // Personne Morale
-  companyName     String?             // Raison Sociale
-  siret           String?
-  legalForm       String?             // SAS, SARL, etc.
-  
-  // Détails du futur contrat (JSON)
-  contractDetails String              @default("{}") // { commissionRate, type: 'CORNER'|'FRANCHISE', ... }
-  contractHistory String              @default("[]") // Historique des versions du contrat
-  documents       String              @default("[]") // Pièces jointes (ID, Kbis, etc.)
-  
-  // Lien vers l'agence une fois convertie
-  convertedAgencyId String?             @unique
-  convertedAgency   Agency?           @relation(fields: [convertedAgencyId], references: [id])
-  
-  rejectionReason String?             // Motif du rejet si status === REJECTED
-  
-  createdAt       DateTime            @default(now())
-  updatedAt       DateTime            @updatedAt
-  
-  notes           FranchiseLeadNote[]
-}
-
-model FranchiseLeadNote {
-  id              String        @id @default(cuid())
-  content         String
-  type            String        @default("NOTE") // NOTE, CALL, EMAIL
-  author          String
-  leadId          String
-  lead            FranchiseLead @relation(fields: [leadId], references: [id])
-  createdAt       DateTime      @default(now())
-}
-
-model Appointment {
-  id          String           @id @default(cuid())
-  start       DateTime
-  end         DateTime
-  type        AppointmentType
-  status      AppointmentStatus @default(SCHEDULED)
-  
-  // Client Info (denormalized)
-  leadId      String
-  lead        Lead             @relation(fields: [leadId], references: [id])
-  leadName    String
-  leadEmail   String?
-
-  // Context
-  agencyId    String?
-  agency      Agency?          @relation(fields: [agencyId], references: [id])
-  
-  hostUserId  String?
-  hostUser    User?            @relation(fields: [hostUserId], references: [id])
-
-  meetingLink String?
-  serviceId   String?
-
-  cancellationReason String?
-
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
 }
 
 enum AppointmentType {
@@ -339,13 +350,17 @@ enum AppointmentStatus {
   NO_SHOW
 }
 
-model SystemSettings {
-  id              String   @id @default("GLOBAL")
-  company         String   @default("{}") // JSON String
-  payment         String   @default("{}") // JSON String
-  notifications   String   @default("{}") // JSON String
-  integrations    String   @default("{}") // JSON String
-  storage         String   @default("{}") // JSON String
-  updatedAt       DateTime @updatedAt
+model Communication {
+  id          String   @id @default(cuid())
+  direction   String   // INBOUND or OUTBOUND
+  type        String   @default("WHATSAPP") // WHATSAPP, SMS, EMAIL
+  content     String
+  sender      String   // Phone number or User ID or "SYSTEM"
+  senderName  String?
+  leadId      String?
+  prospectId  String?
+  createdAt   DateTime @default(now())
+  
+  lead        Lead?     @relation(fields: [leadId], references: [id])
+  prospect    Prospect? @relation(fields: [prospectId], references: [id])
 }
-

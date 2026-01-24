@@ -1,9 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { SettingsService } from '../settings/settings.service';
 
 @Injectable()
 export class FinanceService {
-    constructor(private prisma: PrismaService) { }
+    constructor(
+        private prisma: PrismaService,
+        private settings: SettingsService
+    ) { }
 
     async getGlobalStats() {
         const leads = await this.prisma.lead.findMany({
@@ -184,5 +188,132 @@ export class FinanceService {
         }));
 
         return trends;
+    }
+
+    async getInvoices() {
+        return this.prisma.lead.findMany({
+            where: { invoiceNumber: { not: null } },
+            include: { originAgency: true },
+            orderBy: { paymentDate: 'desc' }
+        });
+    }
+
+    async getTransactions() {
+        return this.prisma.transaction.findMany({
+            include: { lead: true },
+            orderBy: { createdAt: 'desc' }
+        });
+    }
+
+    async getCreditNotes() {
+        return this.prisma.creditNote.findMany({
+            include: { lead: true },
+            orderBy: { createdAt: 'desc' }
+        });
+    }
+
+    /**
+     * Generate SEPA XML for a single payout (ISO 20022 PAIN.001.001.03)
+     */
+    async generatePayoutSepaXml(payoutId: string) {
+        const payout = await this.prisma.payout.findUnique({
+            where: { id: payoutId },
+            include: { agency: true }
+        });
+
+        if (!payout) throw new Error('Payout non trouvé');
+        if (!payout.agency?.iban) throw new Error('IBAN manquant pour cette agence');
+
+        const sysSettings = await this.settings.getSettings();
+        const company = sysSettings.company;
+
+        // Use HQ banking info from settings if available, else default placeholders
+        const debtorIban = (sysSettings as any).banking?.iban || 'FR7600000000000000000000000';
+        const debtorBic = (sysSettings as any).banking?.bic || 'XXXXXXXXXXX';
+
+        const msgId = `MSG-${payout.reference}`;
+        const pmtId = `PMT-${payout.id}`;
+        const now = new Date().toISOString();
+        const executionDate = new Date().toISOString().split('T')[0];
+
+        const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<Document xmlns="urn:iso:std:iso:20022:tech:xsd:pain.001.001.03" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <CstmrCdtTrfInitn>
+    <GrpHdr>
+      <MsgId>${msgId}</MsgId>
+      <CreDtTm>${now}</CreDtTm>
+      <NbOfTxs>1</NbOfTxs>
+      <CtrlSum>${payout.amount.toFixed(2)}</CtrlSum>
+      <InitgPty>
+        <Nm>${this.escapeXml(company.name)}</Nm>
+      </InitgPty>
+    </GrpHdr>
+    <PmtInf>
+      <PmtInfId>${pmtId}</PmtInfId>
+      <PmtMtd>TRF</PmtMtd>
+      <NbOfTxs>1</NbOfTxs>
+      <CtrlSum>${payout.amount.toFixed(2)}</CtrlSum>
+      <PmtTpInf>
+        <SvcLvl>
+          <Cd>SEPA</Cd>
+        </SvcLvl>
+      </PmtTpInf>
+      <ReqdExctnDt>${executionDate}</ReqdExctnDt>
+      <Dbtr>
+        <Nm>${this.escapeXml(company.name)}</Nm>
+      </Dbtr>
+      <DbtrAcct>
+        <Id>
+          <IBAN>${debtorIban}</IBAN>
+        </Id>
+      </DbtrAcct>
+      <DbtrAgt>
+        <FinInstnId>
+          <BIC>${debtorBic}</BIC>
+        </FinInstnId>
+      </DbtrAgt>
+      <ChrgBr>SLEV</ChrgBr>
+      <CdtTrfTxInf>
+        <PmtId>
+          <EndToEndId>${payout.reference}</EndToEndId>
+        </PmtId>
+        <Amt>
+          <InstdAmt Ccy="EUR">${payout.amount.toFixed(2)}</InstdAmt>
+        </Amt>
+        <CdtrAgt>
+          <FinInstnId>
+            <BIC>${payout.agency.bic || 'XXXXXXXXXXX'}</BIC>
+          </FinInstnId>
+        </CdtrAgt>
+        <Cdtr>
+          <Nm>${this.escapeXml(payout.agency.name)}</Nm>
+        </Cdtr>
+        <CdtrAcct>
+          <Id>
+            <IBAN>${payout.agency.iban}</IBAN>
+          </Id>
+        </CdtrAcct>
+        <RmtInf>
+          <Ustrd>COMMISSION SIMULEGAL - ${payout.period}</Ustrd>
+        </RmtInf>
+      </CdtTrfTxInf>
+    </PmtInf>
+  </CstmrCdtTrfInitn>
+</Document>`;
+
+        return xml;
+    }
+
+    private escapeXml(unsafe: string) {
+        return unsafe.replace(/[<>&'"]/g, (c) => {
+            switch (c) {
+                case '<': return '&lt;';
+                case '>': return '&gt;';
+                case '&': return '&amp;';
+                case '\'': return '&apos;';
+                case '"': return '&quot;';
+            }
+            return c;
+        });
     }
 }

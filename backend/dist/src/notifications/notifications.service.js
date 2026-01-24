@@ -50,32 +50,83 @@ const common_1 = require("@nestjs/common");
 const config_1 = require("@nestjs/config");
 const nodemailer = __importStar(require("nodemailer"));
 const twilio_1 = __importDefault(require("twilio"));
+const email_templates_service_1 = require("./email-templates.service");
+const settings_service_1 = require("../settings/settings.service");
 let NotificationsService = class NotificationsService {
     configService;
+    emailTemplates;
+    settingsService;
     twilioClient;
-    mailTransporter;
-    constructor(configService) {
+    cachedSmtpConfig = null;
+    lastConfigCheck = 0;
+    CONFIG_TTL = 60000;
+    constructor(configService, emailTemplates, settingsService) {
         this.configService = configService;
+        this.emailTemplates = emailTemplates;
+        this.settingsService = settingsService;
         const accountSid = this.configService.get('TWILIO_ACCOUNT_SID');
         const authToken = this.configService.get('TWILIO_AUTH_TOKEN');
         if (accountSid && authToken) {
             this.twilioClient = (0, twilio_1.default)(accountSid, authToken);
         }
-        const smtpHost = this.configService.get('SMTP_HOST');
-        const smtpPort = this.configService.get('SMTP_PORT');
-        const smtpUser = this.configService.get('SMTP_USER');
-        const smtpPass = this.configService.get('SMTP_PASS');
-        if (smtpHost && smtpUser) {
-            this.mailTransporter = nodemailer.createTransport({
-                host: smtpHost,
-                port: smtpPort || 587,
-                secure: false,
-                auth: {
-                    user: smtpUser,
-                    pass: smtpPass,
-                },
-            });
+    }
+    async getSmtpConfig() {
+        const now = Date.now();
+        if (this.cachedSmtpConfig && (now - this.lastConfigCheck) < this.CONFIG_TTL) {
+            return this.cachedSmtpConfig;
         }
+        try {
+            const settings = await this.settingsService.getSettings();
+            const dbConfig = settings.notifications;
+            if (dbConfig?.smtpHost && dbConfig?.smtpUser && dbConfig?.smtpPass !== '******') {
+                this.cachedSmtpConfig = {
+                    host: dbConfig.smtpHost,
+                    port: dbConfig.smtpPort || 587,
+                    user: dbConfig.smtpUser,
+                    pass: dbConfig.smtpPass
+                };
+                this.lastConfigCheck = now;
+                console.log('[SMTP] 📧 Using database configuration');
+                return this.cachedSmtpConfig;
+            }
+        }
+        catch (error) {
+            console.warn('[SMTP] Could not load settings from DB:', error);
+        }
+        const envHost = this.configService.get('SMTP_HOST');
+        const envUser = this.configService.get('SMTP_USER');
+        const envPass = this.configService.get('SMTP_PASS');
+        if (envHost && envUser) {
+            this.cachedSmtpConfig = {
+                host: envHost,
+                port: this.configService.get('SMTP_PORT') || 587,
+                user: envUser,
+                pass: envPass || ''
+            };
+            this.lastConfigCheck = now;
+            console.log('[SMTP] 📧 Using environment configuration');
+            return this.cachedSmtpConfig;
+        }
+        return null;
+    }
+    async createTransporter() {
+        const config = await this.getSmtpConfig();
+        if (!config)
+            return null;
+        return nodemailer.createTransport({
+            host: config.host,
+            port: config.port,
+            secure: config.port === 465,
+            auth: {
+                user: config.user,
+                pass: config.pass,
+            },
+        });
+    }
+    async refreshSmtpConfig() {
+        this.cachedSmtpConfig = null;
+        this.lastConfigCheck = 0;
+        console.log('[SMTP] 🔄 Configuration cache cleared');
     }
     async sendWhatsApp(phone, template, params) {
         if (!this.twilioClient) {
@@ -98,18 +149,21 @@ let NotificationsService = class NotificationsService {
             return { success: false, error };
         }
     }
-    async sendEmail(to, subject, body) {
-        if (!this.mailTransporter) {
-            console.warn('[Mailer] Transporter not initialized. Check env vars.');
-            return { success: false };
+    async sendEmail(to, subject, body, html) {
+        const transporter = await this.createTransporter();
+        if (!transporter) {
+            console.log(`[Mailer] 📧 DEV MODE - Would send to ${to}:`);
+            console.log(`  Subject: ${subject}`);
+            console.log(`  Body preview: ${body.substring(0, 100)}...`);
+            return { success: true, messageId: 'dev-mode-no-smtp' };
         }
         try {
-            const info = await this.mailTransporter.sendMail({
-                from: '"SimuLegal Notif" <no-reply@simulegal.fr>',
+            const info = await transporter.sendMail({
+                from: '"SimuLegal" <no-reply@simulegal.fr>',
                 to: to,
                 subject: subject,
                 text: body,
-                html: body.replace(/\n/g, '<br>'),
+                html: html || body.replace(/\n/g, '<br>'),
             });
             console.log(`[Email] 📧 Sent to ${to}: ${info.messageId}`);
             return { success: true, messageId: info.messageId };
@@ -118,6 +172,31 @@ let NotificationsService = class NotificationsService {
             console.error('[Email] Error:', error);
             return { success: false, error };
         }
+    }
+    async sendWelcomeEmail(user, tempPassword) {
+        const template = this.emailTemplates.renderWelcome(user.name, user.email, tempPassword);
+        console.log(`[Transactional] 📧 Sending WELCOME email to ${user.email}`);
+        return this.sendEmail(user.email, template.subject, `Bienvenue ${user.name}! Vos accès: ${user.email} / ${tempPassword}`, template.html);
+    }
+    async sendDiagnosticInvitation(prospect, magicLink) {
+        const template = this.emailTemplates.renderDiagnosticInvitation(prospect.name, magicLink);
+        console.log(`[Transactional] 📧 Sending DIAGNOSTIC INVITATION to ${prospect.email}`);
+        return this.sendEmail(prospect.email, template.subject, `${prospect.name}, passez votre diagnostic: ${magicLink}`, template.html);
+    }
+    async sendAppointmentConfirmationEmail(lead, appointment) {
+        const template = this.emailTemplates.renderAppointmentConfirmation(lead.name, new Date(appointment.start), appointment.type, appointment.meetingLink, appointment.agencyAddress);
+        console.log(`[Transactional] 📧 Sending APPOINTMENT CONFIRMATION to ${lead.email}`);
+        return this.sendEmail(lead.email, template.subject, `RDV confirmé pour ${lead.name}`, template.html);
+    }
+    async sendPaymentConfirmation(lead, amount, refundCode) {
+        const template = this.emailTemplates.renderPaymentConfirmation(lead.name, amount, refundCode);
+        console.log(`[Transactional] 📧 Sending PAYMENT CONFIRMATION to ${lead.email}`);
+        return this.sendEmail(lead.email, template.subject, `Paiement de ${amount}€ reçu. Code: ${refundCode}`, template.html);
+    }
+    async sendAppointmentReminder(lead, appointment) {
+        const template = this.emailTemplates.renderAppointmentReminder(lead.name, new Date(appointment.start), appointment.type, appointment.meetingLink);
+        console.log(`[Transactional] 📧 Sending APPOINTMENT REMINDER to ${lead.email}`);
+        return this.sendEmail(lead.email, template.subject, `Rappel: RDV demain`, template.html);
     }
     async sendSMS(phone, message) {
         if (!this.twilioClient) {
@@ -209,6 +288,8 @@ let NotificationsService = class NotificationsService {
 exports.NotificationsService = NotificationsService;
 exports.NotificationsService = NotificationsService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [config_1.ConfigService])
+    __metadata("design:paramtypes", [config_1.ConfigService,
+        email_templates_service_1.EmailTemplatesService,
+        settings_service_1.SettingsService])
 ], NotificationsService);
 //# sourceMappingURL=notifications.service.js.map

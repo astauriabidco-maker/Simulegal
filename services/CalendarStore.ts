@@ -54,6 +54,15 @@ export const CalendarStore = {
         return CalendarStore.getAllAppointments({ agencyId });
     },
 
+    getAppointmentsByLead: async (leadId: string): Promise<Appointment[]> => {
+        const token = AuthStore.getToken();
+        const res = await fetch(`${API_URL}/appointments?leadId=${leadId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!res.ok) return [];
+        return res.json();
+    },
+
     getAvailableSlots: async (dateStr: string, agencyId?: string, serviceId?: string): Promise<string[]> => {
         const params = new URLSearchParams({ date: dateStr });
         if (agencyId) params.append('agencyId', agencyId);

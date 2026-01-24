@@ -21,34 +21,70 @@ let AgenciesService = class AgenciesService {
         this.devicesService = devicesService;
     }
     async findAll() {
-        return this.prisma.agency.findMany({
+        const agencies = await this.prisma.agency.findMany({
             include: {
                 _count: {
                     select: { leads: true }
                 }
             }
         });
+        return agencies.map(a => this.mapAgency(a));
     }
     async findOne(id) {
-        return this.prisma.agency.findUnique({
+        const agency = await this.prisma.agency.findUnique({
             where: { id },
             include: { leads: true, users: true }
         });
+        if (!agency)
+            return null;
+        return this.mapAgency(agency);
+    }
+    mapAgency(agency) {
+        return {
+            ...agency,
+            zipCodes: this.parseZipCodes(agency.zipCodes)
+        };
+    }
+    parseZipCodes(zipCodes) {
+        if (!zipCodes)
+            return [];
+        try {
+            const parsed = JSON.parse(zipCodes);
+            return Array.isArray(parsed) ? parsed : [];
+        }
+        catch {
+            return zipCodes.split(',').map(s => s.trim()).filter(Boolean);
+        }
     }
     async create(data) {
+        const createData = { ...data };
+        if (createData.zipCodes && Array.isArray(createData.zipCodes)) {
+            createData.zipCodes = JSON.stringify(createData.zipCodes);
+        }
+        else if (typeof createData.zipCodes === 'string') {
+            createData.zipCodes = JSON.stringify(createData.zipCodes.split(',').map((s) => s.trim()).filter(Boolean));
+        }
         const agency = await this.prisma.agency.create({
-            data
+            data: createData
         });
         if (data.type === 'CORNER') {
             await this.devicesService.createProvisioned(agency.id, agency.name);
         }
-        return agency;
+        return this.mapAgency(agency);
     }
     async update(id, data) {
-        return this.prisma.agency.update({
+        const updateData = { ...data };
+        if (updateData.zipCodes && Array.isArray(updateData.zipCodes)) {
+            updateData.zipCodes = JSON.stringify(updateData.zipCodes);
+        }
+        else if (typeof updateData.zipCodes === 'string') {
+            updateData.zipCodes = JSON.stringify(updateData.zipCodes.split(',').map((s) => s.trim()).filter(Boolean));
+        }
+        const agency = await this.prisma.agency.update({
             where: { id },
-            data
+            data: updateData
         });
+        return this.mapAgency(agency);
     }
     async checkTerritoryAvailability(zipCode, excludeAgencyId) {
         const agencies = await this.prisma.agency.findMany({
@@ -72,6 +108,41 @@ let AgenciesService = class AgenciesService {
             }
         }
         return { available: true };
+    }
+    async delete(id) {
+        const agency = await this.prisma.agency.findUnique({
+            where: { id },
+            include: { _count: { select: { leads: true } } }
+        });
+        if (!agency) {
+            throw new Error('Agency not found');
+        }
+        return this.prisma.agency.update({
+            where: { id },
+            data: { status: 'INACTIVE' }
+        });
+    }
+    async exportToCSV() {
+        const agencies = await this.prisma.agency.findMany({
+            include: {
+                _count: { select: { leads: true, users: true } }
+            },
+            orderBy: { name: 'asc' }
+        });
+        const headers = ['ID', 'Nom', 'Type', 'Statut', 'Email', 'Région', 'Codes Postaux', 'Commission %', 'Nb Leads', 'Nb Users'];
+        const rows = agencies.map(a => [
+            a.id,
+            a.name,
+            a.type,
+            a.status,
+            a.contactEmail || '',
+            a.region || '',
+            a.zipCodes || '',
+            a.commissionRate?.toString() || '0',
+            a._count.leads.toString(),
+            a._count.users.toString()
+        ].map(v => `"${(v || '').toString().replace(/"/g, '""')}"`).join(';'));
+        return [headers.join(';'), ...rows].join('\n');
     }
 };
 exports.AgenciesService = AgenciesService;

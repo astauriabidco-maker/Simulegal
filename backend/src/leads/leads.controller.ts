@@ -1,11 +1,15 @@
-import { Controller, Get, Post, Body, Patch, Param, UseGuards, Request, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, ForbiddenException, Request, Query } from '@nestjs/common';
 import { LeadsService } from './leads.service';
+import { InvoicesService } from '../invoices/invoices.service';
 import { AuthGuard } from '@nestjs/passport';
 
 @Controller('leads')
 @UseGuards(AuthGuard('jwt'))
 export class LeadsController {
-    constructor(private readonly leadsService: LeadsService) { }
+    constructor(
+        private readonly leadsService: LeadsService,
+        private readonly invoicesService: InvoicesService
+    ) { }
 
     @Get()
     findAll(@Request() req: any, @Query('agencyId') agencyId?: string) {
@@ -20,6 +24,31 @@ export class LeadsController {
         }
 
         return this.leadsService.findAll();
+    }
+
+    @Delete(':id')
+    remove(@Request() req: any, @Param('id') id: string) {
+        if (req.user.role !== 'SUPER_ADMIN' && req.user.role !== 'HQ_ADMIN') {
+            throw new ForbiddenException('Action réservée au siège');
+        }
+        return this.leadsService.delete(id);
+    }
+
+    @Post(':id/payment')
+    recordPayment(@Param('id') id: string, @Body() data: { amount: number, method: string, reference?: string }) {
+        return this.leadsService.recordPayment(id, data);
+    }
+
+    @Get(':id/invoice')
+    async getInvoice(@Param('id') id: string) {
+        const invoice = await this.invoicesService.getInvoiceData(id);
+        if (!invoice) throw new Error('Invoice not found');
+        return invoice;
+    }
+
+    @Get(':id/invoice/pdf')
+    async downloadPdf(@Param('id') id: string) {
+        return this.invoicesService.generatePdf(id);
     }
 
     @Get(':id')

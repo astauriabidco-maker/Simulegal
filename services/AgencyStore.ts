@@ -17,7 +17,7 @@ export interface AgencyExt {
     contactEmail: string;
     kioskUrl: string;
     commissionRate: number;
-    zipCodes: string;
+    zipCodes: string[];
 }
 
 const API_URL = 'http://localhost:3001/agencies';
@@ -111,5 +111,24 @@ export const AgencyStore = {
             console.error('[AgencyStore] Erreur trends:', error);
             return [];
         }
+    },
+
+    deleteAgency: async (id: string): Promise<boolean> => {
+        try {
+            const response = await fetch(`${API_URL}/${id}`, {
+                method: 'DELETE',
+                headers: getHeaders()
+            });
+            return response.ok;
+        } catch (error) {
+            console.error('[AgencyStore] Erreur suppression:', error);
+            return false;
+        }
+    },
+
+    downloadCSV: () => {
+        const token = AuthStore.getToken();
+        window.open(`${API_URL}/export/csv`, '_blank');
     }
 };
+

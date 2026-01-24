@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { CRM, Lead, LeadDocument } from '../../services/crmStore';
 import { WorkflowService, WorkflowStage } from '../../services/WorkflowService';
 import DocumentAnalysisService, { AnalysisResponse } from '../../services/DocumentAnalysisService';
+import { CalendarStore, Appointment } from '../../services/CalendarStore';
 import GuidedScanner from './GuidedScanner';
 import {
     CheckCircle,
@@ -16,7 +17,8 @@ import {
     ChevronRight,
     Loader2,
     AlertCircle,
-    PartyPopper
+    PartyPopper,
+    X
 } from 'lucide-react';
 
 interface ClientPortalProps {
@@ -63,8 +65,11 @@ const getRequiredDocuments = (serviceId: string): Array<{ id: string; label: str
 
 export default function ClientPortal({ leadId }: ClientPortalProps) {
     const [lead, setLead] = useState<Lead | null>(null);
+    const [appointments, setAppointments] = useState<Appointment[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [showScanner, setShowScanner] = useState(false);
+    const [showMessaging, setShowMessaging] = useState(false);
+    const [messageText, setMessageText] = useState('');
     const [error, setError] = useState<string | null>(null);
 
     // Chargement du lead
@@ -74,6 +79,9 @@ export default function ClientPortal({ leadId }: ClientPortalProps) {
                 const foundLead = await CRM.getLeadById(leadId);
                 if (foundLead) {
                     setLead(foundLead);
+                    // Charger les RDV
+                    const apps = await CalendarStore.getAppointmentsByLead(leadId);
+                    setAppointments(apps);
                 } else {
                     setError('Dossier introuvable');
                 }
@@ -127,9 +135,26 @@ export default function ClientPortal({ leadId }: ClientPortalProps) {
     const allDocsValid = missingDocs.length === 0;
 
     // Calcul de la progression
-    const progressPercent = lead
+    const progressPercent = lead && lead.currentStage
         ? WorkflowService.getProgress(lead.serviceId, lead.currentStage)
         : 0;
+
+    const handleSendMessage = async () => {
+        if (!messageText.trim() || !lead) return;
+        try {
+            const updatedLead = await CRM.addNote(lead.id, {
+                author: 'AGENCY', // Simulé comme venant du client pour cette vue, mais le backend mappera authorName
+                authorName: lead.name,
+                content: messageText
+            });
+            if (updatedLead) {
+                setLead(updatedLead);
+                setMessageText('');
+            }
+        } catch (err) {
+            console.error('Failed to send message:', err);
+        }
+    };
 
     // Loading
     if (isLoading) {
@@ -169,7 +194,9 @@ export default function ClientPortal({ leadId }: ClientPortalProps) {
 
     // Étapes du workflow
     const workflowSteps = WorkflowService.getStepsForService(lead.serviceId);
-    const currentStageIndex = WorkflowService.getStageIndex(lead.serviceId, lead.currentStage);
+    const currentStageIndex = lead.currentStage
+        ? WorkflowService.getStageIndex(lead.serviceId, lead.currentStage)
+        : 0;
 
     return (
         <div className="min-h-screen bg-slate-50 pb-24">
@@ -287,6 +314,42 @@ export default function ClientPortal({ leadId }: ClientPortalProps) {
                 </div>
             </div>
 
+            {/* Rendez-vous à venir */}
+            {appointments.length > 0 && appointments.find(a => a.status === 'SCHEDULED') && (
+                <div className="px-4 mt-6">
+                    <h3 className="font-bold text-slate-900 mb-4">Vos rendez-vous</h3>
+                    <div className="space-y-3">
+                        {appointments.filter(a => a.status === 'SCHEDULED').map(app => (
+                            <div key={app.id} className="bg-white border border-indigo-100 rounded-2xl p-4 shadow-sm">
+                                <div className="flex justify-between items-start mb-3">
+                                    <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${app.type === 'VISIO_JURISTE' ? 'bg-indigo-50 text-indigo-700' : 'bg-emerald-50 text-emerald-700'
+                                        }`}>
+                                        {app.type === 'VISIO_JURISTE' ? 'Visio Juriste' : 'Rendez-vous Agence'}
+                                    </span>
+                                    <Clock size={16} className="text-slate-400" />
+                                </div>
+                                <p className="font-bold text-slate-900">
+                                    {new Date(app.start).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
+                                </p>
+                                <p className="text-sm font-medium text-slate-500 mb-3">
+                                    à {new Date(app.start).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                                </p>
+                                {app.meetingLink && (
+                                    <a
+                                        href={app.meetingLink}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="w-full py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2"
+                                    >
+                                        Rejoindre la visio
+                                    </a>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
             {/* Documents uploadés */}
             {lead.documents && lead.documents.length > 0 && (
                 <div className="px-4 mt-6">
@@ -304,12 +367,22 @@ export default function ClientPortal({ leadId }: ClientPortalProps) {
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <p className="font-medium text-slate-900 truncate">{doc.docType}</p>
+                                    {doc.status === 'REJECTED' && doc.rejectionReason && (
+                                        <p className="text-[10px] font-bold text-red-600 mt-0.5 uppercase">{doc.rejectionReason}</p>
+                                    )}
                                     <p className="text-xs text-slate-500">
                                         {doc.status === 'VALID' ? '✓ Validé' :
-                                            doc.status === 'REJECTED' ? '✗ Rejeté' : 'En attente'}
+                                            doc.status === 'REJECTED' ? '✗ À renvoyer' : 'En attente'}
                                     </p>
                                 </div>
-                                {doc.status === 'VALID' && (
+                                {doc.status === 'REJECTED' ? (
+                                    <button
+                                        onClick={() => setShowScanner(true)}
+                                        className="p-2 bg-red-50 text-red-600 rounded-lg"
+                                    >
+                                        <Camera size={16} />
+                                    </button>
+                                ) : doc.status === 'VALID' && (
                                     <CheckCircle className="text-emerald-500" size={20} />
                                 )}
                             </div>
@@ -320,11 +393,72 @@ export default function ClientPortal({ leadId }: ClientPortalProps) {
 
             {/* Bouton contact */}
             <div className="fixed bottom-6 left-4 right-4">
-                <button className="w-full py-4 bg-slate-900 text-white rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg">
+                <button
+                    onClick={() => setShowMessaging(true)}
+                    className="w-full py-4 bg-slate-900 text-white rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg hover:scale-[1.02] active:scale-95 transition-all"
+                >
                     <MessageCircle size={20} />
                     Contacter mon conseiller
                 </button>
             </div>
+
+            {/* Modal Messagerie */}
+            {showMessaging && (
+                <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-end sm:items-center justify-center">
+                    <div className="bg-white w-full max-w-lg sm:rounded-[2rem] p-6 h-[80vh] flex flex-col animate-in slide-in-from-bottom duration-300">
+                        <div className="flex items-center justify-between mb-6">
+                            <div>
+                                <h3 className="text-xl font-bold text-slate-900">Conversation</h3>
+                                <p className="text-xs text-slate-500">Posez vos questions à notre équipe juridique</p>
+                            </div>
+                            <button onClick={() => setShowMessaging(false)} className="p-2 bg-slate-100 rounded-xl">
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        {/* Messages */}
+                        <div className="flex-1 overflow-auto space-y-4 mb-6">
+                            {lead.notes && lead.notes.length > 0 ? (
+                                lead.notes.map((note, i) => (
+                                    <div key={i} className={`flex flex-col ${note.author === 'AGENCY' ? 'items-end' : 'items-start'}`}>
+                                        <div className={`max-w-[80%] p-4 rounded-2xl text-sm ${note.author === 'AGENCY' ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-slate-100 text-slate-800 rounded-tl-none'
+                                            }`}>
+                                            {note.content}
+                                        </div>
+                                        <span className="text-[10px] text-slate-400 mt-1 font-bold uppercase tracking-widest">
+                                            {note.authorName || (note.author === 'HQ' ? 'Expert Juridique' : 'Moi')} • {new Date(note.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                        </span>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="h-full flex flex-col items-center justify-center text-center p-12 opacity-50">
+                                    <MessageCircle size={48} className="mb-4" />
+                                    <p className="font-bold">Aucun message pour le moment</p>
+                                    <p className="text-xs mt-1">N'hésitez pas à nous poser vos questions sur l'état de votre dossier.</p>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Input */}
+                        <div className="flex gap-2">
+                            <input
+                                type="text"
+                                value={messageText}
+                                onChange={(e) => setMessageText(e.target.value)}
+                                placeholder="Votre message..."
+                                className="flex-1 bg-slate-50 border-none rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-600"
+                                onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                            />
+                            <button
+                                onClick={handleSendMessage}
+                                className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg"
+                            >
+                                <ChevronRight size={24} />
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

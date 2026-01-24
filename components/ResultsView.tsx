@@ -17,9 +17,10 @@ interface ResultsViewProps {
     userProfile: UserProfile;
     onReset: () => void;
     serviceId?: string;
+    forceAgencyId?: string;
 }
 
-export default function ResultsView({ userProfile, onReset, serviceId }: ResultsViewProps) {
+export default function ResultsView({ userProfile, onReset, serviceId, forceAgencyId }: ResultsViewProps) {
     const [showLeadModal, setShowLeadModal] = React.useState(false);
     const [leadForm, setLeadForm] = React.useState({ name: '', phone: '' });
     const isFamilyReunification = serviceId === 'family_reunification';
@@ -152,7 +153,7 @@ export default function ResultsView({ userProfile, onReset, serviceId }: Results
 
     const handleCheckout = (amount: number, label: string) => {
         if (typeof window !== 'undefined' && window.openAuthAndPaymentFlow) {
-            window.openAuthAndPaymentFlow(serviceId || 'generic', amount * 100, label);
+            window.openAuthAndPaymentFlow(serviceId || 'generic', amount * 100, label, forceAgencyId);
         } else {
             alert(`Simulation : Commande de "${label}" pour ${amount}€`);
         }

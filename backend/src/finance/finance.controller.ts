@@ -1,4 +1,5 @@
-import { Controller, Get, Post, Body, UseGuards, Request, Query, ForbiddenException } from '@nestjs/common';
+import { Controller, Get, Post, Body, UseGuards, Request, Query, ForbiddenException, Param, Res, Header } from '@nestjs/common';
+import type { Response } from 'express';
 import { FinanceService } from './finance.service';
 import { AuthGuard } from '@nestjs/passport';
 
@@ -66,5 +67,45 @@ export class FinanceController {
         }
 
         return this.financeService.getAgencyPerformanceTrends(id);
+    }
+
+    @Get('invoices')
+    getInvoices(@Request() req: any) {
+        if (req.user.role !== 'SUPER_ADMIN' && req.user.role !== 'HQ_ADMIN') {
+            throw new ForbiddenException('Accès réservé au siège');
+        }
+        return this.financeService.getInvoices();
+    }
+
+    @Get('transactions')
+    getTransactions(@Request() req: any) {
+        if (req.user.role !== 'SUPER_ADMIN' && req.user.role !== 'HQ_ADMIN') {
+            throw new ForbiddenException('Accès réservé au siège');
+        }
+        return this.financeService.getTransactions();
+    }
+
+    @Get('credit-notes')
+    getCreditNotes(@Request() req: any) {
+        if (req.user.role !== 'SUPER_ADMIN' && req.user.role !== 'HQ_ADMIN') {
+            throw new ForbiddenException('Accès réservé au siège');
+        }
+        return this.financeService.getCreditNotes();
+    }
+
+    @Get('payouts/:id/sepa')
+    @Header('Content-Type', 'application/xml')
+    async downloadSepa(
+        @Request() req: any,
+        @Param('id') id: string,
+        @Res() res: Response
+    ) {
+        if (req.user.role !== 'SUPER_ADMIN' && req.user.role !== 'HQ_ADMIN') {
+            throw new ForbiddenException('Accès réservé au siège');
+        }
+
+        const xml = await this.financeService.generatePayoutSepaXml(id);
+        res.header('Content-Disposition', `attachment; filename=SEPA-PAYOUT-${id}.xml`);
+        return res.send(xml);
     }
 }

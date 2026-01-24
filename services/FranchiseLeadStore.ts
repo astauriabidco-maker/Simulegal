@@ -1,5 +1,5 @@
 
-export type FranchiseLeadStatus = 'NEW' | 'CONTACTED' | 'MEETING' | 'CONTRACT_SENT' | 'SIGNED' | 'REJECTED';
+export type FranchiseLeadStatus = 'NEW' | 'CONTACTED' | 'MEETING' | 'VALIDATED' | 'CONTRACT_SENT' | 'SIGNED' | 'REJECTED';
 
 export interface FranchiseLead {
     id: string;
@@ -141,5 +141,45 @@ export const FranchiseLeadStore = {
             console.error('Error signing contract:', error);
             return null;
         }
+    },
+
+    updateStatus: async (id: string, status: FranchiseLeadStatus): Promise<FranchiseLead | null> => {
+        try {
+            const response = await fetch(`${API_URL}/${id}`, {
+                method: 'PATCH',
+                headers: getHeaders(),
+                body: JSON.stringify({ status })
+            });
+            if (!response.ok) throw new Error('Failed to update status');
+            return await response.json();
+        } catch (error) {
+            console.error('Error updating status:', error);
+            return null;
+        }
+    },
+
+    getAnalytics: async (): Promise<{
+        total: number;
+        statusCounts: Record<string, number>;
+        regionCounts: Record<string, number>;
+        conversionRate: number;
+        monthlyTrend: { month: string; count: number; signed: number }[];
+    } | null> => {
+        try {
+            const response = await fetch(`${API_URL}/analytics/dashboard`, {
+                headers: getHeaders()
+            });
+            if (!response.ok) throw new Error('Failed to fetch analytics');
+            return await response.json();
+        } catch (error) {
+            console.error('Error fetching analytics:', error);
+            return null;
+        }
+    },
+
+    downloadCSV: () => {
+        const token = AuthStore.getToken();
+        window.open(`${API_URL}/export/csv?token=${token}`, '_blank');
     }
 };
+

@@ -67,4 +67,26 @@ export class FranchiseLeadsController {
     addNote(@Param('id') id: string, @Body() body: { content: string, author: string, type?: 'NOTE' | 'CALL' | 'EMAIL' }) {
         return this.franchiseLeadsService.addNote(id, body.content, body.author, body.type);
     }
+
+    // --- ANALYTICS & EXPORT ---
+
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles('HQ_ADMIN', 'SUPER_ADMIN', 'SUPERADMIN')
+    @Get('analytics/dashboard')
+    getAnalytics() {
+        return this.franchiseLeadsService.getAnalytics();
+    }
+
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles('HQ_ADMIN', 'SUPER_ADMIN', 'SUPERADMIN')
+    @Get('export/csv')
+    async exportCSV(@Res() res: Response) {
+        const csv = await this.franchiseLeadsService.exportToCSV();
+        res.set({
+            'Content-Type': 'text/csv; charset=utf-8',
+            'Content-Disposition': 'attachment; filename=franchise-leads.csv'
+        });
+        res.send('\uFEFF' + csv); // BOM for Excel UTF-8
+    }
 }
+

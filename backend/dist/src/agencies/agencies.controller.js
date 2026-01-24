@@ -24,6 +24,17 @@ let AgenciesController = class AgenciesController {
     findAll() {
         return this.agenciesService.findAll();
     }
+    async exportCSV(res) {
+        const csv = await this.agenciesService.exportToCSV();
+        res.set({
+            'Content-Type': 'text/csv; charset=utf-8',
+            'Content-Disposition': 'attachment; filename=agencies.csv'
+        });
+        res.send('\uFEFF' + csv);
+    }
+    checkAvailability(zipCode) {
+        return this.agenciesService.checkTerritoryAvailability(zipCode);
+    }
     findOne(id) {
         return this.agenciesService.findOne(id);
     }
@@ -33,8 +44,8 @@ let AgenciesController = class AgenciesController {
     update(id, data) {
         return this.agenciesService.update(id, data);
     }
-    checkAvailability(zipCode) {
-        return this.agenciesService.checkTerritoryAvailability(zipCode);
+    delete(id) {
+        return this.agenciesService.delete(id);
     }
 };
 exports.AgenciesController = AgenciesController;
@@ -44,6 +55,20 @@ __decorate([
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", void 0)
 ], AgenciesController.prototype, "findAll", null);
+__decorate([
+    (0, common_1.Get)('export/csv'),
+    __param(0, (0, common_1.Res)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], AgenciesController.prototype, "exportCSV", null);
+__decorate([
+    (0, common_1.Get)('check-availability/:zipCode'),
+    __param(0, (0, common_1.Param)('zipCode')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], AgenciesController.prototype, "checkAvailability", null);
 __decorate([
     (0, common_1.Get)(':id'),
     __param(0, (0, common_1.Param)('id')),
@@ -67,12 +92,12 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], AgenciesController.prototype, "update", null);
 __decorate([
-    (0, common_1.Get)('check-availability/:zipCode'),
-    __param(0, (0, common_1.Param)('zipCode')),
+    (0, common_1.Delete)(':id'),
+    __param(0, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", void 0)
-], AgenciesController.prototype, "checkAvailability", null);
+], AgenciesController.prototype, "delete", null);
 exports.AgenciesController = AgenciesController = __decorate([
     (0, common_1.Controller)('agencies'),
     (0, common_1.UseGuards)((0, passport_1.AuthGuard)('jwt')),

@@ -62,6 +62,24 @@ let FinanceController = class FinanceController {
         }
         return this.financeService.getAgencyPerformanceTrends(id);
     }
+    getInvoices(req) {
+        if (req.user.role !== 'SUPER_ADMIN' && req.user.role !== 'HQ_ADMIN') {
+            throw new common_1.ForbiddenException('Accès réservé au siège');
+        }
+        return this.financeService.getInvoices();
+    }
+    getTransactions(req) {
+        if (req.user.role !== 'SUPER_ADMIN' && req.user.role !== 'HQ_ADMIN') {
+            throw new common_1.ForbiddenException('Accès réservé au siège');
+        }
+        return this.financeService.getTransactions();
+    }
+    getCreditNotes(req) {
+        if (req.user.role !== 'SUPER_ADMIN' && req.user.role !== 'HQ_ADMIN') {
+            throw new common_1.ForbiddenException('Accès réservé au siège');
+        }
+        return this.financeService.getCreditNotes();
+    }
 };
 exports.FinanceController = FinanceController;
 __decorate([
@@ -111,6 +129,27 @@ __decorate([
     __metadata("design:paramtypes", [Object, String]),
     __metadata("design:returntype", void 0)
 ], FinanceController.prototype, "getPerformanceTrends", null);
+__decorate([
+    (0, common_1.Get)('invoices'),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], FinanceController.prototype, "getInvoices", null);
+__decorate([
+    (0, common_1.Get)('transactions'),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], FinanceController.prototype, "getTransactions", null);
+__decorate([
+    (0, common_1.Get)('credit-notes'),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], FinanceController.prototype, "getCreditNotes", null);
 exports.FinanceController = FinanceController = __decorate([
     (0, common_1.Controller)('finance'),
     (0, common_1.UseGuards)((0, passport_1.AuthGuard)('jwt')),

@@ -1,4 +1,5 @@
-import { Controller, Get, Post, Body, Patch, Param, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Res, UseGuards } from '@nestjs/common';
+import type { Response } from 'express';
 import { AgenciesService } from './agencies.service';
 import { AuthGuard } from '@nestjs/passport';
 
@@ -10,6 +11,21 @@ export class AgenciesController {
     @Get()
     findAll() {
         return this.agenciesService.findAll();
+    }
+
+    @Get('export/csv')
+    async exportCSV(@Res() res: Response) {
+        const csv = await this.agenciesService.exportToCSV();
+        res.set({
+            'Content-Type': 'text/csv; charset=utf-8',
+            'Content-Disposition': 'attachment; filename=agencies.csv'
+        });
+        res.send('\uFEFF' + csv);
+    }
+
+    @Get('check-availability/:zipCode')
+    checkAvailability(@Param('zipCode') zipCode: string) {
+        return this.agenciesService.checkTerritoryAvailability(zipCode);
     }
 
     @Get(':id')
@@ -27,8 +43,9 @@ export class AgenciesController {
         return this.agenciesService.update(id, data);
     }
 
-    @Get('check-availability/:zipCode')
-    checkAvailability(@Param('zipCode') zipCode: string) {
-        return this.agenciesService.checkTerritoryAvailability(zipCode);
+    @Delete(':id')
+    delete(@Param('id') id: string) {
+        return this.agenciesService.delete(id);
     }
 }
+

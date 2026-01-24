@@ -4,6 +4,9 @@ export interface UserProfile {
     nationality_group: 'EU' | 'ALGERIAN' | 'TUNISIAN' | 'NON_EU' | 'FRANCE' | 'REFUGEE' | 'STATELESS';
     born_in_france: boolean;
     lost_french_nationality?: boolean;
+    name?: string;
+    email?: string;
+    phone?: string;
   };
   timeline: {
     entry_date: string; // ISO Date
@@ -99,7 +102,7 @@ export interface UserProfile {
     maintains_home_abroad?: boolean;
   };
   project: {
-    target_goal?: 'NATURALIZATION' | 'RESIDENCE_PERMIT' | 'BOTH';
+    target_goal?: 'NATURALIZATION' | 'RESIDENCE_PERMIT' | 'BOTH' | 'SERVICE';
   };
   driving: {
     status?: 'STUDENT' | 'TOURIST' | 'WORKER_VP' | 'EU_NATIONAL';

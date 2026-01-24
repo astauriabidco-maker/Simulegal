@@ -11,14 +11,16 @@ const common_1 = require("@nestjs/common");
 const leads_service_1 = require("./leads.service");
 const leads_controller_1 = require("./leads.controller");
 const prisma_module_1 = require("../prisma/prisma.module");
+const invoices_module_1 = require("../invoices/invoices.module");
 let LeadsModule = class LeadsModule {
 };
 exports.LeadsModule = LeadsModule;
 exports.LeadsModule = LeadsModule = __decorate([
     (0, common_1.Module)({
-        imports: [prisma_module_1.PrismaModule],
+        imports: [prisma_module_1.PrismaModule, invoices_module_1.InvoicesModule],
         providers: [leads_service_1.LeadsService],
-        controllers: [leads_controller_1.LeadsController]
+        controllers: [leads_controller_1.LeadsController],
+        exports: [leads_service_1.LeadsService]
     })
 ], LeadsModule);
 //# sourceMappingURL=leads.module.js.map

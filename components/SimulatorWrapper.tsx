@@ -16,12 +16,17 @@ import CallbackStep from '@/components/steps/CallbackStep';
 import ResultsView from '@/components/ResultsView';
 import { LEGAL_QUESTIONS } from '@/data/modules/legal';
 import { Scale, ArrowRight } from 'lucide-react';
+import { SERVICES_CATALOG } from '@/data/services';
+import { CRM } from '@/services/crmStore';
 
 const INITIAL_STATE: UserProfile = {
     identity: {
         age: 25,
         nationality_group: 'NON_EU',
         born_in_france: false,
+        name: '',
+        email: '',
+        phone: ''
     },
     timeline: {
         entry_date: new Date().toISOString().split('T')[0],
@@ -113,19 +118,29 @@ const INITIAL_STATE: UserProfile = {
 
 interface SimulatorWrapperProps {
     serviceId?: string;
+    forceAgencyId?: string;
+    onComplete?: () => void;
 }
 
-export default function SimulatorWrapper({ serviceId }: SimulatorWrapperProps) {
+export default function SimulatorWrapper({ serviceId, forceAgencyId, onComplete }: SimulatorWrapperProps) {
     const [step, setStep] = useState(1);
-    const [userProfile, setUserProfile] = useState<UserProfile>(INITIAL_STATE);
+    const [userProfile, setUserProfile] = useState<UserProfile>({
+        ...INITIAL_STATE,
+        project: {
+            ...INITIAL_STATE.project,
+            target_goal: serviceId ? 'SERVICE' : 'BOTH'
+        }
+    });
 
-    const isFamilyReunification = serviceId === 'family_reunification';
-    const isDrivingExchange = serviceId === 'permis_conduire';
-    const isRdvPrefecture = serviceId === 'rdv_prefecture';
-    const isLegalConsultation = serviceId === 'rdv_juriste';
-    const isFrenchCourse = serviceId === 'french_course';
-    const isCivicExam = serviceId === 'examen_civique';
-    const isCallback = serviceId === 'rappel_echeances';
+    const selectedServiceId = serviceId || '';
+
+    const isFamilyReunification = selectedServiceId === 'family_reunification';
+    const isDrivingExchange = selectedServiceId === 'permis_conduire';
+    const isRdvPrefecture = selectedServiceId === 'rdv_prefecture';
+    const isLegalConsultation = selectedServiceId === 'rdv_juriste';
+    const isFrenchCourse = selectedServiceId === 'french_course';
+    const isCivicExam = selectedServiceId === 'examen_civique';
+    const isCallback = selectedServiceId === 'rappel_echeances';
 
     // Standard: Identity(1), History(2), Activity(3), Family(4), Results(5)
     // Family/Driving/RDV/Juriste/French/Civic/Callback: Questionnaire(1), Results(2)
@@ -326,7 +341,7 @@ export default function SimulatorWrapper({ serviceId }: SimulatorWrapperProps) {
                         onNext={nextStep}
                     />;
                 case 2:
-                    return <ResultsView userProfile={userProfile} onReset={() => setStep(1)} serviceId={serviceId} />;
+                    return <ResultsView userProfile={userProfile} onReset={() => setStep(1)} serviceId={selectedServiceId} forceAgencyId={forceAgencyId} />;
                 default:
                     return null;
             }
@@ -343,7 +358,7 @@ export default function SimulatorWrapper({ serviceId }: SimulatorWrapperProps) {
                         onNext={nextStep}
                     />;
                 case 2:
-                    return <ResultsView userProfile={userProfile} onReset={() => setStep(1)} serviceId={serviceId} />;
+                    return <ResultsView userProfile={userProfile} onReset={() => setStep(1)} serviceId={selectedServiceId} forceAgencyId={forceAgencyId} />;
                 default:
                     return null;
             }
@@ -360,20 +375,37 @@ export default function SimulatorWrapper({ serviceId }: SimulatorWrapperProps) {
                         onNext={nextStep}
                     />;
                 case 2:
-                    return <ResultsView userProfile={userProfile} onReset={() => setStep(1)} serviceId={serviceId} />;
+                    return <ResultsView userProfile={userProfile} onReset={() => setStep(1)} serviceId={selectedServiceId} forceAgencyId={forceAgencyId} />;
                 default:
                     return null;
             }
         }
 
         if (isLegalConsultation) {
-            const openPaymentFlow = (amount: number) => {
-                // @ts-ignore
-                if (window.openAuthAndPaymentFlow) {
-                    // @ts-ignore
-                    window.openAuthAndPaymentFlow(amount / 100);
+            const openPaymentFlow = async (amount: number) => {
+                // En mode Kiosque ou Agency, on crée juste le lead
+                const leadData = {
+                    name: userProfile.identity.name || 'Candidat Anonyme',
+                    email: userProfile.identity.email || '',
+                    phone: userProfile.identity.phone || '',
+                    serviceId: selectedServiceId,
+                    serviceName: SERVICES_CATALOG.find(s => s.id === selectedServiceId)?.title || 'Service Premium',
+                    originAgencyId: forceAgencyId || null,
+                    status: 'NEW',
+                    amountPaid: 0
+                };
+
+                const lead = await CRM.saveLead(leadData);
+                if (lead && onComplete) {
+                    onComplete();
                 } else {
-                    alert(`Simulation : Paiement de ${amount / 100}€ pour Consultation Juridique`);
+                    // @ts-ignore
+                    if (window.openAuthAndPaymentFlow) {
+                        // @ts-ignore
+                        window.openAuthAndPaymentFlow(amount / 100);
+                    } else {
+                        alert(`Dossier ${lead?.id} créé avec succès !`);
+                    }
                 }
             };
 
@@ -459,7 +491,7 @@ export default function SimulatorWrapper({ serviceId }: SimulatorWrapperProps) {
                         onNext={nextStep}
                     />;
                 case 2:
-                    return <ResultsView userProfile={userProfile} onReset={() => setStep(1)} serviceId={serviceId} />;
+                    return <ResultsView userProfile={userProfile} onReset={() => setStep(1)} serviceId={selectedServiceId} forceAgencyId={forceAgencyId} />;
                 default:
                     return null;
             }
@@ -476,7 +508,7 @@ export default function SimulatorWrapper({ serviceId }: SimulatorWrapperProps) {
                         onNext={nextStep}
                     />;
                 case 2:
-                    return <ResultsView userProfile={userProfile} onReset={() => setStep(1)} serviceId={serviceId} />;
+                    return <ResultsView userProfile={userProfile} onReset={() => setStep(1)} serviceId={selectedServiceId} forceAgencyId={forceAgencyId} />;
                 default:
                     return null;
             }
@@ -493,7 +525,7 @@ export default function SimulatorWrapper({ serviceId }: SimulatorWrapperProps) {
                         onNext={nextStep}
                     />;
                 case 2:
-                    return <ResultsView userProfile={userProfile} onReset={() => setStep(1)} serviceId={serviceId} />;
+                    return <ResultsView userProfile={userProfile} onReset={() => setStep(1)} serviceId={selectedServiceId} forceAgencyId={forceAgencyId} />;
                 default:
                     return null;
             }
@@ -510,7 +542,7 @@ export default function SimulatorWrapper({ serviceId }: SimulatorWrapperProps) {
             case 4:
                 return <FamilyVulnerabilityStep data={userProfile} update={updateProfile} onNext={nextStep} onBack={prevStep} canNext={canNext} />;
             case 5:
-                return <ResultsView userProfile={userProfile} onReset={() => setStep(1)} serviceId={serviceId} />;
+                return <ResultsView userProfile={userProfile} onReset={() => setStep(1)} serviceId={selectedServiceId} forceAgencyId={forceAgencyId} />;
             default:
                 return null;
         }

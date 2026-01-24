@@ -10,25 +10,38 @@ export class LeadsService {
     ) { }
 
     async findAll() {
-        return this.prisma.lead.findMany({
+        const leads = await this.prisma.lead.findMany({
             include: { notes: true, originAgency: true },
             orderBy: { createdAt: 'desc' }
         });
+        return leads.map(l => this.mapLead(l));
     }
 
     async findByAgency(agencyId: string) {
-        return this.prisma.lead.findMany({
+        const leads = await this.prisma.lead.findMany({
             where: { originAgencyId: agencyId },
             include: { notes: true },
             orderBy: { createdAt: 'desc' }
         });
+        return leads.map(l => this.mapLead(l));
     }
 
     async findOne(id: string) {
-        return this.prisma.lead.findUnique({
+        const lead = await this.prisma.lead.findUnique({
             where: { id },
             include: { notes: true, originAgency: true }
         });
+        if (!lead) return null;
+        return this.mapLead(lead);
+    }
+
+    private mapLead(lead: any) {
+        return {
+            ...lead,
+            documents: lead.documents ? JSON.parse(lead.documents) : [],
+            contract: lead.contract ? JSON.parse(lead.contract) : null,
+            requiredDocs: lead.requiredDocs ? JSON.parse(lead.requiredDocs) : null
+        };
     }
 
     async updateStatus(id: string, status: any) {
@@ -38,10 +51,12 @@ export class LeadsService {
             await this.notifications.onStageChange(lead, lead.status, status);
         }
 
-        return this.prisma.lead.update({
+        const updatedLead = await this.prisma.lead.update({
             where: { id },
             data: { status }
         });
+
+        return this.mapLead(updatedLead);
     }
 
     async assignUser(id: string, userId: string) {
@@ -59,23 +74,25 @@ export class LeadsService {
     }
 
     async updateDocuments(id: string, documents: any[]) {
-        const lead = await this.prisma.lead.findUnique({ where: { id } });
+        const existingLead = await this.prisma.lead.findUnique({ where: { id } });
 
-        if (lead) {
-            const oldDocs = JSON.parse(lead.documents || '[]');
+        if (existingLead) {
+            const oldDocs = JSON.parse(existingLead.documents || '[]');
             // Trouver les documents qui viennent d'être rejetés
             for (const newDoc of documents) {
                 const oldDoc = oldDocs.find((d: any) => d.id === newDoc.id);
                 if (newDoc.status === 'REJECTED' && oldDoc?.status !== 'REJECTED') {
-                    await this.notifications.onDocumentRejected(lead, newDoc.docType);
+                    await this.notifications.onDocumentRejected(existingLead, newDoc.docType);
                 }
             }
         }
 
-        return this.prisma.lead.update({
+        const lead = await this.prisma.lead.update({
             where: { id },
             data: { documents: JSON.stringify(documents) }
         });
+
+        return this.mapLead(lead);
     }
 
     async addNote(leadId: string, data: { content: string, author: string }) {
@@ -95,15 +112,56 @@ export class LeadsService {
         // Si l'ID n'est pas fourni, on en génère un type SL-XXXXX
         const leadId = data.id || `SL-${Math.floor(Math.random() * 90000 + 10000)}`;
 
-        return this.prisma.lead.create({
+        const { name, email, phone, serviceId, serviceName, status, amountPaid, originAgencyId } = rest;
+
+        const lead = await this.prisma.lead.create({
             data: {
-                ...rest,
                 id: leadId,
-                status: currentStage || rest.status || 'NEW',
+                name,
+                email,
+                phone,
+                serviceId,
+                serviceName,
+                status: status || currentStage || 'NEW',
+                amountPaid: amountPaid || 0,
+                originAgencyId,
                 contract: contract ? JSON.stringify(contract) : null,
                 documents: documents ? JSON.stringify(documents) : '[]',
                 requiredDocs: requiredDocuments ? JSON.stringify(requiredDocuments) : null,
+                data: JSON.stringify(rest)
             }
+        });
+
+        return this.mapLead(lead);
+    }
+
+    async recordPayment(id: string, data: { amount: number, method: string, reference?: string }) {
+        const lead = await this.prisma.lead.findUnique({ where: { id } });
+        if (!lead) throw new Error('Lead not found');
+
+        const newAmount = (lead.amountPaid || 0) + data.amount;
+
+        // On génère un numéro de facture si c'est le premier paiement
+        const invoiceNumber = lead.invoiceNumber || `FAC-${new Date().getFullYear()}-${id.split('-').pop()}`;
+
+        const updatedLead = await this.prisma.lead.update({
+            where: { id },
+            data: {
+                amountPaid: newAmount,
+                paymentMethod: data.method,
+                paymentDate: new Date(),
+                paymentRef: data.reference,
+                invoiceNumber,
+                status: 'PAID'
+            }
+        });
+
+        return this.mapLead(updatedLead);
+    }
+
+    async delete(id: string) {
+        return this.prisma.lead.delete({
+            where: { id }
         });
     }
 }

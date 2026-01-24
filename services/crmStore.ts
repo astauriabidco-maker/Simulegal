@@ -39,24 +39,30 @@ export interface Lead {
     // Service & Business
     serviceId: string;       // ex: 'regroupement_familial'
     serviceName: string;
+    status: string; // From backend LeadStatus
+
+    // Billing
     amountPaid: number;
     paymentStatus: PaymentStatus;
-    status: string; // From backend LeadStatus
+    paymentMethod?: string;
+    paymentDate?: string;
+    paymentRef?: string;
+    invoiceNumber?: string;
 
     // Logistique Réseau
     originAgencyId?: string; // ID de l'agence/borne (pour commissions)
     assignedUser?: string;   // Juriste du siège assigné
 
     // Opérations - Workflow
-    currentStage: WorkflowStage;  // L'étape actuelle du pipeline
-    documents: LeadDocument[];    // Documents avec statut de vérification
+    currentStage?: WorkflowStage;  // L'étape actuelle du pipeline
+    documents?: LeadDocument[];    // Documents avec statut de vérification
 
     // Legacy compatibility
     notes?: LeadNote[];
     requiredDocuments?: DocumentRequirement[];
 
     // Juridique (Preuve)
-    contract: {
+    contract?: {
         signedAt: string;
         ipAddress: string;    // IP de signature
         consentVersion: string; // ex: "v1.0"

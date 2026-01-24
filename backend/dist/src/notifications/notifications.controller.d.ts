@@ -60,4 +60,29 @@ export declare class NotificationsController {
         oldStage: string;
         newStage: string;
     }): Promise<void>;
+    testEmail(data: {
+        to: string;
+        template: 'welcome' | 'diagnostic' | 'appointment' | 'payment' | 'reminder';
+    }): Promise<{
+        success: boolean;
+        messageId: any;
+        error?: undefined;
+    } | {
+        success: boolean;
+        error: any;
+        messageId?: undefined;
+    } | {
+        error: string;
+    }>;
+    refreshSmtp(): Promise<{
+        success: boolean;
+        message: string;
+    }>;
+    testSmtp(data: {
+        to?: string;
+    }): Promise<{
+        success: boolean;
+        messageId: any;
+        message: string;
+    }>;
 }

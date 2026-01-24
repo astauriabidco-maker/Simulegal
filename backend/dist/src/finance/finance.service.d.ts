@@ -61,4 +61,106 @@ export declare class FinanceService {
         commission: number;
         count: number;
     }[]>;
+    getInvoices(): Promise<({
+        originAgency: {
+            id: string;
+            name: string;
+            type: import(".prisma/client").$Enums.AgencyType;
+            status: import(".prisma/client").$Enums.AgencyStatus;
+            region: string;
+            city: string;
+            zipCodes: string;
+            commissionRate: number;
+            serviceCommissionOverrides: string | null;
+            contactEmail: string;
+            kioskUrl: string;
+            createdAt: Date;
+            updatedAt: Date;
+        } | null;
+    } & {
+        data: string;
+        id: string;
+        name: string;
+        status: import(".prisma/client").$Enums.LeadStatus;
+        createdAt: Date;
+        updatedAt: Date;
+        email: string;
+        phone: string;
+        serviceId: string;
+        serviceName: string;
+        amountPaid: number;
+        paymentMethod: string | null;
+        paymentDate: Date | null;
+        paymentRef: string | null;
+        invoiceNumber: string | null;
+        contract: string | null;
+        documents: string;
+        requiredDocs: string | null;
+        originAgencyId: string | null;
+        assignedUserId: string | null;
+    })[]>;
+    getTransactions(): Promise<({
+        lead: {
+            data: string;
+            id: string;
+            name: string;
+            status: import(".prisma/client").$Enums.LeadStatus;
+            createdAt: Date;
+            updatedAt: Date;
+            email: string;
+            phone: string;
+            serviceId: string;
+            serviceName: string;
+            amountPaid: number;
+            paymentMethod: string | null;
+            paymentDate: Date | null;
+            paymentRef: string | null;
+            invoiceNumber: string | null;
+            contract: string | null;
+            documents: string;
+            requiredDocs: string | null;
+            originAgencyId: string | null;
+            assignedUserId: string | null;
+        };
+    } & {
+        id: string;
+        type: string;
+        createdAt: Date;
+        invoiceNumber: string | null;
+        leadId: string;
+        amount: number;
+        reference: string | null;
+        method: string | null;
+    })[]>;
+    getCreditNotes(): Promise<({
+        lead: {
+            data: string;
+            id: string;
+            name: string;
+            status: import(".prisma/client").$Enums.LeadStatus;
+            createdAt: Date;
+            updatedAt: Date;
+            email: string;
+            phone: string;
+            serviceId: string;
+            serviceName: string;
+            amountPaid: number;
+            paymentMethod: string | null;
+            paymentDate: Date | null;
+            paymentRef: string | null;
+            invoiceNumber: string | null;
+            contract: string | null;
+            documents: string;
+            requiredDocs: string | null;
+            originAgencyId: string | null;
+            assignedUserId: string | null;
+        };
+    } & {
+        number: string;
+        id: string;
+        createdAt: Date;
+        leadId: string;
+        amount: number;
+        reason: string;
+    })[]>;
 }

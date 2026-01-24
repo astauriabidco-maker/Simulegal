@@ -21,23 +21,36 @@ let LeadsService = class LeadsService {
         this.notifications = notifications;
     }
     async findAll() {
-        return this.prisma.lead.findMany({
+        const leads = await this.prisma.lead.findMany({
             include: { notes: true, originAgency: true },
             orderBy: { createdAt: 'desc' }
         });
+        return leads.map(l => this.mapLead(l));
     }
     async findByAgency(agencyId) {
-        return this.prisma.lead.findMany({
+        const leads = await this.prisma.lead.findMany({
             where: { originAgencyId: agencyId },
             include: { notes: true },
             orderBy: { createdAt: 'desc' }
         });
+        return leads.map(l => this.mapLead(l));
     }
     async findOne(id) {
-        return this.prisma.lead.findUnique({
+        const lead = await this.prisma.lead.findUnique({
             where: { id },
             include: { notes: true, originAgency: true }
         });
+        if (!lead)
+            return null;
+        return this.mapLead(lead);
+    }
+    mapLead(lead) {
+        return {
+            ...lead,
+            documents: lead.documents ? JSON.parse(lead.documents) : [],
+            contract: lead.contract ? JSON.parse(lead.contract) : null,
+            requiredDocs: lead.requiredDocs ? JSON.parse(lead.requiredDocs) : null
+        };
     }
     async updateStatus(id, status) {
         const lead = await this.prisma.lead.findUnique({ where: { id } });
@@ -45,10 +58,11 @@ let LeadsService = class LeadsService {
             console.log(`[LeadsService] Updating lead ${id} status from ${lead.status} to ${status}`);
             await this.notifications.onStageChange(lead, lead.status, status);
         }
-        return this.prisma.lead.update({
+        const updatedLead = await this.prisma.lead.update({
             where: { id },
             data: { status }
         });
+        return this.mapLead(updatedLead);
     }
     async assignUser(id, userId) {
         const lead = await this.prisma.lead.findUnique({ where: { id } });
@@ -62,20 +76,21 @@ let LeadsService = class LeadsService {
         });
     }
     async updateDocuments(id, documents) {
-        const lead = await this.prisma.lead.findUnique({ where: { id } });
-        if (lead) {
-            const oldDocs = JSON.parse(lead.documents || '[]');
+        const existingLead = await this.prisma.lead.findUnique({ where: { id } });
+        if (existingLead) {
+            const oldDocs = JSON.parse(existingLead.documents || '[]');
             for (const newDoc of documents) {
                 const oldDoc = oldDocs.find((d) => d.id === newDoc.id);
                 if (newDoc.status === 'REJECTED' && oldDoc?.status !== 'REJECTED') {
-                    await this.notifications.onDocumentRejected(lead, newDoc.docType);
+                    await this.notifications.onDocumentRejected(existingLead, newDoc.docType);
                 }
             }
         }
-        return this.prisma.lead.update({
+        const lead = await this.prisma.lead.update({
             where: { id },
             data: { documents: JSON.stringify(documents) }
         });
+        return this.mapLead(lead);
     }
     async addNote(leadId, data) {
         return this.prisma.leadNote.create({
@@ -89,15 +104,48 @@ let LeadsService = class LeadsService {
     async create(data) {
         const { currentStage, contract, documents, requiredDocuments, ...rest } = data;
         const leadId = data.id || `SL-${Math.floor(Math.random() * 90000 + 10000)}`;
-        return this.prisma.lead.create({
+        const { name, email, phone, serviceId, serviceName, status, amountPaid, originAgencyId } = rest;
+        const lead = await this.prisma.lead.create({
             data: {
-                ...rest,
                 id: leadId,
-                status: currentStage || rest.status || 'NEW',
+                name,
+                email,
+                phone,
+                serviceId,
+                serviceName,
+                status: status || currentStage || 'NEW',
+                amountPaid: amountPaid || 0,
+                originAgencyId,
                 contract: contract ? JSON.stringify(contract) : null,
                 documents: documents ? JSON.stringify(documents) : '[]',
                 requiredDocs: requiredDocuments ? JSON.stringify(requiredDocuments) : null,
+                data: JSON.stringify(rest)
             }
+        });
+        return this.mapLead(lead);
+    }
+    async recordPayment(id, data) {
+        const lead = await this.prisma.lead.findUnique({ where: { id } });
+        if (!lead)
+            throw new Error('Lead not found');
+        const newAmount = (lead.amountPaid || 0) + data.amount;
+        const invoiceNumber = lead.invoiceNumber || `FAC-${new Date().getFullYear()}-${id.split('-').pop()}`;
+        const updatedLead = await this.prisma.lead.update({
+            where: { id },
+            data: {
+                amountPaid: newAmount,
+                paymentMethod: data.method,
+                paymentDate: new Date(),
+                paymentRef: data.reference,
+                invoiceNumber,
+                status: 'PAID'
+            }
+        });
+        return this.mapLead(updatedLead);
+    }
+    async delete(id) {
+        return this.prisma.lead.delete({
+            where: { id }
         });
     }
 };

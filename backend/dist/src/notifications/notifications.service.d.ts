@@ -1,9 +1,18 @@
 import { ConfigService } from '@nestjs/config';
+import { EmailTemplatesService } from './email-templates.service';
+import { SettingsService } from '../settings/settings.service';
 export declare class NotificationsService {
     private configService;
+    private emailTemplates;
+    private settingsService;
     private twilioClient;
-    private mailTransporter;
-    constructor(configService: ConfigService);
+    private cachedSmtpConfig;
+    private lastConfigCheck;
+    private readonly CONFIG_TTL;
+    constructor(configService: ConfigService, emailTemplates: EmailTemplatesService, settingsService: SettingsService);
+    private getSmtpConfig;
+    private createTransporter;
+    refreshSmtpConfig(): Promise<void>;
     sendWhatsApp(phone: string, template: string, params: any): Promise<{
         success: boolean;
         messageId?: undefined;
@@ -17,11 +26,76 @@ export declare class NotificationsService {
         error: any;
         messageId?: undefined;
     }>;
-    sendEmail(to: string, subject: string, body: string): Promise<{
+    sendEmail(to: string, subject: string, body: string, html?: string): Promise<{
         success: boolean;
-        messageId?: undefined;
+        messageId: any;
         error?: undefined;
     } | {
+        success: boolean;
+        error: any;
+        messageId?: undefined;
+    }>;
+    sendWelcomeEmail(user: {
+        name: string;
+        email: string;
+    }, tempPassword: string): Promise<{
+        success: boolean;
+        messageId: any;
+        error?: undefined;
+    } | {
+        success: boolean;
+        error: any;
+        messageId?: undefined;
+    }>;
+    sendDiagnosticInvitation(prospect: {
+        name: string;
+        email: string;
+    }, magicLink: string): Promise<{
+        success: boolean;
+        messageId: any;
+        error?: undefined;
+    } | {
+        success: boolean;
+        error: any;
+        messageId?: undefined;
+    }>;
+    sendAppointmentConfirmationEmail(lead: {
+        name: string;
+        email: string;
+    }, appointment: {
+        start: Date;
+        type: 'VISIO_JURISTE' | 'PHYSICAL_AGENCY';
+        meetingLink?: string;
+        agencyAddress?: string;
+    }): Promise<{
+        success: boolean;
+        messageId: any;
+        error?: undefined;
+    } | {
+        success: boolean;
+        error: any;
+        messageId?: undefined;
+    }>;
+    sendPaymentConfirmation(lead: {
+        name: string;
+        email: string;
+    }, amount: number, refundCode: string): Promise<{
+        success: boolean;
+        messageId: any;
+        error?: undefined;
+    } | {
+        success: boolean;
+        error: any;
+        messageId?: undefined;
+    }>;
+    sendAppointmentReminder(lead: {
+        name: string;
+        email: string;
+    }, appointment: {
+        start: Date;
+        type: 'VISIO_JURISTE' | 'PHYSICAL_AGENCY';
+        meetingLink?: string;
+    }): Promise<{
         success: boolean;
         messageId: any;
         error?: undefined;

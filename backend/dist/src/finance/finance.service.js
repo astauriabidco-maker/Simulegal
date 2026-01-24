@@ -170,6 +170,25 @@ let FinanceService = class FinanceService {
         }));
         return trends;
     }
+    async getInvoices() {
+        return this.prisma.lead.findMany({
+            where: { invoiceNumber: { not: null } },
+            include: { originAgency: true },
+            orderBy: { paymentDate: 'desc' }
+        });
+    }
+    async getTransactions() {
+        return this.prisma.transaction.findMany({
+            include: { lead: true },
+            orderBy: { createdAt: 'desc' }
+        });
+    }
+    async getCreditNotes() {
+        return this.prisma.creditNote.findMany({
+            include: { lead: true },
+            orderBy: { createdAt: 'desc' }
+        });
+    }
 };
 exports.FinanceService = FinanceService;
 exports.FinanceService = FinanceService = __decorate([

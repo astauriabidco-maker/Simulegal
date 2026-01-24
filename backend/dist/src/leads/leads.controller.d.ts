@@ -1,16 +1,12 @@
 import { LeadsService } from './leads.service';
+import { InvoicesService } from '../invoices/invoices.service';
 export declare class LeadsController {
     private readonly leadsService;
-    constructor(leadsService: LeadsService);
-    findAll(req: any, agencyId?: string): Promise<({
-        notes: {
-            id: string;
-            createdAt: Date;
-            content: string;
-            author: string;
-            leadId: string;
-        }[];
-    } & {
+    private readonly invoicesService;
+    constructor(leadsService: LeadsService, invoicesService: InvoicesService);
+    findAll(req: any, agencyId?: string): Promise<any[]>;
+    remove(req: any, id: string): Promise<{
+        data: string;
         id: string;
         name: string;
         status: import(".prisma/client").$Enums.LeadStatus;
@@ -21,86 +17,49 @@ export declare class LeadsController {
         serviceId: string;
         serviceName: string;
         amountPaid: number;
+        paymentMethod: string | null;
+        paymentDate: Date | null;
+        paymentRef: string | null;
+        invoiceNumber: string | null;
         contract: string | null;
         documents: string;
         requiredDocs: string | null;
         originAgencyId: string | null;
         assignedUserId: string | null;
-    })[]>;
-    findOne(id: string): Promise<({
-        originAgency: {
-            id: string;
+    }>;
+    recordPayment(id: string, data: {
+        amount: number;
+        method: string;
+        reference?: string;
+    }): Promise<any>;
+    getInvoice(id: string): Promise<{
+        invoiceNumber: string | null;
+        date: Date;
+        client: {
             name: string;
-            type: import(".prisma/client").$Enums.AgencyType;
-            status: import(".prisma/client").$Enums.AgencyStatus;
-            region: string;
+            email: string;
+            phone: string;
+        };
+        service: {
+            name: string;
+            amount: number;
+        };
+        agency: {
+            name: string;
             city: string;
-            zipCodes: string;
-            commissionRate: number;
-            serviceCommissionOverrides: string | null;
-            contactEmail: string;
-            kioskUrl: string;
-            createdAt: Date;
-            updatedAt: Date;
-        } | null;
-        notes: {
-            id: string;
-            createdAt: Date;
-            content: string;
-            author: string;
-            leadId: string;
-        }[];
-    } & {
-        id: string;
-        name: string;
-        status: import(".prisma/client").$Enums.LeadStatus;
-        createdAt: Date;
-        updatedAt: Date;
-        email: string;
-        phone: string;
-        serviceId: string;
-        serviceName: string;
-        amountPaid: number;
-        contract: string | null;
-        documents: string;
-        requiredDocs: string | null;
-        originAgencyId: string | null;
-        assignedUserId: string | null;
-    }) | null>;
-    create(data: any): Promise<{
-        id: string;
-        name: string;
-        status: import(".prisma/client").$Enums.LeadStatus;
-        createdAt: Date;
-        updatedAt: Date;
-        email: string;
-        phone: string;
-        serviceId: string;
-        serviceName: string;
-        amountPaid: number;
-        contract: string | null;
-        documents: string;
-        requiredDocs: string | null;
-        originAgencyId: string | null;
-        assignedUserId: string | null;
+        };
+        payment: {
+            method: string | null;
+            reference: string | null;
+        };
     }>;
-    updateStatus(id: string, status: string): Promise<{
-        id: string;
-        name: string;
-        status: import(".prisma/client").$Enums.LeadStatus;
-        createdAt: Date;
-        updatedAt: Date;
-        email: string;
-        phone: string;
-        serviceId: string;
-        serviceName: string;
-        amountPaid: number;
-        contract: string | null;
-        documents: string;
-        requiredDocs: string | null;
-        originAgencyId: string | null;
-        assignedUserId: string | null;
-    }>;
+    downloadPdf(id: string): Promise<{
+        filename: string;
+        content: string;
+    } | null>;
+    findOne(id: string): Promise<any>;
+    create(data: any): Promise<any>;
+    updateStatus(id: string, status: string): Promise<any>;
     addNote(id: string, data: {
         content: string;
         author: string;
@@ -112,6 +71,7 @@ export declare class LeadsController {
         leadId: string;
     }>;
     assignUser(id: string, userId: string): Promise<{
+        data: string;
         id: string;
         name: string;
         status: import(".prisma/client").$Enums.LeadStatus;
@@ -122,27 +82,15 @@ export declare class LeadsController {
         serviceId: string;
         serviceName: string;
         amountPaid: number;
+        paymentMethod: string | null;
+        paymentDate: Date | null;
+        paymentRef: string | null;
+        invoiceNumber: string | null;
         contract: string | null;
         documents: string;
         requiredDocs: string | null;
         originAgencyId: string | null;
         assignedUserId: string | null;
     }>;
-    updateDocuments(id: string, documents: any[]): Promise<{
-        id: string;
-        name: string;
-        status: import(".prisma/client").$Enums.LeadStatus;
-        createdAt: Date;
-        updatedAt: Date;
-        email: string;
-        phone: string;
-        serviceId: string;
-        serviceName: string;
-        amountPaid: number;
-        contract: string | null;
-        documents: string;
-        requiredDocs: string | null;
-        originAgencyId: string | null;
-        assignedUserId: string | null;
-    }>;
+    updateDocuments(id: string, documents: any[]): Promise<any>;
 }

@@ -14,8 +14,12 @@ import {
     CheckCircle,
     Building2,
     Lock,
-    ShieldCheck
+    ShieldCheck,
+    Download,
+    DollarSign,
+    Plus
 } from 'lucide-react';
+import { BillingStore } from '../../services/BillingStore';
 
 interface FranchiseCaseDetailProps {
     leadId: string;
@@ -41,6 +45,8 @@ export default function FranchiseCaseDetail({
     const [lead, setLead] = useState<Lead | null>(null);
     const [newNote, setNewNote] = useState('');
     const [isSending, setIsSending] = useState(false);
+    const [showPaymentForm, setShowPaymentForm] = useState(false);
+    const [paymentData, setPaymentData] = useState({ amount: 0, method: 'CARD', ref: '' });
 
     useEffect(() => {
         if (isOpen && leadId) {
@@ -56,13 +62,24 @@ export default function FranchiseCaseDetail({
 
     const statusConfig = STATUS_CONFIG[lead.status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.NEW;
 
+    const handleRecordPayment = async () => {
+        if (paymentData.amount <= 0) return;
+        const updated = await BillingStore.recordPayment(leadId, paymentData.amount * 100, paymentData.method, paymentData.ref);
+        if (updated) {
+            setLead({ ...lead, ...updated });
+            setShowPaymentForm(false);
+            setPaymentData({ amount: 0, method: 'CARD', ref: '' });
+        }
+    };
+
+    const handleDownloadInvoice = () => {
+        BillingStore.downloadInvoicePdf(leadId);
+    };
+
     const handleSendNote = async () => {
         if (!newNote.trim()) return;
 
         setIsSending(true);
-        // Simule un délai réseau
-        await new Promise(resolve => setTimeout(resolve, 500));
-
         const updatedLead = await CRM.addNote(leadId, {
             author: 'AGENCY',
             authorName: agencyName,
@@ -170,11 +187,80 @@ export default function FranchiseCaseDetail({
                                         <p className="font-bold text-indigo-800 text-sm">Signature électronique</p>
                                     </div>
                                     <div className="text-xs text-indigo-700 space-y-1">
-                                        <p>Signé le : {new Date(lead.contract.signedAt).toLocaleString('fr-FR')}</p>
-                                        <p>Version CGV : {lead.contract.consentVersion}</p>
+                                        <p>Signé le : {new Date(lead.contract).toLocaleString('fr-FR')}</p>
                                     </div>
                                 </div>
                             )}
+
+                            {/* Section FACTURATION */}
+                            <div className="border-t border-slate-100 pt-6 mt-6">
+                                <div className="flex items-center justify-between mb-4">
+                                    <h3 className="font-bold text-slate-900 flex items-center gap-2">
+                                        <DollarSign size={18} className="text-emerald-600" />
+                                        Facturation & Paiement
+                                    </h3>
+                                    {lead.invoiceNumber && (
+                                        <button
+                                            onClick={handleDownloadInvoice}
+                                            className="text-xs font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
+                                        >
+                                            <Download size={14} /> Facture {lead.invoiceNumber}
+                                        </button>
+                                    )}
+                                </div>
+
+                                {!showPaymentForm ? (
+                                    <button
+                                        onClick={() => setShowPaymentForm(true)}
+                                        className="w-full py-3 border-2 border-dashed border-slate-200 rounded-xl text-slate-400 font-bold text-sm hover:border-emerald-300 hover:text-emerald-600 transition-all flex items-center justify-center gap-2"
+                                    >
+                                        <Plus size={16} /> Enregistrer un encaissement
+                                    </button>
+                                ) : (
+                                    <div className="bg-slate-50 rounded-xl p-4 border border-emerald-100 animate-in slide-in-from-top-2">
+                                        <div className="grid grid-cols-2 gap-3 mb-3">
+                                            <input
+                                                type="number"
+                                                placeholder="Montant (€)"
+                                                value={paymentData.amount || ''}
+                                                onChange={e => setPaymentData({ ...paymentData, amount: parseFloat(e.target.value) })}
+                                                className="p-2 rounded-lg border-none ring-1 ring-slate-200 focus:ring-emerald-500 font-bold text-sm"
+                                            />
+                                            <select
+                                                value={paymentData.method}
+                                                onChange={e => setPaymentData({ ...paymentData, method: e.target.value })}
+                                                className="p-2 rounded-lg border-none ring-1 ring-slate-200 focus:ring-emerald-500 font-bold text-sm"
+                                            >
+                                                <option value="CARD">CB (TPE)</option>
+                                                <option value="CASH">Espèces</option>
+                                                <option value="TRANSFER">Virement</option>
+                                                <option value="CHECK">Chèque</option>
+                                            </select>
+                                        </div>
+                                        <input
+                                            type="text"
+                                            placeholder="Référence (N° transaction, etc)"
+                                            value={paymentData.ref}
+                                            onChange={e => setPaymentData({ ...paymentData, ref: e.target.value })}
+                                            className="w-full p-2 rounded-lg border-none ring-1 ring-slate-200 focus:ring-emerald-500 font-bold text-sm mb-3"
+                                        />
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={handleRecordPayment}
+                                                className="flex-1 bg-emerald-600 text-white py-2 rounded-lg font-bold text-sm hover:bg-emerald-700 transition-colors"
+                                            >
+                                                Valider l'encaissement
+                                            </button>
+                                            <button
+                                                onClick={() => setShowPaymentForm(false)}
+                                                className="px-4 py-2 bg-slate-200 text-slate-600 rounded-lg font-bold text-sm hover:bg-slate-300 transition-colors"
+                                            >
+                                                Annuler
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
 

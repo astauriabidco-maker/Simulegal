@@ -11,6 +11,7 @@ export declare class AppointmentsService {
         orderBy?: Prisma.AppointmentOrderByWithRelationInput;
     }): Promise<any[]>;
     findLeadById(id: string): Promise<{
+        data: string;
         id: string;
         name: string;
         status: import(".prisma/client").$Enums.LeadStatus;
@@ -21,6 +22,10 @@ export declare class AppointmentsService {
         serviceId: string;
         serviceName: string;
         amountPaid: number;
+        paymentMethod: string | null;
+        paymentDate: Date | null;
+        paymentRef: string | null;
+        invoiceNumber: string | null;
         contract: string | null;
         documents: string;
         requiredDocs: string | null;

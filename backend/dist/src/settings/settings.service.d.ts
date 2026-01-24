@@ -15,9 +15,9 @@ export declare class SettingsService implements OnModuleInit {
     updateSection(section: string, data: any): Promise<{
         id: string;
         updatedAt: Date;
-        notifications: string;
         company: string;
         payment: string;
+        notifications: string;
         integrations: string;
         storage: string;
     }>;

@@ -113,5 +113,38 @@ export const FinanceStore = {
             console.error('[Finance] ❌ Erreur API règlements:', error);
             return [];
         }
+    },
+
+    getInvoices: async (): Promise<Lead[]> => {
+        try {
+            const response = await fetch(`${API_URL}/invoices`, { headers: getHeaders() });
+            if (!response.ok) throw new Error('Erreur chargement factures');
+            return response.json();
+        } catch (error) {
+            console.error('[Finance] ❌ Erreur API factures:', error);
+            return [];
+        }
+    },
+
+    getTransactions: async (): Promise<any[]> => {
+        try {
+            const response = await fetch(`${API_URL}/transactions`, { headers: getHeaders() });
+            if (!response.ok) throw new Error('Erreur chargement transactions');
+            return response.json();
+        } catch (error) {
+            console.error('[Finance] ❌ Erreur API transactions:', error);
+            return [];
+        }
+    },
+
+    getCreditNotes: async (): Promise<any[]> => {
+        try {
+            const response = await fetch(`${API_URL}/credit-notes`, { headers: getHeaders() });
+            if (!response.ok) throw new Error('Erreur chargement avoirs');
+            return response.json();
+        } catch (error) {
+            console.error('[Finance] ❌ Erreur API avoirs:', error);
+            return [];
+        }
     }
 };

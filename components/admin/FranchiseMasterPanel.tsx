@@ -5,7 +5,9 @@ import { Plus, Search, Building2, Store, QrCode, MapPin, TrendingUp, Percent, Ch
 import { AgencyExt, AgencyStore } from '../../services/AgencyStore';
 import FranceMap from './FranceMap';
 
-const PerformanceTrendChart = ({ data }: { data: any[] }) => {
+const PerformanceTrendChart = ({ data, agencyId }: { data: any[], agencyId: string }) => {
+    const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+
     if (!data || data.length === 0) return (
         <div className="h-64 flex flex-col items-center justify-center bg-slate-50 rounded-[32px] border-2 border-dashed border-slate-200">
             <BarChart3 className="text-slate-300 mb-2" size={32} />
@@ -18,8 +20,14 @@ const PerformanceTrendChart = ({ data }: { data: any[] }) => {
     const height = 120;
     const width = 500;
 
+    const downloadSepaSample = async () => {
+        // Just as an example, for the current agency, 
+        // in a real scenario we'd use a specific payout from a list
+        window.open(`http://localhost:3001/finance/payouts/LATEST/sepa?agencyId=${agencyId}`, '_blank');
+    };
+
     return (
-        <div className="space-y-8">
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
             {/* GMV Chart */}
             <div className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-sm relative overflow-hidden group">
                 <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
@@ -39,6 +47,17 @@ const PerformanceTrendChart = ({ data }: { data: any[] }) => {
                                 <stop offset="0%" stopColor="#6366f1" />
                                 <stop offset="100%" stopColor="#818cf8" />
                             </linearGradient>
+                            <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+                                <feGaussianBlur in="SourceAlpha" stdDeviation="3" />
+                                <feOffset dx="0" dy="4" result="offsetblur" />
+                                <feComponentTransfer>
+                                    <feFuncA type="linear" slope="0.2" />
+                                </feComponentTransfer>
+                                <feMerge>
+                                    <feMergeNode />
+                                    <feMergeNode in="SourceGraphic" />
+                                </feMerge>
+                            </filter>
                         </defs>
 
                         {/* Grid */}
@@ -51,19 +70,34 @@ const PerformanceTrendChart = ({ data }: { data: any[] }) => {
                             const barHeight = (d.gmv / maxGMV) * height;
                             const x = (i * (width / data.length)) + (width / data.length / 4);
                             const barWidth = width / data.length / 2;
+                            const isActive = hoveredIndex === i;
 
                             return (
-                                <g key={i} className="group/bar transition-all duration-300">
+                                <g
+                                    key={i}
+                                    className="group/bar cursor-pointer"
+                                    onMouseEnter={() => setHoveredIndex(i)}
+                                    onMouseLeave={() => setHoveredIndex(null)}
+                                >
                                     <rect
                                         x={x} y={height - barHeight}
                                         width={barWidth} height={barHeight}
-                                        fill="url(#gmvGradient)" rx="6"
-                                        className="transition-all duration-500 group-hover/bar:brightness-110"
+                                        fill="url(#gmvGradient)" rx="8"
+                                        filter={isActive ? "url(#shadow)" : ""}
+                                        className={`transition-all duration-300 ${isActive ? 'brightness-110 -translate-y-1' : 'brightness-100 opacity-80'}`}
                                     />
-                                    <text x={x + barWidth / 2} y={height + 25} textAnchor="middle" className="text-[10px] font-black fill-slate-400 uppercase">{d.period}</text>
-                                    <text x={x + barWidth / 2} y={height - barHeight - 10} textAnchor="middle" className="text-[10px] font-black fill-indigo-600 opacity-0 group-hover/bar:opacity-100 transition-opacity">
-                                        {d.gmv.toLocaleString()}€
-                                    </text>
+                                    <text x={x + barWidth / 2} y={height + 25} textAnchor="middle" className={`text-[10px] font-black transition-colors duration-300 uppercase ${isActive ? 'fill-indigo-600' : 'fill-slate-400'}`}>{d.period}</text>
+
+                                    {/* Tooltip-like value */}
+                                    <g className={`transition-all duration-300 transform ${isActive ? 'opacity-100 -translate-y-2' : 'opacity-0 translate-y-2'}`}>
+                                        <rect
+                                            x={x + barWidth / 2 - 35} y={height - barHeight - 40}
+                                            width="70" height="25" rx="12" fill="#1e293b"
+                                        />
+                                        <text x={x + barWidth / 2} y={height - barHeight - 24} textAnchor="middle" className="text-[9px] font-bold fill-white">
+                                            {d.gmv.toLocaleString()}€
+                                        </text>
+                                    </g>
                                 </g>
                             );
                         })}
@@ -73,21 +107,25 @@ const PerformanceTrendChart = ({ data }: { data: any[] }) => {
 
             {/* Conversion Sparklines / Lead Volume */}
             <div className="grid grid-cols-2 gap-6">
-                <div className="bg-slate-900 p-8 rounded-[32px] text-white">
+                <div className="bg-slate-900 p-8 rounded-[32px] text-white overflow-hidden relative group">
+                    <div className="absolute top-[-20%] right-[-10%] opacity-10 group-hover:scale-110 transition-transform duration-700">
+                        <Users size={160} />
+                    </div>
                     <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">Volume Dossiers</p>
-                    <div className="flex items-end gap-6">
-                        <div className="flex-1">
-                            <p className="text-4xl font-black tracking-tighter mb-1">{data.reduce((sum, d) => sum + d.count, 0)}</p>
+                    <div className="flex items-end justify-between relative z-10">
+                        <div>
+                            <p className="text-4xl font-black tracking-tighter mb-1 leading-none">{data.reduce((sum, d) => sum + d.count, 0)}</p>
                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total 6 derniers mois</p>
                         </div>
-                        <div className="flex gap-1 items-end h-16">
+                        <div className="flex gap-1.5 items-end h-16">
                             {data.map((d, i) => {
                                 const dotHeight = (d.count / maxCount) * 100;
                                 return (
                                     <div
                                         key={i}
-                                        className="w-2 bg-indigo-500 rounded-full transition-all duration-500"
-                                        style={{ height: `${Math.max(dotHeight, 10)}%` }}
+                                        className="w-2.5 bg-indigo-500 rounded-full transition-all duration-500 hover:brightness-125"
+                                        style={{ height: `${Math.max(dotHeight, 15)}%` }}
+                                        title={`${d.period}: ${d.count}`}
                                     />
                                 );
                             })}
@@ -95,21 +133,41 @@ const PerformanceTrendChart = ({ data }: { data: any[] }) => {
                     </div>
                 </div>
 
-                <div className="bg-indigo-600 p-8 rounded-[32px] text-white">
+                <div className="bg-indigo-600 p-8 rounded-[32px] text-white group hover:bg-indigo-700 transition-colors duration-300 cursor-pointer overflow-hidden relative">
+                    <div className="absolute top-[-20%] left-[-10%] opacity-10 group-hover:rotate-12 transition-transform duration-700">
+                        <DollarSign size={160} />
+                    </div>
                     <p className="text-[10px] font-black text-indigo-300 uppercase tracking-widest mb-4">Moyenne Panier</p>
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between relative z-10">
                         <div>
-                            <p className="text-4xl font-black tracking-tighter mb-1">
+                            <p className="text-4xl font-black tracking-tighter mb-1 leading-none">
                                 {Math.round(data.reduce((sum, d) => sum + d.gmv, 0) / Math.max(data.reduce((sum, d) => sum + d.count, 0), 1))}€
                             </p>
                             <p className="text-[10px] font-bold text-indigo-200 uppercase tracking-widest">Par dossier payé</p>
                         </div>
-                        <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center">
+                        <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm group-hover:scale-110 transition-transform">
                             <Percent size={24} />
                         </div>
                     </div>
                 </div>
             </div>
+
+            {/* Export Actions (Simulated) */}
+            {data.length > 0 && (
+                <div className="bg-white border-2 border-slate-100 rounded-[32px] p-2 flex items-center">
+                    <div className="px-6 flex-1">
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Opérations bancaires</p>
+                        <p className="text-xs font-bold text-slate-700">Générer le virement de commission de ce mois</p>
+                    </div>
+                    <button
+                        onClick={downloadSepaSample}
+                        className="bg-indigo-600 hover:bg-slate-900 text-white px-6 py-4 rounded-3xl font-black text-xs uppercase tracking-widest flex items-center gap-2 transition-all shadow-lg active:scale-95"
+                    >
+                        <Download size={16} />
+                        Export SEPA XML
+                    </button>
+                </div>
+            )}
         </div>
     );
 };
@@ -136,10 +194,12 @@ export default function FranchiseMasterPanel() {
         type: 'OWNED',
         commissionRate: 0,
         contactEmail: '',
-        zipCodes: '',
+        zipCodes: [],
         status: 'ACTIVE',
         region: ''
     });
+
+    const [zipCodesString, setZipCodesString] = useState('');
 
     useEffect(() => {
         loadData();
@@ -185,17 +245,19 @@ export default function FranchiseMasterPanel() {
         if (agency) {
             setSelectedAgency(agency);
             setFormData(agency);
+            setZipCodesString(Array.isArray(agency.zipCodes) ? agency.zipCodes.join(', ') : '');
             loadPerformance(agency.id);
         } else {
             setSelectedAgency(null);
             setPerformanceTrends([]);
+            setZipCodesString('');
             setFormData({
                 id: '',
                 name: '',
                 type: 'OWNED',
                 commissionRate: 0,
                 contactEmail: '',
-                zipCodes: '',
+                zipCodes: [],
                 status: 'ACTIVE',
                 region: ''
             });
@@ -206,10 +268,13 @@ export default function FranchiseMasterPanel() {
 
     const handleSave = async () => {
         try {
+            const finalZipCodes = zipCodesString.split(',').map(s => s.trim()).filter(Boolean);
+            const dataToSave = { ...formData, zipCodes: finalZipCodes };
+
             if (selectedAgency) {
-                await AgencyStore.updateAgency(selectedAgency.id, formData);
+                await AgencyStore.updateAgency(selectedAgency.id, dataToSave);
             } else {
-                await AgencyStore.addAgency(formData as any);
+                await AgencyStore.addAgency(dataToSave as any);
             }
             await loadData();
             setIsModalOpen(false);
@@ -225,7 +290,7 @@ export default function FranchiseMasterPanel() {
     };
 
     const handleCheckTerritory = async () => {
-        const codes = formData.zipCodes?.split(',').map(s => s.trim()).filter(Boolean) || [];
+        const codes = zipCodesString.split(',').map(s => s.trim()).filter(Boolean);
         if (codes.length === 0) return;
 
         setIsValidating(true);
@@ -457,7 +522,7 @@ export default function FranchiseMasterPanel() {
                                             <p className="text-slate-400 font-bold text-xs uppercase tracking-widest">Agrégation des données...</p>
                                         </div>
                                     ) : (
-                                        <PerformanceTrendChart data={performanceTrends} />
+                                        <PerformanceTrendChart data={performanceTrends} agencyId={selectedAgency?.id || ''} />
                                     )}
                                 </div>
                             )}
@@ -577,8 +642,8 @@ export default function FranchiseMasterPanel() {
                                             <textarea
                                                 className="w-full h-32 bg-slate-50 border-2 border-slate-100 rounded-2xl p-4 font-bold text-slate-900 focus:border-indigo-500 outline-none resize-none"
                                                 placeholder="75001, 75002..."
-                                                value={formData.zipCodes}
-                                                onChange={(e) => setFormData({ ...formData, zipCodes: e.target.value })}
+                                                value={zipCodesString}
+                                                onChange={(e) => setZipCodesString(e.target.value)}
                                             />
                                             <div className="flex flex-wrap gap-2">
                                                 {Object.entries(territoryValidation).map(([code, result]) => (

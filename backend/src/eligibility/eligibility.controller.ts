@@ -1,4 +1,4 @@
-import { Controller, Get, Param } from '@nestjs/common';
+import { Controller, Get, Param, Post, Body } from '@nestjs/common';
 import { EligibilityService } from './eligibility.service';
 
 @Controller('eligibility')
@@ -13,5 +13,10 @@ export class EligibilityController {
     @Get('rules/:category')
     getRules(@Param('category') category: string) {
         return this.service.getRules(category);
+    }
+
+    @Post('evaluate/:category')
+    evaluate(@Param('category') category: string, @Body() userProfile: any) {
+        return this.service.evaluateEligibility(userProfile, category);
     }
 }

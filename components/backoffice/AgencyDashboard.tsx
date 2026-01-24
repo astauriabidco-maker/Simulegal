@@ -4,10 +4,13 @@ import React, { useState, useEffect } from 'react';
 import { CRM, Lead } from '../../services/crmStore';
 import { Agency } from '../../types/backoffice';
 import FranchiseCaseDetail from './FranchiseCaseDetail';
+import SimulatorWrapper from '../SimulatorWrapper';
 import { AuthStore } from '../../services/authStore';
 import { AgencyStore } from '../../services/AgencyStore';
+import { WorkflowService } from '../../services/WorkflowService';
 import {
     Phone,
+    X,
     Eye,
     DollarSign,
     CheckCircle,
@@ -48,6 +51,8 @@ export default function AgencyDashboard() {
     const [areaLeads, setAreaLeads] = useState<Lead[]>([]); // Leads dans la zone géo à rappeler
     const [currentAgency, setCurrentAgency] = useState<any>(null);
     const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
+    const [showSimulator, setShowSimulator] = useState(false);
+    const [performanceTrends, setPerformanceTrends] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
@@ -84,6 +89,10 @@ export default function AgencyDashboard() {
                 });
                 setAreaLeads(leadsInArea);
             }
+
+            // 5. Charger les tendances de performance
+            const trends = await AgencyStore.getPerformanceTrends(agencyId);
+            setPerformanceTrends(trends);
         } catch (error) {
             console.error('[AgencyDashboard] Erreur chargement:', error);
         } finally {
@@ -104,8 +113,8 @@ export default function AgencyDashboard() {
     };
     const commissionAmount = (commissionStats.totalCA * commissionStats.commissionRate) / 100;
 
-    const getStatusBadge = (status: string) => {
-        switch (status) {
+    const getStatusBadge = (lead: Lead) => {
+        switch (lead.status) {
             case 'PAID':
                 return { label: 'Payé', color: 'bg-emerald-100 text-emerald-700', icon: <DollarSign size={12} /> };
             case 'PROCESSING':
@@ -113,7 +122,8 @@ export default function AgencyDashboard() {
             case 'COMPLETED':
                 return { label: 'Finalisé', color: 'bg-blue-100 text-blue-700', icon: <CheckCircle size={12} /> };
             default:
-                return { label: status, color: 'bg-slate-100 text-slate-700', icon: <AlertCircle size={12} /> };
+                const workflowLabel = lead.currentStage ? WorkflowService.getStageLabel(lead.currentStage) : lead.status;
+                return { label: workflowLabel, color: 'bg-slate-100 text-slate-700', icon: <AlertCircle size={12} /> };
         }
     };
 
@@ -142,7 +152,17 @@ export default function AgencyDashboard() {
                         </p>
                     </div>
 
-                    <div className="ml-auto flex items-center gap-3">
+                    <div className="ml-auto flex items-center gap-6">
+                        <button
+                            onClick={() => setShowSimulator(true)}
+                            className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-lg shadow-indigo-200 flex items-center gap-2 group"
+                        >
+                            <User size={16} className="group-hover:scale-110 transition-transform" />
+                            Nouveau Client (Simulation)
+                        </button>
+
+                        <div className="h-10 w-px bg-slate-100 mx-2" />
+
                         <div className="text-right">
                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Mon Taux</p>
                             <p className="text-xl font-black text-emerald-600">{currentAgency?.commissionRate}%</p>
@@ -256,7 +276,7 @@ export default function AgencyDashboard() {
                                 </thead>
                                 <tbody className="divide-y divide-slate-50">
                                     {productionDossiers.map(lead => {
-                                        const badge = getStatusBadge(lead.currentStage);
+                                        const badge = getStatusBadge(lead);
                                         return (
                                             <tr key={lead.id} className="hover:bg-slate-50/50 transition-colors">
                                                 <td className="p-6">
@@ -286,11 +306,89 @@ export default function AgencyDashboard() {
                     </div>
                 )}
 
-                {/* ONGLET 3: COMMISSIONS */}
+                {/* ONGLET 3: COMMISSIONS & PILOTAGE */}
                 {activeTab === 'commissions' && (
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                         <div className="lg:col-span-2 space-y-8">
-                            {/* Stats */}
+                            {/* Graphique de Performance */}
+                            <div className="bg-white rounded-[2.5rem] p-8 border border-slate-200 shadow-sm">
+                                <div className="flex items-center justify-between mb-8">
+                                    <div>
+                                        <h3 className="font-black text-slate-900 uppercase tracking-wider text-sm">Tendances de Performance</h3>
+                                        <p className="text-xs text-slate-400 font-medium">Evolution du GMV et des commissions sur 6 mois</p>
+                                    </div>
+                                    <div className="flex items-center gap-4">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-3 h-3 bg-indigo-600 rounded-full" />
+                                            <span className="text-[10px] font-black text-slate-400 uppercase">GMV</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-3 h-3 bg-emerald-500 rounded-full" />
+                                            <span className="text-[10px] font-black text-slate-400 uppercase">Comm.</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="h-64 w-full flex items-end justify-between gap-4 px-2">
+                                    {performanceTrends.length > 0 ? performanceTrends.map((t, i) => {
+                                        const maxGmv = Math.max(...performanceTrends.map(p => p.gmv), 1);
+                                        const height = (t.gmv / maxGmv) * 100;
+                                        return (
+                                            <div key={i} className="flex-1 flex flex-col items-center gap-2 group h-full justify-end">
+                                                <div className="relative w-full flex flex-col items-center justify-end h-full">
+                                                    {/* GMV Bar */}
+                                                    <div
+                                                        className="w-full bg-indigo-100 rounded-t-xl hover:bg-indigo-200 transition-all relative group-hover:shadow-lg"
+                                                        style={{ height: `${height}%` }}
+                                                    >
+                                                        {/* Commission Overlay */}
+                                                        <div
+                                                            className="absolute bottom-0 left-0 right-0 bg-emerald-400 rounded-t-xl opacity-80"
+                                                            style={{ height: `${(t.commission / (t.gmv || 1)) * 100}%` }}
+                                                        />
+
+                                                        {/* Tooltip */}
+                                                        <div className="absolute -top-12 left-1/2 -translate-x-1/2 bg-slate-900 text-white p-2 rounded-lg text-[10px] font-bold opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
+                                                            GMV: {t.gmv}€<br />
+                                                            Comm: {t.commission.toFixed(0)}€
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <span className="text-[10px] font-black text-slate-400 uppercase">{t.period}</span>
+                                            </div>
+                                        );
+                                    }) : (
+                                        <div className="w-full h-full flex items-center justify-center text-slate-300 font-bold italic">
+                                            Chargement des données...
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Entonnoir de Conversion */}
+                            <div className="bg-white rounded-[2.5rem] p-8 border border-slate-200 shadow-sm relative overflow-hidden">
+                                <h3 className="font-black text-slate-900 uppercase tracking-wider text-sm mb-8">Entonnoir de Conversion</h3>
+                                <div className="space-y-4">
+                                    {[
+                                        { label: 'Leads Identifiés', count: myLeads.length, color: 'bg-slate-100' },
+                                        { label: 'Dossiers Signés', count: productionDossiers.length, color: 'bg-indigo-100' },
+                                        { label: 'En Traitement', count: productionDossiers.filter(d => d.status === 'PROCESSING').length, color: 'bg-blue-100' },
+                                        { label: 'Payés / Finalisés', count: productionDossiers.filter(d => d.status === 'PAID' || d.status === 'COMPLETED').length, color: 'bg-emerald-100' },
+                                    ].map((step, i, arr) => {
+                                        const width = (step.count / (arr[0].count || 1)) * 100;
+                                        return (
+                                            <div key={i} className="relative">
+                                                <div className={`h-12 ${step.color} rounded-2xl flex items-center px-6 transition-all duration-1000`} style={{ width: `${Math.max(width, 20)}%` }}>
+                                                    <span className="text-[10px] font-black text-slate-900 uppercase whitespace-nowrap">{step.label}</span>
+                                                    <span className="ml-auto font-black text-slate-900">{step.count}</span>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            {/* Stats Cards */}
                             <div className="grid grid-cols-2 gap-6">
                                 <div className="bg-white rounded-3xl p-8 border border-slate-200">
                                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">CA Total Apporté</p>
@@ -307,42 +405,70 @@ export default function AgencyDashboard() {
                                     </div>
                                 </div>
                             </div>
-
-                            {/* Info */}
-                            <div className="bg-indigo-900 rounded-3xl p-8 text-white">
-                                <div className="flex items-start gap-4">
-                                    <div className="p-3 bg-white/10 rounded-2xl">
-                                        <AlertCircle size={24} />
-                                    </div>
-                                    <div>
-                                        <h3 className="text-lg font-black mb-2 uppercase tracking-wide">Règlement des commissions</h3>
-                                        <p className="text-indigo-100 text-sm leading-relaxed">
-                                            Vos commissions sont validées mensuellement après clôture des dossiers par le siège.
-                                            Les virements sont effectués le 5 de chaque mois pour le mois précédent.
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
                         </div>
 
-                        {/* Side List */}
-                        <div className="bg-white rounded-3xl border border-slate-200 p-6">
-                            <h3 className="font-black text-slate-900 uppercase tracking-wider text-xs mb-6">Derniers Apports</h3>
-                            <div className="space-y-6">
-                                {productionDossiers.slice(0, 5).map(l => (
-                                    <div key={l.id} className="flex items-center justify-between">
-                                        <div>
-                                            <p className="text-xs font-black text-slate-800">{l.name}</p>
-                                            <p className="text-[10px] text-slate-400 font-bold">{new Date(l.createdAt).toLocaleDateString()}</p>
+                        {/* Side List - Activités Récentes */}
+                        <div className="space-y-6">
+                            <div className="bg-white rounded-3xl border border-slate-200 p-6">
+                                <h3 className="font-black text-slate-900 uppercase tracking-wider text-[10px] mb-6 flex items-center gap-2">
+                                    <Clock size={14} className="text-indigo-600" />
+                                    Activités Récentes Apports
+                                </h3>
+                                <div className="space-y-6">
+                                    {productionDossiers.slice(0, 8).map(l => (
+                                        <div key={l.id} className="flex items-center justify-between group cursor-pointer" onClick={() => setSelectedLeadId(l.id)}>
+                                            <div className="min-w-0">
+                                                <p className="text-xs font-black text-slate-800 truncate group-hover:text-indigo-600 transition-colors">{l.name}</p>
+                                                <p className="text-[10px] text-slate-400 font-bold">{new Date(l.createdAt).toLocaleDateString()}</p>
+                                            </div>
+                                            <p className="text-xs font-black text-emerald-600 whitespace-nowrap">+{(l.amountPaid / 100 * (currentAgency?.commissionRate || 15) / 100).toFixed(2)} €</p>
                                         </div>
-                                        <p className="text-xs font-black text-emerald-600">+{(l.amountPaid / 100 * (currentAgency?.commissionRate || 15) / 100).toFixed(2)} €</p>
-                                    </div>
-                                ))}
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="bg-slate-900 rounded-3xl p-8 text-white">
+                                <h3 className="text-xs font-black mb-4 uppercase tracking-widest text-indigo-400">Rappel Règlement</h3>
+                                <p className="text-slate-400 text-[10px] leading-relaxed font-medium">
+                                    Les commissions sont versées mensuellement le 5 du mois suivant. Assurez-vous d'avoir fourni votre RIB à Simulegal HQ.
+                                </p>
                             </div>
                         </div>
                     </div>
                 )}
             </div>
+
+            {/* Modale Simulateur */}
+            {showSimulator && (
+                <div className="fixed inset-0 z-[100] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+                    <div className="bg-slate-50 w-full max-w-5xl h-[90vh] rounded-[3rem] shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in duration-300">
+                        <div className="p-6 border-b border-slate-200 flex justify-between items-center bg-white">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-black">S</div>
+                                <div>
+                                    <h3 className="font-black text-slate-900 uppercase tracking-tight">Nouvelle Simulation Agence</h3>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Client en présence physique • Agence {currentAgency?.name}</p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => setShowSimulator(false)}
+                                className="w-10 h-10 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-xl flex items-center justify-center transition-colors"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+                        <div className="flex-1 overflow-auto py-8">
+                            <SimulatorWrapper
+                                forceAgencyId={currentAgency?.id}
+                                onComplete={() => {
+                                    setShowSimulator(false);
+                                    loadAgencyData(currentAgency?.id); // Rafraîchir les leads
+                                }}
+                            />
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Modale Détail Dossier */}
             <FranchiseCaseDetail

@@ -112,7 +112,7 @@ export class AppointmentsService {
                     content: `📅 Rendez-vous ${data.type === 'VISIO_JURISTE' ? 'Visio' : 'en Agence'} confirmé pour le ${start.toLocaleDateString()} à ${start.toLocaleTimeString()}`
                 }
             });
-        } catch (error) {
+        } catch (error: any) {
             console.warn(`[Appointments] Could not update lead:`, error.message);
         }
 

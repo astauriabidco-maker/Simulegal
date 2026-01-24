@@ -8,8 +8,8 @@ export declare class AbsencesController {
         updatedAt: Date;
         end: Date;
         userId: string;
-        start: Date;
         reason: string | null;
+        start: Date;
     }[]>;
     create(data: {
         userId: string;
@@ -22,8 +22,8 @@ export declare class AbsencesController {
         updatedAt: Date;
         end: Date;
         userId: string;
-        start: Date;
         reason: string | null;
+        start: Date;
     }>;
     remove(id: string): Promise<{
         id: string;
@@ -31,7 +31,7 @@ export declare class AbsencesController {
         updatedAt: Date;
         end: Date;
         userId: string;
-        start: Date;
         reason: string | null;
+        start: Date;
     }>;
 }

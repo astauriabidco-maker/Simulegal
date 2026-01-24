@@ -10,7 +10,7 @@ import { Building2, LayoutDashboard, X, Radio, Shield } from 'lucide-react';
 
 declare global {
   interface Window {
-    openAuthAndPaymentFlow: (serviceId: string, price: number, name?: string) => void;
+    openAuthAndPaymentFlow: (serviceId: string, price: number, name?: string, forceAgencyId?: string) => void;
     kioskPartnerId: string | null;
   }
 }
@@ -46,7 +46,7 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    window.openAuthAndPaymentFlow = (serviceId: string, price: number, name?: string) => {
+    window.openAuthAndPaymentFlow = (serviceId: string, price: number, name?: string, forceAgencyId?: string) => {
       const names: Record<string, string> = {
         'titre_sejour': 'Accompagnement Titre de Séjour',
         'naturalisation': 'Dossier de Naturalisation',
@@ -60,6 +60,10 @@ export default function Home() {
         serviceName: name || names[serviceId] || 'Service Premium',
         price
       });
+      // On injecte le code partenaire si forcé (pour dashboard agence)
+      if (forceAgencyId) {
+        setPartnerId(forceAgencyId);
+      }
       setIsCheckoutOpen(true);
     };
   }, []);

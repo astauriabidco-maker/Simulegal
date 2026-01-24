@@ -15,8 +15,10 @@ export default function FranchiseLeadDetailPage() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [formData, setFormData] = useState<Partial<FranchiseLead>>({});
-    const [contractConfig, setContractConfig] = useState({
-        isExclusive: true
+    const [contractConfig, setContractConfig] = useState<any>({
+        isExclusive: true,
+        type: 'FRANCHISE',
+        commissionRate: 15
     });
     const [documents, setDocuments] = useState<any[]>([]);
     const [contractHistory, setContractHistory] = useState<any[]>([]);

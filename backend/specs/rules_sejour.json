@@ -1,0 +1,1031 @@
+[
+    {
+        "id": "carte_resident_refugie_apatride",
+        "name": "Carte de Résident - Réfugié / Apatride (10 ans)",
+        "description": "Délivrée de plein droit dès la reconnaissance du statut (Art. L. 424-1 et L. 424-3).",
+        "priority": 98,
+        "source_ref": "CESEDA L. 424-1, L. 424-3",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "identity.nationality_group",
+                    "op": "IN",
+                    "val": [
+                        "REFUGEE",
+                        "STATELESS"
+                    ]
+                },
+                {
+                    "var": "civic.clean_criminal_record",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "civic.no_expulsion_order",
+                    "op": "EQ",
+                    "val": true
+                }
+            ]
+        }
+    },
+    {
+        "id": "carte_resident_longue_duree_ue",
+        "name": "Carte de résident de longue durée - UE (10 ans)",
+        "description": "Pour les étrangers résidant légalement en France depuis 5 ans sans interruption.",
+        "priority": 100,
+        "source_ref": "39, 40",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "identity.nationality_group",
+                    "op": "NEQ",
+                    "val": "EU"
+                },
+                {
+                    "var": "timeline.years_continuous_residence",
+                    "op": "GTE",
+                    "val": "@config:duration_thresholds.residence_in_france.resident_longue_duree_ue"
+                },
+                {
+                    "var": "financial.resources_stable_sufficient",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "admin.health_insurance",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "integration.french_level",
+                    "op": "GTE",
+                    "val": "B1"
+                },
+                {
+                    "var": "integration.civic_exam_passed",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "civic.clean_criminal_record",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "civic.no_expulsion_order",
+                    "op": "EQ",
+                    "val": true
+                }
+            ]
+        }
+    },
+    {
+        "id": "carte_resident_conjoint_francais",
+        "name": "Carte de résident - Conjoint de Français (10 ans)",
+        "description": "Accessible après 3 ans de mariage (1 an si Tunisien).",
+        "priority": 95,
+        "source_ref": "37, 38",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "family.spouse_nationality",
+                    "op": "EQ",
+                    "val": "FRENCH"
+                },
+                {
+                    "OR": [
+                        {
+                            "AND": [
+                                {
+                                    "var": "identity.nationality_group",
+                                    "op": "EQ",
+                                    "val": "TUNISIAN"
+                                },
+                                {
+                                    "var": "family.marriage_duration_years",
+                                    "op": "GTE",
+                                    "val": "@config:duration_thresholds.marriage_duration.pour_carte_resident_conjoint_francais_tunisien"
+                                }
+                            ]
+                        },
+                        {
+                            "AND": [
+                                {
+                                    "var": "identity.nationality_group",
+                                    "op": "NEQ",
+                                    "val": "TUNISIAN"
+                                },
+                                {
+                                    "var": "family.marriage_duration_years",
+                                    "op": "GTE",
+                                    "val": "@config:duration_thresholds.marriage_duration.pour_carte_resident_conjoint_francais"
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "var": "family.community_of_life",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "family.is_polygamous",
+                    "op": "EQ",
+                    "val": false
+                },
+                {
+                    "var": "integration.french_level",
+                    "op": "GTE",
+                    "val": "B1"
+                },
+                {
+                    "var": "integration.civic_exam_passed",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "civic.clean_criminal_record",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "civic.no_expulsion_order",
+                    "op": "EQ",
+                    "val": true
+                }
+            ]
+        }
+    },
+    {
+        "id": "carte_resident_regroupement_familial",
+        "name": "Carte de résident - Regroupement Familial (10 ans)",
+        "description": "Pour les personnes entrées par regroupement familial, après 3 ans de résidence.",
+        "priority": 94,
+        "source_ref": "41",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "admin.entry_mode",
+                    "op": "EQ",
+                    "val": "FAMILY_REUNIFICATION"
+                },
+                {
+                    "var": "timeline.years_continuous_residence",
+                    "op": "GTE",
+                    "val": 3
+                },
+                {
+                    "var": "family.community_of_life",
+                    "op": "EQ",
+                    "val": true
+                }
+            ]
+        }
+    },
+    {
+        "id": "passeport_talent_carte_bleue_eu",
+        "name": "Passeport Talent - Carte Bleue Européenne (4 ans)",
+        "description": "Travailleur hautement qualifié (Bac+3 min) avec salaire élevé.",
+        "priority": 90,
+        "source_ref": "24",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "work.contract_duration_months",
+                    "op": "GTE",
+                    "val": 12
+                },
+                {
+                    "var": "work.annual_gross_salary",
+                    "op": "GTE",
+                    "val": "@config:financial_thresholds.salary_annual_gross.passeport_talent_carte_bleue_eu"
+                },
+                {
+                    "OR": [
+                        {
+                            "var": "education.years_higher_education",
+                            "op": "GTE",
+                            "val": 3
+                        },
+                        {
+                            "var": "work.years_experience_comparable",
+                            "op": "GTE",
+                            "val": 5
+                        }
+                    ]
+                },
+                {
+                    "var": "integration.french_level",
+                    "op": "GTE",
+                    "val": "A2"
+                },
+                {
+                    "var": "integration.civic_exam_passed",
+                    "op": "EQ",
+                    "val": true
+                }
+            ]
+        }
+    },
+    {
+        "id": "passeport_talent_investisseur",
+        "name": "Passeport Talent - Investisseur (4 ans)",
+        "description": "Investissement direct d'au moins 300 000 €.",
+        "priority": 89,
+        "source_ref": "29",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "investment.amount",
+                    "op": "GTE",
+                    "val": "@config:financial_thresholds.investments.investisseur_eco_fonds"
+                },
+                {
+                    "var": "investment.creates_jobs",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "integration.french_level",
+                    "op": "GTE",
+                    "val": "A2"
+                },
+                {
+                    "var": "integration.civic_exam_passed",
+                    "op": "EQ",
+                    "val": true
+                }
+            ]
+        }
+    },
+    {
+        "id": "passeport_talent_salarie_qualifie",
+        "name": "Passeport Talent - Salarié Qualifié (4 ans)",
+        "description": "Diplômé Master (ou équivalent) avec salaire > 43k€.",
+        "priority": 88,
+        "source_ref": "22",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "education.diploma_level",
+                    "op": "IN",
+                    "val": [
+                        "MASTER",
+                        "PHD",
+                        "SPECIALIZED_MASTER"
+                    ]
+                },
+                {
+                    "var": "work.contract_duration_months",
+                    "op": "GTE",
+                    "val": 3
+                },
+                {
+                    "var": "work.annual_gross_salary",
+                    "op": "GTE",
+                    "val": "@config:financial_thresholds.salary_annual_gross.passeport_talent_salarie_qualifie"
+                }
+            ]
+        }
+    },
+    {
+        "id": "passeport_talent_entreprise_innovante",
+        "name": "Passeport Talent - Entreprise Innovante (4 ans)",
+        "description": "Recrutement par une Jeune Entreprise Innovante (JEI) pour R&D.",
+        "priority": 87,
+        "source_ref": "23",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "work.is_innovative_company",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "work.job_related_to_rd",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "work.annual_gross_salary",
+                    "op": "GTE",
+                    "val": "@config:financial_thresholds.salary_annual_gross.passeport_talent_salarie_qualifie"
+                }
+            ]
+        }
+    },
+    {
+        "id": "passeport_talent_mandataire",
+        "name": "Passeport Talent - Mandataire Social (4 ans)",
+        "description": "Représentant légal d'une entreprise avec 3 mois d'ancienneté groupe.",
+        "priority": 86,
+        "source_ref": "30",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "work.company_role",
+                    "op": "EQ",
+                    "val": "MANDATAIRE"
+                },
+                {
+                    "var": "work.group_seniority_months",
+                    "op": "GTE",
+                    "val": 3
+                },
+                {
+                    "var": "work.annual_gross_salary",
+                    "op": "GTE",
+                    "val": "@config:financial_thresholds.salary_annual_gross.passeport_talent_mandataire_social"
+                },
+                {
+                    "var": "integration.french_level",
+                    "op": "GTE",
+                    "val": "A2"
+                },
+                {
+                    "var": "integration.civic_exam_passed",
+                    "op": "EQ",
+                    "val": true
+                }
+            ]
+        }
+    },
+    {
+        "id": "passeport_talent_creation",
+        "name": "Passeport Talent - Création d'entreprise (4 ans)",
+        "description": "Projet de création avec investissement de 30 000 €.",
+        "priority": 85,
+        "source_ref": "27",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "education.diploma_level",
+                    "op": "IN",
+                    "val": [
+                        "MASTER",
+                        "PHD"
+                    ]
+                },
+                {
+                    "var": "investment.amount",
+                    "op": "GTE",
+                    "val": "@config:financial_thresholds.investments.creation_entreprise_fonds"
+                },
+                {
+                    "var": "project.is_real_and_serious",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "integration.french_level",
+                    "op": "GTE",
+                    "val": "A2"
+                },
+                {
+                    "var": "integration.civic_exam_passed",
+                    "op": "EQ",
+                    "val": true
+                }
+            ]
+        }
+    },
+    {
+        "id": "passeport_talent_famille",
+        "name": "Passeport Talent (Famille accompagnante)",
+        "description": "Pour le conjoint/enfants d'un titulaire Passeport Talent.",
+        "priority": 80,
+        "source_ref": "33",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "family.spouse_has_passport_talent",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "family.is_polygamous",
+                    "op": "EQ",
+                    "val": false
+                }
+            ]
+        }
+    },
+    {
+        "id": "vpf_conjoint_francais",
+        "name": "Carte de séjour - VPF - Conjoint de Français",
+        "description": "Délivrée au conjoint de Français (sans condition de durée de mariage pour la 1ère demande).",
+        "priority": 60,
+        "source_ref": "1",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "family.spouse_nationality",
+                    "op": "EQ",
+                    "val": "FRENCH"
+                },
+                {
+                    "var": "family.spouse_kept_nationality",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "family.community_of_life",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "family.is_polygamous",
+                    "op": "EQ",
+                    "val": false
+                }
+            ]
+        }
+    },
+    {
+        "id": "vpf_parent_enfant_francais",
+        "name": "Carte de séjour - VPF - Parent d’enfant français",
+        "description": "Pour le parent qui contribue à l'entretien de son enfant français mineur.",
+        "priority": 60,
+        "source_ref": "3, 4",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "family.has_french_child",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "family.child_residence_france",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "family.contributes_to_education",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "family.is_polygamous",
+                    "op": "EQ",
+                    "val": false
+                }
+            ]
+        }
+    },
+    {
+        "id": "vpf_pacs_francais",
+        "name": "Carte de séjour - VPF - PACS avec Français",
+        "description": "Partenaire de PACS avec preuves de vie commune d'au moins 1 an.",
+        "priority": 58,
+        "source_ref": "2, 3",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "family.is_pacsed_with_french",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "family.cohabitation_duration_years",
+                    "op": "GTE",
+                    "val": 1
+                },
+                {
+                    "var": "family.community_of_life",
+                    "op": "EQ",
+                    "val": true
+                }
+            ]
+        }
+    },
+    {
+        "id": "vpf_jeune_entre_mineur",
+        "name": "Carte de séjour - VPF - Liens personnels (Jeune entré mineur)",
+        "description": "Jeune entré avant 13 ans (ou 10 ans) ou né en France.",
+        "priority": 55,
+        "source_ref": "7, 8",
+        "conditions": {
+            "OR": [
+                {
+                    "var": "timeline.age_at_entry",
+                    "op": "LTE",
+                    "val": 13
+                },
+                {
+                    "AND": [
+                        {
+                            "var": "identity.born_in_france",
+                            "op": "EQ",
+                            "val": true
+                        },
+                        {
+                            "var": "timeline.years_continuous_residence",
+                            "op": "GTE",
+                            "val": 8
+                        },
+                        {
+                            "var": "education.years_schooling_france",
+                            "op": "GTE",
+                            "val": 5
+                        }
+                    ]
+                },
+                {
+                    "AND": [
+                        {
+                            "var": "identity.nationality_group",
+                            "op": "EQ",
+                            "val": "TUNISIAN"
+                        },
+                        {
+                            "var": "timeline.age_at_entry",
+                            "op": "LTE",
+                            "val": 10
+                        }
+                    ]
+                }
+            ]
+        }
+    },
+    {
+        "id": "vpf_humanitaire_violence",
+        "name": "Carte de séjour - VPF - Protection (Violence conjugale)",
+        "description": "Victime de violences bénéficiant d'une ordonnance de protection.",
+        "priority": 52,
+        "source_ref": "12",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "vulnerability.has_protection_order_violence",
+                    "op": "EQ",
+                    "val": true
+                }
+            ]
+        }
+    },
+    {
+        "id": "aps_enfant_malade",
+        "name": "APS - Parent d’enfant malade",
+        "description": "Si l'enfant nécessite des soins indispensables indisponibles au pays.",
+        "priority": 51,
+        "source_ref": "35",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "health.child_needs_care",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "health.treatment_available_origin",
+                    "op": "EQ",
+                    "val": false
+                },
+                {
+                    "var": "family.child_residence_france",
+                    "op": "EQ",
+                    "val": true
+                }
+            ]
+        }
+    },
+    {
+        "id": "cs_salarie",
+        "name": "Carte de séjour - Salarié (CDI)",
+        "description": "Titre lié à un CDI. Nécessite autorisation de travail ou métier en tension.",
+        "priority": 40,
+        "source_ref": "14, 15, 77",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "work.contract_type",
+                    "op": "EQ",
+                    "val": "CDI"
+                },
+                {
+                    "var": "work.salary_monthly_gross",
+                    "op": "GTE",
+                    "val": "@config:financial_thresholds.salary_monthly_gross.smic"
+                },
+                {
+                    "OR": [
+                        {
+                            "var": "work.has_work_authorization",
+                            "op": "EQ",
+                            "val": true
+                        },
+                        {
+                            "var": "work.job_in_tension_list",
+                            "op": "EQ",
+                            "val": true
+                        }
+                    ]
+                },
+                {
+                    "var": "integration.french_level",
+                    "op": "GTE",
+                    "val": "A2"
+                },
+                {
+                    "var": "integration.civic_exam_passed",
+                    "op": "EQ",
+                    "val": true
+                }
+            ]
+        }
+    },
+    {
+        "id": "cs_travailleur_temporaire",
+        "name": "Carte de séjour - Travailleur temporaire (CDD)",
+        "description": "Titre lié à un CDD.",
+        "priority": 30,
+        "source_ref": "16, 17",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "work.contract_type",
+                    "op": "EQ",
+                    "val": "CDD"
+                },
+                {
+                    "var": "work.salary_monthly_gross",
+                    "op": "GTE",
+                    "val": "@config:financial_thresholds.salary_monthly_gross.smic"
+                },
+                {
+                    "var": "work.has_work_authorization",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "integration.french_level",
+                    "op": "GTE",
+                    "val": "A2"
+                },
+                {
+                    "var": "integration.civic_exam_passed",
+                    "op": "EQ",
+                    "val": true
+                }
+            ]
+        }
+    },
+    {
+        "id": "cs_entrepreneur_liberale",
+        "name": "Carte de séjour - Entrepreneur / Profession Libérale",
+        "description": "Création d'activité viable (revenus > SMIC).",
+        "priority": 35,
+        "source_ref": "18, 19",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "work.is_entrepreneur",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "work.business_project_viable",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "financial.resources_monthly_average",
+                    "op": "GTE",
+                    "val": "@config:financial_thresholds.salary_monthly_gross.entrepreneur_viabilite"
+                },
+                {
+                    "var": "civic.clean_criminal_record",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "civic.no_expulsion_order",
+                    "op": "EQ",
+                    "val": true
+                }
+            ]
+        }
+    },
+    {
+        "id": "cs_etudiant",
+        "name": "Carte de séjour - Étudiant",
+        "description": "Inscription dans le supérieur + ressources minimums.",
+        "priority": 20,
+        "source_ref": "49, 56",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "education.is_enrolled_higher_ed",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "financial.resources_monthly_average",
+                    "op": "GTE",
+                    "val": 615.00
+                }
+            ]
+        }
+    },
+    {
+        "id": "rece_post_master",
+        "name": "Carte RECE (Recherche d'emploi / Création d'entreprise)",
+        "description": "Pour les étudiants diplômés (Master/Licence Pro) souhaitant chercher un emploi.",
+        "priority": 25,
+        "source_ref": "49, 50",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "admin.current_visa_type",
+                    "op": "IN",
+                    "val": [
+                        "STUDENT",
+                        "RESEARCHER"
+                    ]
+                },
+                {
+                    "var": "education.diploma_level",
+                    "op": "IN",
+                    "val": [
+                        "MASTER",
+                        "LICENCE_PRO",
+                        "CGE_LEVEL_1"
+                    ]
+                }
+            ]
+        }
+    },
+    {
+        "id": "cs_visiteur",
+        "name": "Carte de séjour - Visiteur",
+        "description": "Pour vivre en France sans exercer d'activité professionnelle.",
+        "priority": 10,
+        "source_ref": "54, 55",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "work.wants_to_work",
+                    "op": "EQ",
+                    "val": false
+                },
+                {
+                    "var": "financial.resources_annual_total",
+                    "op": "GTE",
+                    "val": "@config:financial_thresholds.salary_annual_gross.visiteur_ressources_annuelles"
+                },
+                {
+                    "var": "admin.health_insurance",
+                    "op": "EQ",
+                    "val": true
+                }
+            ]
+        }
+    },
+    {
+        "id": "cs_saisonnier",
+        "name": "Carte de séjour - Travailleur saisonnier",
+        "description": "Pour travaux saisonniers (max 6 mois/an). Résidence habituelle hors de France.",
+        "priority": 15,
+        "source_ref": "34",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "work.contract_type",
+                    "op": "EQ",
+                    "val": "SEASONAL"
+                },
+                {
+                    "var": "work.contract_duration_months",
+                    "op": "GTE",
+                    "val": 3
+                },
+                {
+                    "var": "residence.maintains_home_abroad",
+                    "op": "EQ",
+                    "val": true
+                }
+            ]
+        }
+    },
+    {
+        "id": "cs_ict_detache",
+        "name": "Carte de séjour - Salarié détaché ICT",
+        "description": "Cadre ou expert envoyé en mission par un groupe international.",
+        "priority": 38,
+        "source_ref": "52, 53",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "work.is_ict_transfer",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "work.group_seniority_months",
+                    "op": "GTE",
+                    "val": 6
+                },
+                {
+                    "var": "work.is_manager_or_expert",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "integration.french_level",
+                    "op": "GTE",
+                    "val": "A2"
+                },
+                {
+                    "var": "integration.civic_exam_passed",
+                    "op": "EQ",
+                    "val": true
+                }
+            ]
+        }
+    },
+    {
+        "id": "aes_metiers_tension",
+        "name": "Admission Exceptionnelle au Séjour (AES) - Métiers en tension",
+        "description": "Régularisation par le travail pour les métiers en tension (Circulaire Valls / Loi Immigration).",
+        "priority": 45,
+        "source_ref": "AES_Circulaire_Valls",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "admin.has_valid_visa_or_permit",
+                    "op": "EQ",
+                    "val": false
+                },
+                {
+                    "var": "timeline.years_continuous_residence",
+                    "op": "GTE",
+                    "val": 3
+                },
+                {
+                    "var": "work.contract_type",
+                    "op": "IN",
+                    "val": [
+                        "CDI",
+                        "CDD"
+                    ]
+                },
+                {
+                    "var": "work.has_payslips",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "work.salary_monthly_gross",
+                    "op": "GTE",
+                    "val": "@config:financial_thresholds.salary_monthly_gross.smic"
+                }
+            ]
+        }
+    },
+    {
+        "id": "cra_algerien_resident_10ans",
+        "name": "Certificat de Résidence Algérien - 10 ans",
+        "description": "Délivré après 3 ans de résidence régulière (Accord Franco-Algérien), contre 5 ans en droit commun.",
+        "priority": 99,
+        "source_ref": "Accord Franco-Algérien 1968 (Art 7 bis)",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "identity.nationality_group",
+                    "op": "EQ",
+                    "val": "ALGERIAN"
+                },
+                {
+                    "var": "timeline.years_continuous_residence",
+                    "op": "GTE",
+                    "val": 3
+                },
+                {
+                    "var": "financial.resources_stable_sufficient",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "civic.clean_criminal_record",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "civic.no_expulsion_order",
+                    "op": "EQ",
+                    "val": true
+                }
+            ]
+        }
+    },
+    {
+        "id": "cra_algerien_conjoint_francais",
+        "name": "Certificat de Résidence Algérien - 1 an (VPF)",
+        "description": "Délivré au conjoint algérien d'un Français sur simple preuve d'entrée légale (même visa touriste).",
+        "priority": 65,
+        "source_ref": "Accord Franco-Algérien 1968 (Art 6)",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "identity.nationality_group",
+                    "op": "EQ",
+                    "val": "ALGERIAN"
+                },
+                {
+                    "var": "family.spouse_nationality",
+                    "op": "EQ",
+                    "val": "FRENCH"
+                },
+                {
+                    "var": "family.community_of_life",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "admin.has_valid_visa_or_permit",
+                    "op": "EQ",
+                    "val": true
+                }
+            ]
+        }
+    },
+    {
+        "id": "cra_algerien_activite_liberale",
+        "name": "Certificat de Résidence Algérien - Profession non salariée",
+        "description": "Pour les Algériens souhaitant exercer une activité indépendante (Commerçant, Artisan...).",
+        "priority": 36,
+        "source_ref": "Accord Franco-Algérien 1968 (Art 5)",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "identity.nationality_group",
+                    "op": "EQ",
+                    "val": "ALGERIAN"
+                },
+                {
+                    "var": "work.is_entrepreneur",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "work.business_project_viable",
+                    "op": "EQ",
+                    "val": true
+                }
+            ]
+        }
+    },
+    {
+        "id": "cs_citoyen_ue_inactif_ou_actif",
+        "name": "Carte de séjour - Citoyen UE / EEE / Suisse",
+        "description": "Facultative. Reconnaissance du droit au séjour pour travailleur ou inactif avec ressources.",
+        "priority": 5,
+        "source_ref": "Droit de l'Union (Libre circulation)",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "identity.nationality_group",
+                    "op": "EQ",
+                    "val": "EU"
+                },
+                {
+                    "var": "civic.clean_criminal_record",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "civic.no_expulsion_order",
+                    "op": "EQ",
+                    "val": true
+                }
+            ]
+        }
+    },
+    {
+        "id": "cs_membre_famille_ue",
+        "name": "Carte de séjour - Membre de famille d'un citoyen UE",
+        "description": "Pour le conjoint (non UE) d'un citoyen européen résidant en France.",
+        "priority": 62,
+        "source_ref": "Code de l'entrée et du séjour (Art R121-1)",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "identity.nationality_group",
+                    "op": "NEQ",
+                    "val": "EU"
+                },
+                {
+                    "var": "family.spouse_nationality",
+                    "op": "EQ",
+                    "val": "EU"
+                },
+                {
+                    "var": "family.community_of_life",
+                    "op": "EQ",
+                    "val": true
+                }
+            ]
+        }
+    }
+]

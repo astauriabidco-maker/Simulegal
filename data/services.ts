@@ -1,100 +1,115 @@
 export type ServicePole = 'PROCEDURES' | 'INTEGRATION' | 'EXPERTISE';
+export type ServiceType = 'SIMULATION' | 'CONSULTATION' | 'DOCUMENT' | 'FORMATION' | 'CALLBACK';
 
 export interface Service {
     id: string;
     title: string;
     description: string;
     pole: ServicePole;
+    type: ServiceType;
     isSimulatable: boolean;
     iconName: string;
     badge?: string;
+    price?: number; // Prix indicatif en centimes
 }
 
 export const SERVICES_CATALOG: Service[] = [
-    // PÔLE PROCÉDURES
+    // PÔLE PROCÉDURES (Avec Simulation)
     {
-        id: 'residence_permit',
+        id: 'nat_accomp',
+        title: 'Accompagnement Nationalité',
+        description: 'Accompagnement complet pour votre demande de nationalité française.',
+        pole: 'PROCEDURES',
+        type: 'SIMULATION',
+        isSimulatable: true,
+        iconName: 'Flag',
+        badge: 'SIMUL',
+        price: 49000 // 490€
+    },
+    {
+        id: 'sejour_accomp',
         title: 'Accompagnement Titre Séjour',
         description: 'Aide à la préparation et au dépôt de votre dossier de titre de séjour.',
         pole: 'PROCEDURES',
+        type: 'SIMULATION',
         isSimulatable: true,
         iconName: 'FileText',
-        badge: 'SIMUL'
+        badge: 'SIMUL',
+        price: 35000 // 350€
     },
     {
-        id: 'naturalization',
-        title: 'Accompagnement Naturalisation',
-        description: 'Accompagnement complet pour votre demande de nationalité française.',
-        pole: 'PROCEDURES',
-        isSimulatable: true,
-        iconName: 'Flag',
-        badge: 'SIMUL'
-    },
-    {
-        id: 'family_reunification',
-        title: 'Regroupement familial',
+        id: 'regroup_fam',
+        title: 'Regroupement Familial',
         description: 'Procédure pour faire venir votre famille en France en toute sécurité.',
         pole: 'PROCEDURES',
+        type: 'SIMULATION',
         isSimulatable: true,
         iconName: 'Users',
-        badge: 'SIMUL'
+        badge: 'SIMUL',
+        price: 39000 // 390€
     },
 
-    // PÔLE INTÉGRATION
+    // PÔLE EXPERTISE (Sans Simulation ou Partielle)
     {
-        id: 'french_course',
-        title: 'Cours de français A2/B1/B2',
-        description: 'Cours adaptés pour vos examens et votre intégration en France.',
-        pole: 'INTEGRATION',
-        isSimulatable: true,
-        iconName: 'Languages',
-        badge: 'LOCAL'
-    },
-    {
-        id: 'examen_civique',
-        title: 'Examen Civique',
-        description: 'Entraînement intensif au QCM des valeurs républicaines (Obligatoire 2026).',
-        pole: 'INTEGRATION',
-        isSimulatable: true,
-        iconName: 'GraduationCap',
-        badge: 'LOCAL'
-    },
-    {
-        id: 'rappel_echeances',
-        title: 'Je veux être rappelé.e',
-        description: 'Service de rappel pour ne jamais rater vos échéances de renouvellement.',
-        pole: 'INTEGRATION',
-        isSimulatable: true,
-        iconName: 'BookOpen',
-        badge: 'LOCAL'
-    },
-
-    // PÔLE EXPERTISE
-    {
-        id: 'permis_conduire',
+        id: 'permis_change',
         title: 'Changement Permis Conduire',
         description: 'Aide à l\'obtention ou à l\'échange de votre permis de conduire étranger.',
         pole: 'EXPERTISE',
-        isSimulatable: true,
+        type: 'DOCUMENT',
+        isSimulatable: false,
         iconName: 'Car',
-        badge: 'SIMUL'
-    },
-    {
-        id: 'rdv_prefecture',
-        title: 'Assistance RDV préfecture',
-        description: 'Aide à la prise de rendez-vous et préparation du passage en préfecture.',
-        pole: 'EXPERTISE',
-        isSimulatable: true,
-        iconName: 'Calendar',
-        badge: 'SIMUL'
+        price: 15000 // 150€
     },
     {
         id: 'rdv_juriste',
         title: 'Rendez-vous Juriste',
         description: 'Conseil juridique personnalisé avec un expert en droit des étrangers.',
         pole: 'EXPERTISE',
-        isSimulatable: true,
+        type: 'CONSULTATION',
+        isSimulatable: false,
         iconName: 'Gavel',
-        badge: 'SIMUL'
+        price: 8000 // 80€
+    },
+    {
+        id: 'rdv_pref',
+        title: 'Rendez-vous Préfecture',
+        description: 'Assistance à la prise de rendez-vous et préparation du passage en préfecture.',
+        pole: 'EXPERTISE',
+        type: 'CONSULTATION',
+        isSimulatable: false,
+        iconName: 'Calendar',
+        price: 5000 // 50€
+    },
+
+    // PÔLE INTÉGRATION
+    {
+        id: 'langue_a2b1',
+        title: 'Cours de langues A2/B1',
+        description: 'Cours adaptés pour vos examens et votre intégration en France.',
+        pole: 'INTEGRATION',
+        type: 'FORMATION',
+        isSimulatable: false,
+        iconName: 'Languages',
+        price: 25000 // 250€
+    },
+    {
+        id: 'form_civique',
+        title: 'Formation Civique',
+        description: 'Sessions de formation obligatoire sur les valeurs de la République.',
+        pole: 'INTEGRATION',
+        type: 'FORMATION',
+        isSimulatable: false,
+        iconName: 'GraduationCap',
+        price: 12000 // 120€
+    },
+    {
+        id: 'rappel',
+        title: 'Être Rappelé',
+        description: 'Service gratuit pour être contacté par un conseiller SimuLegal.',
+        pole: 'INTEGRATION',
+        type: 'CALLBACK',
+        isSimulatable: false,
+        iconName: 'Phone',
+        price: 0
     }
 ];

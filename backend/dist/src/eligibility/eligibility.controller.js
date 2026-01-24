@@ -26,6 +26,9 @@ let EligibilityController = class EligibilityController {
     getRules(category) {
         return this.service.getRules(category);
     }
+    evaluate(category, userProfile) {
+        return this.service.evaluateEligibility(userProfile, category);
+    }
 };
 exports.EligibilityController = EligibilityController;
 __decorate([
@@ -41,6 +44,14 @@ __decorate([
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", void 0)
 ], EligibilityController.prototype, "getRules", null);
+__decorate([
+    (0, common_1.Post)('evaluate/:category'),
+    __param(0, (0, common_1.Param)('category')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", void 0)
+], EligibilityController.prototype, "evaluate", null);
 exports.EligibilityController = EligibilityController = __decorate([
     (0, common_1.Controller)('eligibility'),
     __metadata("design:paramtypes", [eligibility_service_1.EligibilityService])

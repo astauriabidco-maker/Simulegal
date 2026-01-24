@@ -11,16 +11,18 @@ const common_1 = require("@nestjs/common");
 const config_1 = require("@nestjs/config");
 const notifications_service_1 = require("./notifications.service");
 const notifications_controller_1 = require("./notifications.controller");
+const email_templates_service_1 = require("./email-templates.service");
+const settings_module_1 = require("../settings/settings.module");
 let NotificationsModule = class NotificationsModule {
 };
 exports.NotificationsModule = NotificationsModule;
 exports.NotificationsModule = NotificationsModule = __decorate([
     (0, common_1.Global)(),
     (0, common_1.Module)({
-        imports: [config_1.ConfigModule],
+        imports: [config_1.ConfigModule, settings_module_1.SettingsModule],
         controllers: [notifications_controller_1.NotificationsController],
-        providers: [notifications_service_1.NotificationsService],
-        exports: [notifications_service_1.NotificationsService],
+        providers: [notifications_service_1.NotificationsService, email_templates_service_1.EmailTemplatesService],
+        exports: [notifications_service_1.NotificationsService, email_templates_service_1.EmailTemplatesService],
     })
 ], NotificationsModule);
 //# sourceMappingURL=notifications.module.js.map

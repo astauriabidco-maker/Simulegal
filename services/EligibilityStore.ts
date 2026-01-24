@@ -136,6 +136,25 @@ export const EligibilityStore = {
     resetRules: (category: 'sejour' | 'naturalisation' | 'family') => {
         localStorage.removeItem(RULES_KEY_PREFIX + category);
         console.log(`[ELIGIBILITY] 🔄 Règles "${category}" réinitialisées`);
+    },
+    /**
+     * Evalue l'éligibilité via le Backend
+     */
+    evaluateEligibility: async (userProfile: any, category: string): Promise<ProcedureRule[]> => {
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+        try {
+            const res = await fetch(`${API_URL}/eligibility/evaluate/${category}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(userProfile)
+            });
+            if (res.ok) {
+                return await res.json();
+            }
+        } catch (err) {
+            console.warn(`[ELIGIBILITY] ⚠️ Backend evaluation failed for ${category}`, err);
+        }
+        return [];
     }
 };
 

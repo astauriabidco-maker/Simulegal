@@ -6,14 +6,20 @@ import * as bcrypt from 'bcrypt';
 export class UsersService {
     constructor(private prisma: PrismaService) { }
 
+    private mapUser(user: any) {
+        if (!user) return null;
+        return {
+            ...user,
+            scopeAgencyIds: user.scopeAgencyIds ? (typeof user.scopeAgencyIds === 'string' ? JSON.parse(user.scopeAgencyIds) : user.scopeAgencyIds) : [],
+            expertises: user.expertises ? (typeof user.expertises === 'string' ? JSON.parse(user.expertises) : user.expertises) : []
+        };
+    }
+
     async findAll() {
         const users = await this.prisma.user.findMany({
             include: { agency: true, roleRef: true }
         });
-        return users.map(u => ({
-            ...u,
-            scopeAgencyIds: u.scopeAgencyIds ? JSON.parse(u.scopeAgencyIds) : []
-        }));
+        return users.map(u => this.mapUser(u));
     }
 
     async findSystemUsers() {
@@ -28,10 +34,7 @@ export class UsersService {
             include: { agency: true, roleRef: true },
             orderBy: { createdAt: 'desc' }
         });
-        return users.map(u => ({
-            ...u,
-            scopeAgencyIds: u.scopeAgencyIds ? JSON.parse(u.scopeAgencyIds) : []
-        }));
+        return users.map(u => this.mapUser(u));
     }
 
     async findOneByEmail(email: string) {
@@ -39,11 +42,7 @@ export class UsersService {
             where: { email },
             include: { agency: true, roleRef: true }
         });
-        if (!user) return null;
-        return {
-            ...user,
-            scopeAgencyIds: user.scopeAgencyIds ? JSON.parse(user.scopeAgencyIds) : []
-        };
+        return this.mapUser(user);
     }
 
     async findOneById(id: string) {
@@ -51,11 +50,7 @@ export class UsersService {
             where: { id },
             include: { agency: true, roleRef: true }
         });
-        if (!user) return null;
-        return {
-            ...user,
-            scopeAgencyIds: user.scopeAgencyIds ? JSON.parse(user.scopeAgencyIds) : []
-        };
+        return this.mapUser(user);
     }
 
     async create(data: any) {
@@ -63,14 +58,18 @@ export class UsersService {
 
         // Sérialisation des périmètres
         const scopeAgencyIds = data.scopeAgencyIds ? JSON.stringify(data.scopeAgencyIds) : "[]";
+        const expertises = data.expertises ? JSON.stringify(data.expertises) : "[]";
 
-        return this.prisma.user.create({
+        const user = await this.prisma.user.create({
             data: {
                 ...data,
                 scopeAgencyIds,
+                expertises,
                 password: hashedPassword
             }
         });
+
+        return this.mapUser(user);
     }
 
     async update(id: string, data: any) {
@@ -84,10 +83,16 @@ export class UsersService {
             updateData.scopeAgencyIds = JSON.stringify(updateData.scopeAgencyIds);
         }
 
-        return this.prisma.user.update({
+        if (updateData.expertises && Array.isArray(updateData.expertises)) {
+            updateData.expertises = JSON.stringify(updateData.expertises);
+        }
+
+        const user = await this.prisma.user.update({
             where: { id },
             data: updateData
         });
+
+        return this.mapUser(user);
     }
 
     async delete(id: string) {

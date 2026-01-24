@@ -1,30 +1,64 @@
-import { Injectable } from '@nestjs/common';
-import * as fs from 'fs'; // In real app, use DB or load on startup
-// For simplicity in this demo environment, we return hardcoded structures matching the frontend's JSONs
-// Ideally these should be in the DB.
+import { Injectable, Logger } from '@nestjs/common';
+import * as fs from 'fs';
+import * as path from 'path';
 
 @Injectable()
 export class EligibilityService {
+    private readonly logger = new Logger(EligibilityService.name);
+    private readonly rootSpecsPath = path.join(process.cwd(), '..', 'specs');
+    private readonly localSpecsPath = path.join(process.cwd(), 'specs');
+
+    private getSpecsDir(): string {
+        if (fs.existsSync(this.rootSpecsPath)) return this.rootSpecsPath;
+        return this.localSpecsPath;
+    }
 
     getThresholds() {
-        return {
-            "smic_mensuel_brut": 1766.92,
-            "smic_mensuel_net": 1398.69,
-            "smic_annuel_brut": 21203.00,
-            "min_residence_naturalisation_years": 5,
-            "min_residence_conjoint_years": 4,
-            "min_residence_etudiant_reduc_years": 2,
-            "logement_surface_base": 9,
-            "logement_surface_per_person": 9,
-            "frais_timbre_naturalisation": 55,
-            "frais_timbre_sejour_base": 225
-        };
+        const specsDir = this.getSpecsDir();
+        try {
+            const filePath = path.join(specsDir, 'config_thresholds.json');
+            if (fs.existsSync(filePath)) {
+                return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+            }
+        } catch (error) {
+            this.logger.error('Failed to load thresholds', error);
+        }
+
+        throw new Error('Critical: Legal specification "config_thresholds.json" not found.');
     }
 
     getRules(category: string) {
-        // Return emtpy or base rules. Implementing full JSON content here would be huge.
-        // For the purpose of "Backending", we can just return what we have or a placeholder that the frontend falls back on.
-        // Better: Return the actual rule structure if possible.
+        const specsDir = this.getSpecsDir();
+        const fileNames: Record<string, string> = {
+            'sejour': 'rules_sejour.json',
+            'naturalisation': 'rules_naturalisation.json',
+            'family': 'rules_family.json'
+        };
+
+        const fileName = fileNames[category];
+        if (!fileName) return [];
+
+        try {
+            const filePath = path.join(specsDir, fileName);
+            if (fs.existsSync(filePath)) {
+                return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+            }
+        } catch (error) {
+            this.logger.error(`Failed to load rules for category ${category}`, error);
+        }
+
         return [];
+    }
+
+    async evaluateEligibility(userProfile: any, category: string) {
+        const rules = this.getRules(category);
+        const thresholds = this.getThresholds();
+        const { evaluateRule } = require('./rule-engine.util');
+
+        const eligibleRules = rules.filter((rule: any) =>
+            evaluateRule(userProfile, rule.conditions, thresholds)
+        );
+
+        return eligibleRules.sort((a: any, b: any) => (b.priority || 0) - (a.priority || 0));
     }
 }

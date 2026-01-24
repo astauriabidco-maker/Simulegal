@@ -3,102 +3,10 @@ import { FranchiseLeadsService } from './franchise-leads.service';
 export declare class FranchiseLeadsController {
     private readonly franchiseLeadsService;
     constructor(franchiseLeadsService: FranchiseLeadsService);
-    create(body: any): Promise<{
-        id: string;
-        name: string;
-        status: import(".prisma/client").$Enums.FranchiseLeadStatus;
-        region: string;
-        createdAt: Date;
-        updatedAt: Date;
-        email: string;
-        phone: string;
-        documents: string;
-        targetCity: string;
-        companyName: string | null;
-        siret: string | null;
-        legalForm: string | null;
-        contractDetails: string;
-        contractHistory: string;
-        convertedAgencyId: string | null;
-    }>;
-    findAll(): Promise<{
-        id: string;
-        name: string;
-        status: import(".prisma/client").$Enums.FranchiseLeadStatus;
-        region: string;
-        createdAt: Date;
-        updatedAt: Date;
-        email: string;
-        phone: string;
-        documents: string;
-        targetCity: string;
-        companyName: string | null;
-        siret: string | null;
-        legalForm: string | null;
-        contractDetails: string;
-        contractHistory: string;
-        convertedAgencyId: string | null;
-    }[]>;
-    findOne(id: string): Promise<({
-        notes: {
-            id: string;
-            type: string;
-            createdAt: Date;
-            content: string;
-            author: string;
-            leadId: string;
-        }[];
-        convertedAgency: {
-            id: string;
-            name: string;
-            type: import(".prisma/client").$Enums.AgencyType;
-            status: import(".prisma/client").$Enums.AgencyStatus;
-            region: string;
-            city: string;
-            zipCodes: string;
-            commissionRate: number;
-            serviceCommissionOverrides: string | null;
-            contactEmail: string;
-            kioskUrl: string;
-            createdAt: Date;
-            updatedAt: Date;
-        } | null;
-    } & {
-        id: string;
-        name: string;
-        status: import(".prisma/client").$Enums.FranchiseLeadStatus;
-        region: string;
-        createdAt: Date;
-        updatedAt: Date;
-        email: string;
-        phone: string;
-        documents: string;
-        targetCity: string;
-        companyName: string | null;
-        siret: string | null;
-        legalForm: string | null;
-        contractDetails: string;
-        contractHistory: string;
-        convertedAgencyId: string | null;
-    }) | null>;
-    update(id: string, body: any): Promise<{
-        id: string;
-        name: string;
-        status: import(".prisma/client").$Enums.FranchiseLeadStatus;
-        region: string;
-        createdAt: Date;
-        updatedAt: Date;
-        email: string;
-        phone: string;
-        documents: string;
-        targetCity: string;
-        companyName: string | null;
-        siret: string | null;
-        legalForm: string | null;
-        contractDetails: string;
-        contractHistory: string;
-        convertedAgencyId: string | null;
-    }>;
+    create(body: any): Promise<any>;
+    findAll(): Promise<any[]>;
+    findOne(id: string): Promise<any>;
+    update(id: string, body: any): Promise<any>;
     signContract(id: string): Promise<{
         lead: {
             id: string;
@@ -117,40 +25,10 @@ export declare class FranchiseLeadsController {
             contractDetails: string;
             contractHistory: string;
             convertedAgencyId: string | null;
+            rejectionReason: string | null;
         };
-        agency: {
-            id: string;
-            name: string;
-            type: import(".prisma/client").$Enums.AgencyType;
-            status: import(".prisma/client").$Enums.AgencyStatus;
-            region: string;
-            city: string;
-            zipCodes: string;
-            commissionRate: number;
-            serviceCommissionOverrides: string | null;
-            contactEmail: string;
-            kioskUrl: string;
-            createdAt: Date;
-            updatedAt: Date;
-        };
-        user: {
-            tempPassword: string;
-            id: string;
-            name: string;
-            createdAt: Date;
-            updatedAt: Date;
-            expertises: string;
-            agencyId: string | null;
-            email: string;
-            role: import(".prisma/client").$Enums.UserRole;
-            password: string;
-            roleId: string | null;
-            homeAgencyId: string | null;
-            scopeAgencyIds: string;
-            permissions: string;
-            lastLogin: Date | null;
-            isSystemUser: boolean;
-        };
+        agency: any;
+        user: any;
     }>;
     getContract(id: string, res: Response): Promise<void>;
     addNote(id: string, body: {
@@ -165,4 +43,16 @@ export declare class FranchiseLeadsController {
         author: string;
         leadId: string;
     }>;
+    getAnalytics(): Promise<{
+        total: number;
+        statusCounts: Record<string, number>;
+        regionCounts: Record<string, number>;
+        conversionRate: number;
+        monthlyTrend: {
+            month: string;
+            count: number;
+            signed: number;
+        }[];
+    }>;
+    exportCSV(res: Response): Promise<void>;
 }

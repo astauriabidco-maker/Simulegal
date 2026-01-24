@@ -47,4 +47,63 @@ export class NotificationsController {
     async triggerStageChange(@Body() data: { lead: any, oldStage: string, newStage: string }) {
         return this.notificationsService.onStageChange(data.lead, data.oldStage, data.newStage);
     }
+
+    /**
+     * Test endpoint for transactional emails (DEV only)
+     */
+    @Post('test-email')
+    async testEmail(@Body() data: { to: string; template: 'welcome' | 'diagnostic' | 'appointment' | 'payment' | 'reminder' }) {
+        const testUser = { name: 'Jean Dupont', email: data.to };
+        const testAppointment = {
+            start: new Date(Date.now() + 24 * 60 * 60 * 1000), // Tomorrow
+            type: 'VISIO_JURISTE' as const,
+            meetingLink: 'https://meet.google.com/abc-defg-hij'
+        };
+
+        switch (data.template) {
+            case 'welcome':
+                return this.notificationsService.sendWelcomeEmail(testUser, 'TempPass123!');
+            case 'diagnostic':
+                return this.notificationsService.sendDiagnosticInvitation(testUser, 'https://simulegal.fr/diagnostic?token=abc123');
+            case 'appointment':
+                return this.notificationsService.sendAppointmentConfirmationEmail(testUser, testAppointment);
+            case 'payment':
+                return this.notificationsService.sendPaymentConfirmation(testUser, 9.90, 'REFUND-ABC123');
+            case 'reminder':
+                return this.notificationsService.sendAppointmentReminder(testUser, testAppointment);
+            default:
+                return { error: 'Invalid template. Use: welcome, diagnostic, appointment, payment, reminder' };
+        }
+    }
+
+    /**
+     * Refresh SMTP configuration cache (call after updating settings)
+     */
+    @Post('refresh-smtp')
+    @UseGuards(JwtAuthGuard)
+    async refreshSmtp() {
+        await this.notificationsService.refreshSmtpConfig();
+        return { success: true, message: 'SMTP configuration cache refreshed' };
+    }
+
+    /**
+     * Test SMTP connection with current settings
+     */
+    @Post('test-smtp')
+    async testSmtp(@Body() data: { to?: string }) {
+        const testEmail = data.to || 'test@example.com';
+        const result = await this.notificationsService.sendEmail(
+            testEmail,
+            'Test SMTP - SimuLegal',
+            'Ceci est un email de test pour vérifier la configuration SMTP.',
+            '<h1>✅ Configuration SMTP fonctionnelle</h1><p>Cet email confirme que votre serveur SMTP est correctement configuré.</p>'
+        );
+        return {
+            success: result.success,
+            messageId: result.messageId,
+            message: result.success
+                ? `Email de test envoyé à ${testEmail}`
+                : 'Échec de l\'envoi (voir logs)'
+        };
+    }
 }

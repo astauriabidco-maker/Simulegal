@@ -25,15 +25,32 @@ services:
       dockerfile: Dockerfile
     ports:
       - "3001:3001"
-    volumes:
-      - ./backend/prisma/dev.db:/app/prisma/dev.db
     environment:
-      - DATABASE_URL=file:./dev.db
+      - DATABASE_URL=postgresql://simulegal:simulegal_pw@db:5432/simulegal?schema=public
       - PORT=3001
-      # Add other environment variables here (e.g., JWT_SECRET)
+      - JWT_SECRET=change_me_in_production
+    depends_on:
+      - db
+    networks:
+      - simulegal-network
+
+  db:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      - POSTGRES_USER=simulegal
+      - POSTGRES_PASSWORD=simulegal_pw
+      - POSTGRES_DB=simulegal
+    ports:
+      - "5435:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
     networks:
       - simulegal-network
 
 networks:
   simulegal-network:
     driver: bridge
+
+volumes:
+  postgres_data:

@@ -1,0 +1,344 @@
+[
+    {
+        "id": "nat_droit_du_sol_18ans",
+        "name": "Acquisition automatique à la majorité (Né en France)",
+        "description": "Pour les jeunes nés en France de parents étrangers, à leurs 18 ans.",
+        "priority": 100,
+        "source_ref": "73, 74",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "identity.born_in_france",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "identity.age",
+                    "op": "GTE",
+                    "val": 18
+                },
+                {
+                    "var": "timeline.years_residence_since_age_11",
+                    "op": "GTE",
+                    "val": 5
+                },
+                {
+                    "var": "civic.clean_criminal_record",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "civic.no_expulsion_order",
+                    "op": "EQ",
+                    "val": true
+                }
+            ]
+        }
+    },
+    {
+        "id": "nat_droit_du_sol_anticipe_13_16",
+        "name": "Acquisition anticipée (13-16 ans) - Né en France",
+        "description": "Demande par les parents (13-16 ans) ou personnelle (16-18 ans).",
+        "priority": 95,
+        "source_ref": "73",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "identity.born_in_france",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "identity.age",
+                    "op": "GTE",
+                    "val": 13
+                },
+                {
+                    "var": "identity.age",
+                    "op": "LT",
+                    "val": 18
+                },
+                {
+                    "var": "timeline.years_residence_since_age_8",
+                    "op": "GTE",
+                    "val": 5
+                },
+                {
+                    "var": "civic.clean_criminal_record",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "civic.no_expulsion_order",
+                    "op": "EQ",
+                    "val": true
+                }
+            ]
+        }
+    },
+    {
+        "id": "nat_declaration_mariage",
+        "name": "Déclaration de nationalité par mariage",
+        "description": "Après 4 ans de mariage avec un conjoint français.",
+        "priority": 90,
+        "source_ref": "62, 63",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "family.spouse_nationality",
+                    "op": "EQ",
+                    "val": "FRENCH"
+                },
+                {
+                    "var": "family.marriage_duration_years",
+                    "op": "GTE",
+                    "val": "@config:duration_thresholds.marriage_duration.pour_nationalite_mariage"
+                },
+                {
+                    "var": "family.community_of_life",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "integration.french_level",
+                    "op": "GTE",
+                    "val": "B2"
+                },
+                {
+                    "var": "civic.clean_criminal_record",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "civic.no_expulsion_order",
+                    "op": "EQ",
+                    "val": true
+                }
+            ]
+        }
+    },
+    {
+        "id": "nat_declaration_fratrie",
+        "name": "Déclaration de nationalité - Frère/Sœur de Français",
+        "description": "Pour les frères et sœurs de Français ayant grandi en France.",
+        "priority": 85,
+        "source_ref": "60, 61",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "family.has_french_sibling",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "education.schooling_in_france_age_6_to_16",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "timeline.residence_since_age_6",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "civic.clean_criminal_record",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "civic.no_expulsion_order",
+                    "op": "EQ",
+                    "val": true
+                }
+            ]
+        }
+    },
+    {
+        "id": "nat_declaration_ascendant",
+        "name": "Déclaration de nationalité - Ascendant de Français",
+        "description": "Pour les parents/grands-parents de Français résidant en France depuis 25 ans.",
+        "priority": 80,
+        "source_ref": "58, 59",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "family.is_ascendant_of_french",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "identity.age",
+                    "op": "GTE",
+                    "val": 65
+                },
+                {
+                    "var": "timeline.years_continuous_residence",
+                    "op": "GTE",
+                    "val": "@config:duration_thresholds.residence_in_france.ascendant_de_francais"
+                },
+                {
+                    "var": "civic.clean_criminal_record",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "civic.no_expulsion_order",
+                    "op": "EQ",
+                    "val": true
+                }
+            ]
+        }
+    },
+    {
+        "id": "nat_decret_etudes_sup",
+        "name": "Naturalisation par décret (Parcours Études Supérieures)",
+        "description": "Réduit la durée de résidence requise à 2 ans après un diplôme du supérieur.",
+        "priority": 70,
+        "source_ref": "71, 72",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "education.has_french_higher_education_diploma",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "timeline.years_continuous_residence",
+                    "op": "GTE",
+                    "val": "@config:duration_thresholds.residence_in_france.naturalisation_etudes_sup"
+                },
+                {
+                    "var": "integration.french_level",
+                    "op": "GTE",
+                    "val": "B2"
+                },
+                {
+                    "var": "financial.resources_stable_sufficient",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "civic.clean_criminal_record",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "integration.adheres_to_republican_values",
+                    "op": "EQ",
+                    "val": true
+                }
+            ]
+        }
+    },
+    {
+        "id": "nat_decret_refugie",
+        "name": "Naturalisation par décret - Réfugié / Apatride",
+        "description": "Pas de durée minimum exigée (ou réduite) pour les réfugiés statutaires.",
+        "priority": 65,
+        "source_ref": "76",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "identity.nationality_group",
+                    "op": "IN",
+                    "val": [
+                        "REFUGEE",
+                        "STATELESS"
+                    ]
+                },
+                {
+                    "var": "timeline.years_continuous_residence",
+                    "op": "GTE",
+                    "val": 0
+                },
+                {
+                    "var": "integration.french_level",
+                    "op": "GTE",
+                    "val": "B1"
+                },
+                {
+                    "var": "civic.clean_criminal_record",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "civic.no_expulsion_order",
+                    "op": "EQ",
+                    "val": true
+                }
+            ]
+        }
+    },
+    {
+        "id": "nat_decret_standard",
+        "name": "Naturalisation par décret (Cas général)",
+        "description": "La voie classique après 5 ans de résidence.",
+        "priority": 50,
+        "source_ref": "71, 72",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "timeline.years_continuous_residence",
+                    "op": "GTE",
+                    "val": "@config:duration_thresholds.residence_in_france.naturalisation_standard"
+                },
+                {
+                    "var": "integration.french_level",
+                    "op": "GTE",
+                    "val": "B2"
+                },
+                {
+                    "var": "financial.resources_stable_sufficient",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "civic.clean_criminal_record",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "integration.adheres_to_republican_values",
+                    "op": "EQ",
+                    "val": true
+                }
+            ]
+        }
+    },
+    {
+        "id": "nat_reintegration_decret",
+        "name": "Réintégration dans la nationalité (Décret)",
+        "description": "Pour ceux qui ont perdu la nationalité française.",
+        "priority": 60,
+        "source_ref": "69, 70",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "identity.lost_french_nationality",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "timeline.years_continuous_residence",
+                    "op": "GTE",
+                    "val": 5
+                },
+                {
+                    "var": "integration.french_level",
+                    "op": "GTE",
+                    "val": "B2"
+                },
+                {
+                    "var": "civic.clean_criminal_record",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "civic.no_expulsion_order",
+                    "op": "EQ",
+                    "val": true
+                }
+            ]
+        }
+    }
+]

@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
@@ -20,9 +21,13 @@ import { CatalogModule } from './catalog/catalog.module';
 import { SettingsModule } from './settings/settings.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { SalesModule } from './sales/sales.module';
+import { InvoicesModule } from './invoices/invoices.module';
+import { PaymentsModule } from './payments/payments.module';
+import { WhatsappModule } from './whatsapp/whatsapp.module';
 
 @Module({
   imports: [
+    ConfigModule.forRoot({ isGlobal: true }),
     AuthModule,
     UsersModule,
     PrismaModule,
@@ -40,7 +45,10 @@ import { SalesModule } from './sales/sales.module';
     SettingsModule,
     DashboardModule,
     SalesModule,
-    AbsencesModule
+    InvoicesModule,
+    PaymentsModule,
+    AbsencesModule,
+    WhatsappModule
   ],
   controllers: [AppController],
   providers: [AppService],

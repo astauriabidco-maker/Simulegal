@@ -1,0 +1,53 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.evaluateRule = evaluateRule;
+const common_1 = require("@nestjs/common");
+const logger = new common_1.Logger('RuleEngine');
+function getValueByPath(obj, path) {
+    return path.split('.').reduce((acc, part) => acc && acc[part], obj);
+}
+function resolveValue(val, thresholds) {
+    if (typeof val === 'string' && val.startsWith('@config:')) {
+        const path = val.replace('@config:', '').split('.');
+        let current = thresholds;
+        for (const key of path) {
+            if (current && typeof current === 'object' && key in current) {
+                current = current[key];
+            }
+            else {
+                return undefined;
+            }
+        }
+        return current;
+    }
+    return val;
+}
+function evaluateRule(data, condition, thresholds = {}) {
+    if (condition.AND) {
+        return condition.AND.every(c => evaluateRule(data, c, thresholds));
+    }
+    if (condition.OR) {
+        return condition.OR.some(c => evaluateRule(data, c, thresholds));
+    }
+    if (condition.var && condition.op) {
+        const userValue = getValueByPath(data, condition.var);
+        const targetValue = resolveValue(condition.val, thresholds);
+        if (userValue === undefined || userValue === null) {
+            return false;
+        }
+        switch (condition.op) {
+            case 'EQ': return userValue === targetValue;
+            case 'NEQ': return userValue !== targetValue;
+            case 'GT': return userValue > targetValue;
+            case 'GTE': return userValue >= targetValue;
+            case 'LT': return userValue < targetValue;
+            case 'LTE': return userValue <= targetValue;
+            case 'IN': return Array.isArray(targetValue) && targetValue.includes(userValue);
+            default:
+                logger.warn(`Unsupported operator: ${condition.op}`);
+                return false;
+        }
+    }
+    return false;
+}
+//# sourceMappingURL=rule-engine.util.js.map

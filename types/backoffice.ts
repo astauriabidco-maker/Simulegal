@@ -25,6 +25,7 @@ export interface StaffUser {
     id: string;
     name: string;
     email: string;
+    phone?: string;
     isActive: boolean;
     role: 'HQ_ADMIN' | 'AGENCY_MANAGER' | 'CASE_WORKER' | 'SALES' | 'KIOSK_AGENT';
 
@@ -38,8 +39,8 @@ export interface StaffUser {
     // - Si rempli : Ne voit QUE ces agences spécifiques.
     scopeAgencyIds?: string[];
 
-    // EXPERTISES (JSON string array of serviceIds)
-    expertises?: string;
+    // EXPERTISES (Array of serviceIds)
+    expertises?: string[];
 }
 
 // Extension du Lead pour le traçage Back-Office

@@ -50,6 +50,17 @@ let FranchiseLeadsController = class FranchiseLeadsController {
     addNote(id, body) {
         return this.franchiseLeadsService.addNote(id, body.content, body.author, body.type);
     }
+    getAnalytics() {
+        return this.franchiseLeadsService.getAnalytics();
+    }
+    async exportCSV(res) {
+        const csv = await this.franchiseLeadsService.exportToCSV();
+        res.set({
+            'Content-Type': 'text/csv; charset=utf-8',
+            'Content-Disposition': 'attachment; filename=franchise-leads.csv'
+        });
+        res.send('\uFEFF' + csv);
+    }
 };
 exports.FranchiseLeadsController = FranchiseLeadsController;
 __decorate([
@@ -115,6 +126,23 @@ __decorate([
     __metadata("design:paramtypes", [String, Object]),
     __metadata("design:returntype", void 0)
 ], FranchiseLeadsController.prototype, "addNote", null);
+__decorate([
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('HQ_ADMIN', 'SUPER_ADMIN', 'SUPERADMIN'),
+    (0, common_1.Get)('analytics/dashboard'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], FranchiseLeadsController.prototype, "getAnalytics", null);
+__decorate([
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('HQ_ADMIN', 'SUPER_ADMIN', 'SUPERADMIN'),
+    (0, common_1.Get)('export/csv'),
+    __param(0, (0, common_1.Res)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], FranchiseLeadsController.prototype, "exportCSV", null);
 exports.FranchiseLeadsController = FranchiseLeadsController = __decorate([
     (0, common_1.Controller)('franchise-leads'),
     __metadata("design:paramtypes", [franchise_leads_service_1.FranchiseLeadsService])

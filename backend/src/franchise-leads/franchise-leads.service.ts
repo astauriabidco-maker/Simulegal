@@ -17,50 +17,59 @@ export class FranchiseLeadsService {
     ) { }
 
     async findAll() {
-        return this.prisma.franchiseLead.findMany({
+        const leads = await this.prisma.franchiseLead.findMany({
             orderBy: { updatedAt: 'desc' }
         });
+        return leads.map(l => this.mapLead(l));
     }
 
     async findOne(id: string) {
-        return this.prisma.franchiseLead.findUnique({
+        const lead = await this.prisma.franchiseLead.findUnique({
             where: { id },
             include: {
                 convertedAgency: true,
                 notes: { orderBy: { createdAt: 'desc' } }
             }
         });
+        if (!lead) return null;
+        return this.mapLead(lead);
+    }
+
+    private mapLead(lead: any) {
+        return {
+            ...lead,
+            contractDetails: lead.contractDetails ? JSON.parse(lead.contractDetails) : {},
+            contractHistory: lead.contractHistory ? JSON.parse(lead.contractHistory) : [],
+            documents: lead.documents ? JSON.parse(lead.documents) : []
+        };
     }
 
     async create(data: any) {
-        return this.prisma.franchiseLead.create({
+        const { contractDetails, contractHistory, documents, ...rest } = data;
+        const lead = await this.prisma.franchiseLead.create({
             data: {
-                ...data,
+                ...rest,
+                contractDetails: contractDetails ? JSON.stringify(contractDetails) : "{}",
+                contractHistory: contractHistory ? JSON.stringify(contractHistory) : "[]",
+                documents: documents ? JSON.stringify(documents) : "[]",
                 status: 'NEW'
             }
         });
+        return this.mapLead(lead);
     }
 
     async update(id: string, data: any) {
-        // Auto-Log Status Change
-        if (data.status) {
-            const current = await this.prisma.franchiseLead.findUnique({ where: { id }, select: { status: true } });
-            if (current && current.status !== data.status) {
-                await this.prisma.franchiseLeadNote.create({
-                    data: {
-                        leadId: id,
-                        content: `🔄 Statut modifié : ${current.status} ➔ ${data.status}`,
-                        author: 'Système',
-                        type: 'SYSTEM'
-                    }
-                });
-            }
-        }
+        const updateData = { ...data };
+        if (updateData.contractDetails) updateData.contractDetails = JSON.stringify(updateData.contractDetails);
+        if (updateData.contractHistory) updateData.contractHistory = JSON.stringify(updateData.contractHistory);
+        if (updateData.documents) updateData.documents = JSON.stringify(updateData.documents);
 
-        return this.prisma.franchiseLead.update({
+        const lead = await this.prisma.franchiseLead.update({
             where: { id },
-            data
+            data: updateData
         });
+
+        return this.mapLead(lead);
     }
 
     async signContract(id: string) {
@@ -82,7 +91,7 @@ export class FranchiseLeadsService {
         }
 
         // 1. Lire les détails du contrat
-        const contract = JSON.parse(lead.contractDetails || '{}');
+        const contract = lead.contractDetails ? (typeof lead.contractDetails === 'string' ? JSON.parse(lead.contractDetails) : lead.contractDetails) : {};
         const agencyType = contract.type || 'FRANCHISE';
 
         // 2. Créer l'agence
@@ -145,14 +154,14 @@ export class FranchiseLeadsService {
     }
 
     async logContractHistory(id: string, version: any) {
-        const lead = await this.prisma.franchiseLead.findUnique({ where: { id }, select: { contractHistory: true } });
+        const lead = await this.findOne(id);
         if (!lead) throw new BadRequestException('Lead not found');
-        const history = JSON.parse(lead.contractHistory || '[]');
+        const history = lead.contractHistory || [];
         history.push({
             ...version,
             timestamp: new Date().toISOString()
         });
-        return this.update(id, { contractHistory: JSON.stringify(history) });
+        return this.update(id, { contractHistory: history });
     }
 
     async generateContract(id: string): Promise<Buffer> {
@@ -212,7 +221,7 @@ export class FranchiseLeadsService {
             doc.fontSize(20).text('CONTRAT DE PARTENARIAT SIMULEGAL', { align: 'center' });
             doc.moveDown();
 
-            const contract = JSON.parse(lead.contractDetails || '{}');
+            const contract = lead.contractDetails ? (typeof lead.contractDetails === 'string' ? JSON.parse(lead.contractDetails) : lead.contractDetails) : {};
             const typeLabel = contract.type === 'CORNER' ? 'Contrat Corner' : 'Contrat de Franchise';
 
             doc.fontSize(12).text(`Type de contrat : ${typeLabel}`, { align: 'center' });
@@ -272,4 +281,89 @@ export class FranchiseLeadsService {
             }
         });
     }
+
+    /**
+     * Get analytics data for franchise leads
+     */
+    async getAnalytics() {
+        const leads = await this.prisma.franchiseLead.findMany({
+            select: { status: true, region: true, createdAt: true }
+        });
+
+        // Status counts
+        const statusCounts: Record<string, number> = {};
+        leads.forEach(l => {
+            statusCounts[l.status] = (statusCounts[l.status] || 0) + 1;
+        });
+
+        // Region counts
+        const regionCounts: Record<string, number> = {};
+        leads.forEach(l => {
+            regionCounts[l.region] = (regionCounts[l.region] || 0) + 1;
+        });
+
+        // Conversion rate (NEW -> SIGNED)
+        const totalNew = leads.length;
+        const totalSigned = statusCounts['SIGNED'] || 0;
+        const conversionRate = totalNew > 0 ? Math.round((totalSigned / totalNew) * 100) : 0;
+
+        // Monthly trend (last 6 months)
+        const now = new Date();
+        const monthlyTrend: { month: string; count: number; signed: number }[] = [];
+        for (let i = 5; i >= 0; i--) {
+            const monthStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0);
+            const monthLabel = monthStart.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' });
+
+            const monthLeads = leads.filter(l => {
+                const d = new Date(l.createdAt);
+                return d >= monthStart && d <= monthEnd;
+            });
+
+            monthlyTrend.push({
+                month: monthLabel,
+                count: monthLeads.length,
+                signed: monthLeads.filter(l => l.status === 'SIGNED').length
+            });
+        }
+
+        return {
+            total: leads.length,
+            statusCounts,
+            regionCounts,
+            conversionRate,
+            monthlyTrend
+        };
+    }
+
+    /**
+     * Export leads to CSV
+     */
+    async exportToCSV(filters?: { region?: string; status?: string }): Promise<string> {
+        let where: any = {};
+        if (filters?.region) where.region = filters.region;
+        if (filters?.status) where.status = filters.status;
+
+        const leads = await this.prisma.franchiseLead.findMany({
+            where,
+            orderBy: { createdAt: 'desc' }
+        });
+
+        const headers = ['ID', 'Nom', 'Email', 'Téléphone', 'Ville', 'Région', 'Statut', 'Société', 'SIRET', 'Date Création'];
+        const rows = leads.map(l => [
+            l.id,
+            l.name,
+            l.email,
+            l.phone,
+            l.targetCity,
+            l.region,
+            l.status,
+            l.companyName || '',
+            l.siret || '',
+            new Date(l.createdAt).toLocaleDateString('fr-FR')
+        ].map(v => `"${(v || '').toString().replace(/"/g, '""')}"`).join(';'));
+
+        return [headers.join(';'), ...rows].join('\n');
+    }
 }
+

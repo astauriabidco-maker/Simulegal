@@ -1,9 +1,7 @@
-export interface AnalysisResponse {
-    status: 'VALID' | 'REJECTED_BLURRY' | 'REJECTED_INCOMPLETE' | 'REJECTED_WRONG_TYPE' | 'REJECTED_EXPIRED';
-    confidence: number;
-    message: string;
-    extractedData?: Record<string, string>;
-}
+import * as OCR from './ocr.interface';
 export declare class DocumentsService {
-    analyze(file: Express.Multer.File): Promise<AnalysisResponse>;
+    private readonly ocrProvider;
+    private readonly logger;
+    constructor(ocrProvider: OCR.OCRProvider);
+    analyze(file: Express.Multer.File): Promise<OCR.AnalysisResponse>;
 }
