@@ -54,7 +54,7 @@ export default function CallCockpit({ prospect, onClose, onSaveNote }: CallCockp
                 // 2. Créer le Device
                 const newDevice = new Device(token, {
                     logLevel: 1,
-                    codecPreferences: ['opus', 'pcmu']
+                    codecPreferences: ['opus', 'pcmu'] as any
                 });
 
                 // 3. Listeners

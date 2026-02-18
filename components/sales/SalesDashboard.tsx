@@ -116,7 +116,7 @@ export default function SalesDashboard() {
             email: prospect.email,
             phone: prospect.phone,
             serviceId: prospect.interestServiceId || 'unknown',
-            serviceName: prospect.interestService || 'Projet Client',
+            serviceName: prospect.interestServiceId || 'Projet Client',
             status: 'NEW',
             currentStage: 'NEW',
             documents: initialDocs,

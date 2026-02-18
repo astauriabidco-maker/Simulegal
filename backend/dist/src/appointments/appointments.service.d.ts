@@ -11,12 +11,12 @@ export declare class AppointmentsService {
         orderBy?: Prisma.AppointmentOrderByWithRelationInput;
     }): Promise<any[]>;
     findLeadById(id: string): Promise<{
-        data: string;
         id: string;
         name: string;
         status: import(".prisma/client").$Enums.LeadStatus;
         createdAt: Date;
         updatedAt: Date;
+        data: string;
         email: string;
         phone: string;
         serviceId: string;

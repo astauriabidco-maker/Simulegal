@@ -33,15 +33,22 @@ export const EligibilityStore = {
                 localStorage.setItem(THRESHOLDS_KEY, JSON.stringify(thresholds));
             }
 
-            // 2. Rules (Example for 'naturalisation')
-            const rRes = await fetch(`${API_URL}/eligibility/rules/naturalisation`);
-            if (rRes.ok) {
-                const rules = await rRes.json();
-                if (rules && rules.length > 0) {
-                    localStorage.setItem(RULES_KEY_PREFIX + 'naturalisation', JSON.stringify(rules));
+            // 2. Rules — sync all 3 categories
+            const categories = ['naturalisation', 'sejour', 'family'] as const;
+            for (const category of categories) {
+                try {
+                    const rRes = await fetch(`${API_URL}/eligibility/rules/${category}`);
+                    if (rRes.ok) {
+                        const rules = await rRes.json();
+                        if (rules && rules.length > 0) {
+                            localStorage.setItem(RULES_KEY_PREFIX + category, JSON.stringify(rules));
+                        }
+                    }
+                } catch (catErr) {
+                    console.warn(`[ELIGIBILITY] ⚠️ Failed to sync category: ${category}`, catErr);
                 }
             }
-            console.log('[ELIGIBILITY] ✅ Sync complete');
+            console.log('[ELIGIBILITY] ✅ Sync complete (thresholds + 3 categories)');
         } catch (err) {
             console.warn('[ELIGIBILITY] ⚠️ Backend sync failed, using defaults', err);
         }
@@ -155,7 +162,64 @@ export const EligibilityStore = {
             console.warn(`[ELIGIBILITY] ⚠️ Backend evaluation failed for ${category}`, err);
         }
         return [];
-    }
+    },
+
+    // ============================================
+    // AUDIT TRAIL
+    // ============================================
+
+    /**
+     * Sauvegarde une règle via le backend (avec audit trail)
+     */
+    saveRuleToBackend: async (category: string, ruleId: string, conditions: any, changedBy: string, changeDetails?: string) => {
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+        try {
+            const res = await fetch(`${API_URL}/eligibility/rules/${category}/${ruleId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ conditions, changedBy, changeDetails }),
+            });
+            if (res.ok) {
+                console.log(`[ELIGIBILITY] ✅ Rule ${ruleId} saved to backend with audit trail`);
+                return await res.json();
+            }
+        } catch (err) {
+            console.warn(`[ELIGIBILITY] ⚠️ Backend save failed for rule ${ruleId}`, err);
+        }
+        return null;
+    },
+
+    /**
+     * Récupère l'audit log des modifications
+     */
+    fetchAuditLog: async (limit = 50): Promise<any[]> => {
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+        try {
+            const res = await fetch(`${API_URL}/eligibility/audit-log?limit=${limit}`);
+            if (res.ok) {
+                return await res.json();
+            }
+        } catch (err) {
+            console.warn('[ELIGIBILITY] ⚠️ Failed to fetch audit log', err);
+        }
+        return [];
+    },
+
+    /**
+     * Récupère l'historique d'une règle spécifique
+     */
+    fetchRuleHistory: async (category: string, ruleId: string): Promise<any[]> => {
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+        try {
+            const res = await fetch(`${API_URL}/eligibility/audit-log/${category}/${ruleId}`);
+            if (res.ok) {
+                return await res.json();
+            }
+        } catch (err) {
+            console.warn(`[ELIGIBILITY] ⚠️ Failed to fetch rule history for ${ruleId}`, err);
+        }
+        return [];
+    },
 };
 
 export default EligibilityStore;

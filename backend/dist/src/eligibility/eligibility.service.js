@@ -38,20 +38,35 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
 var EligibilityService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.EligibilityService = void 0;
 const common_1 = require("@nestjs/common");
+const prisma_service_1 = require("../prisma/prisma.service");
 const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
 let EligibilityService = EligibilityService_1 = class EligibilityService {
+    prisma;
     logger = new common_1.Logger(EligibilityService_1.name);
     rootSpecsPath = path.join(process.cwd(), '..', 'specs');
     localSpecsPath = path.join(process.cwd(), 'specs');
+    constructor(prisma) {
+        this.prisma = prisma;
+    }
     getSpecsDir() {
         if (fs.existsSync(this.rootSpecsPath))
             return this.rootSpecsPath;
         return this.localSpecsPath;
+    }
+    getFileNames() {
+        return {
+            'sejour': 'rules_sejour.json',
+            'naturalisation': 'rules_naturalisation.json',
+            'family': 'rules_family.json',
+        };
     }
     getThresholds() {
         const specsDir = this.getSpecsDir();
@@ -68,12 +83,7 @@ let EligibilityService = EligibilityService_1 = class EligibilityService {
     }
     getRules(category) {
         const specsDir = this.getSpecsDir();
-        const fileNames = {
-            'sejour': 'rules_sejour.json',
-            'naturalisation': 'rules_naturalisation.json',
-            'family': 'rules_family.json'
-        };
-        const fileName = fileNames[category];
+        const fileName = this.getFileNames()[category];
         if (!fileName)
             return [];
         try {
@@ -94,9 +104,74 @@ let EligibilityService = EligibilityService_1 = class EligibilityService {
         const eligibleRules = rules.filter((rule) => evaluateRule(userProfile, rule.conditions, thresholds));
         return eligibleRules.sort((a, b) => (b.priority || 0) - (a.priority || 0));
     }
+    async updateRule(category, ruleId, newConditions, changedBy, changeDetails) {
+        const specsDir = this.getSpecsDir();
+        const fileName = this.getFileNames()[category];
+        if (!fileName)
+            throw new Error(`Unknown category: ${category}`);
+        const filePath = path.join(specsDir, fileName);
+        const rules = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+        const ruleIndex = rules.findIndex((r) => r.id === ruleId);
+        if (ruleIndex === -1)
+            throw new Error(`Rule ${ruleId} not found in ${category}`);
+        const previousRule = { ...rules[ruleIndex] };
+        rules[ruleIndex].conditions = newConditions;
+        fs.writeFileSync(filePath, JSON.stringify(rules, null, 4), 'utf8');
+        await this.prisma.ruleAuditLog.create({
+            data: {
+                category,
+                ruleId,
+                ruleName: previousRule.title || previousRule.label || ruleId,
+                action: 'UPDATE',
+                changedBy,
+                previousValue: JSON.stringify(previousRule.conditions),
+                newValue: JSON.stringify(newConditions),
+                changeDetails: changeDetails || `Conditions modifiées par ${changedBy}`,
+            },
+        });
+        this.logger.log(`✅ Rule ${ruleId} updated in ${category} by ${changedBy}`);
+        return rules[ruleIndex];
+    }
+    async updateThresholds(newThresholds, changedBy, changeDetails) {
+        const specsDir = this.getSpecsDir();
+        const filePath = path.join(specsDir, 'config_thresholds.json');
+        let previousThresholds = {};
+        try {
+            previousThresholds = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+        }
+        catch (e) { }
+        fs.writeFileSync(filePath, JSON.stringify(newThresholds, null, 4), 'utf8');
+        await this.prisma.ruleAuditLog.create({
+            data: {
+                category: 'config',
+                ruleId: 'thresholds',
+                ruleName: 'Seuils de configuration',
+                action: 'UPDATE',
+                changedBy,
+                previousValue: JSON.stringify(previousThresholds),
+                newValue: JSON.stringify(newThresholds),
+                changeDetails: changeDetails || `Seuils mis à jour par ${changedBy}`,
+            },
+        });
+        this.logger.log(`✅ Thresholds updated by ${changedBy}`);
+        return newThresholds;
+    }
+    async getAuditLog(limit = 50) {
+        return this.prisma.ruleAuditLog.findMany({
+            orderBy: { createdAt: 'desc' },
+            take: limit,
+        });
+    }
+    async getRuleHistory(category, ruleId) {
+        return this.prisma.ruleAuditLog.findMany({
+            where: { category, ruleId },
+            orderBy: { createdAt: 'desc' },
+        });
+    }
 };
 exports.EligibilityService = EligibilityService;
 exports.EligibilityService = EligibilityService = EligibilityService_1 = __decorate([
-    (0, common_1.Injectable)()
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [prisma_service_1.PrismaService])
 ], EligibilityService);
 //# sourceMappingURL=eligibility.service.js.map

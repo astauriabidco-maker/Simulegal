@@ -79,7 +79,6 @@ let AppointmentsController = class AppointmentsController {
             await this.notificationsService.sendAppointmentConfirmation(lead, appointment);
         }
         return appointment;
-        return appointment;
     }
     async update(id, body) {
         const data = { ...body };

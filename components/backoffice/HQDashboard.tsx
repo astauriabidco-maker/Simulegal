@@ -151,7 +151,7 @@ export default function HQDashboard({ onViewDossier }: HQDashboardProps) {
                 setSelectedLead(updated);
 
                 // Auto-advance logic: If all docs are VALID and we are in COLLECTING stage, move to REVIEW
-                const allValid = updated.documents.every(d => d.status === 'VALID');
+                const allValid = updated.documents && updated.documents.every(d => d.status === 'VALID');
                 if (allValid && updated.currentStage === 'COLLECTING') {
                     console.log('[AutoAdvance] All documents valid, moving to REVIEW');
                     const nextStepLead = await DossierStore.updateStatus(leadId, 'REVIEW' as any);
@@ -293,7 +293,7 @@ export default function HQDashboard({ onViewDossier }: HQDashboardProps) {
                                                 lead={lead}
                                                 onView={() => setSelectedLead(lead)}
                                                 onNext={() => {
-                                                    const next = WorkflowService.getNextStage(lead.serviceId, lead.currentStage);
+                                                    const next = WorkflowService.getNextStage(lead.serviceId, lead.currentStage!);
                                                     if (next) handleUpdateStage(lead.id, next);
                                                 }}
                                             />
@@ -316,7 +316,7 @@ export default function HQDashboard({ onViewDossier }: HQDashboardProps) {
                     onAssign={(userId) => handleAssign(selectedLead.id, userId)}
                     onDocAction={(docId, status) => handleDocAction(selectedLead.id, docId, status)}
                     onNext={() => {
-                        const next = WorkflowService.getNextStage(selectedLead.serviceId, selectedLead.currentStage);
+                        const next = WorkflowService.getNextStage(selectedLead.serviceId, selectedLead.currentStage!);
                         if (next) handleUpdateStage(selectedLead.id, next);
                     }}
                     onAddNote={(text) => handleAddNote(selectedLead.id, text)}
@@ -363,7 +363,7 @@ function LeadCard({
         }
 
         // Action par défaut : passer à l'étape suivante
-        const nextStage = WorkflowService.getNextStage(lead.serviceId, lead.currentStage);
+        const nextStage = WorkflowService.getNextStage(lead.serviceId, lead.currentStage!);
         if (nextStage && lead.currentStage !== 'CLOSED') {
             return (
                 <button
@@ -448,7 +448,7 @@ function LeadDetailModal({
     onNext: () => void;
     onAddNote: (text: string) => void;
 }) {
-    const nextStage = WorkflowService.getNextStage(lead.serviceId, lead.currentStage);
+    const nextStage = WorkflowService.getNextStage(lead.serviceId, lead.currentStage!);
     const [noteText, setNoteText] = React.useState('');
 
     return (
@@ -484,7 +484,7 @@ function LeadDetailModal({
                                         <TrendingUp size={16} className="text-slate-400" /> {lead.phone}
                                     </p>
                                     <p className="text-sm font-bold text-slate-700 flex items-center gap-2">
-                                        <Building2 size={16} className="text-slate-400" /> {lead.originAgency?.name || 'Vente Directe'}
+                                        <Building2 size={16} className="text-slate-400" /> {(lead as any).originAgency?.name || 'Vente Directe'}
                                     </p>
                                 </div>
                             </div>
@@ -494,7 +494,7 @@ function LeadDetailModal({
                                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-3">Juriste Assigné</label>
                                 <div className="space-y-3">
                                     <select
-                                        value={lead.assignedUserId || ''}
+                                        value={lead.assignedUser || ''}
                                         onChange={(e) => onAssign(e.target.value)}
                                         disabled={isUpdating}
                                         className="w-full pl-4 pr-10 py-3 bg-slate-50 border-none rounded-2xl text-sm font-bold text-slate-700 appearance-none focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer"
@@ -609,7 +609,7 @@ function LeadDetailModal({
                         <div className="h-10 w-[1px] bg-slate-200" />
                         <div>
                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Statut Actuel</p>
-                            <p className="text-sm font-bold text-slate-700">{WorkflowService.getStageLabel(lead.currentStage)}</p>
+                            <p className="text-sm font-bold text-slate-700">{WorkflowService.getStageLabel(lead.currentStage!)}</p>
                         </div>
                     </div>
 

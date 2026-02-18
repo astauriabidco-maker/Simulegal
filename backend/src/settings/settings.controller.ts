@@ -17,11 +17,10 @@ export class SettingsController {
     @Roles('SUPER_ADMIN')
     @Patch(':section')
     async updateSection(
-        @Body() data: any,
-        @Body('section') section: string // Using param or body
+        @Param('section') section: string,
+        @Body() data: any
     ) {
-        // Simple logic: section is passed as key or we can use generic update
-        // We'll use the body keys to determine section for flexibility or explicit param
+        return this.settingsService.updateSection(section, data);
     }
 
     @UseGuards(JwtAuthGuard, RolesGuard)

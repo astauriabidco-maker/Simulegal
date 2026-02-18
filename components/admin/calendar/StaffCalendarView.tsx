@@ -197,7 +197,7 @@ export default function StaffCalendarView({ currentUserRole, currentUserAgencyId
 
         setLoading(true);
         try {
-            await CalendarStore.updateAppointment(draggedAppointment.id, newStart.toISOString(), newEnd.toISOString());
+            await CalendarStore.updateAppointment(draggedAppointment.id, { start: newStart.toISOString(), end: newEnd.toISOString() });
             loadData();
         } catch (error) {
             alert('Impossible de déplacer le rendez-vous : ' + (error as any).message);

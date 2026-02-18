@@ -10,13 +10,16 @@ exports.EligibilityModule = void 0;
 const common_1 = require("@nestjs/common");
 const eligibility_controller_1 = require("./eligibility.controller");
 const eligibility_service_1 = require("./eligibility.service");
+const prisma_module_1 = require("../prisma/prisma.module");
 let EligibilityModule = class EligibilityModule {
 };
 exports.EligibilityModule = EligibilityModule;
 exports.EligibilityModule = EligibilityModule = __decorate([
     (0, common_1.Module)({
+        imports: [prisma_module_1.PrismaModule],
         controllers: [eligibility_controller_1.EligibilityController],
         providers: [eligibility_service_1.EligibilityService],
+        exports: [eligibility_service_1.EligibilityService],
     })
 ], EligibilityModule);
 //# sourceMappingURL=eligibility.module.js.map

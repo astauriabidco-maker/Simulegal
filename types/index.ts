@@ -1,7 +1,7 @@
 export interface UserProfile {
   identity: {
     age: number;
-    nationality_group: 'EU' | 'ALGERIAN' | 'TUNISIAN' | 'NON_EU' | 'FRANCE' | 'REFUGEE' | 'STATELESS';
+    nationality_group: 'EU' | 'ALGERIAN' | 'TUNISIAN' | 'MOROCCAN' | 'NON_EU' | 'FRANCE' | 'REFUGEE' | 'STATELESS';
     born_in_france: boolean;
     lost_french_nationality?: boolean;
     name?: string;
@@ -15,12 +15,14 @@ export interface UserProfile {
     years_residence_since_age_11?: number;
     years_residence_since_age_8?: number;
     residence_since_age_6?: boolean;
+    resides_in_france?: boolean;
   };
   admin: {
     current_visa_type?: 'VLS-TS' | 'STUDENT' | 'VISITOR' | 'WORKER' | 'VPF' | 'PASSEPORT_TALENT' | 'RESIDENT_CARD' | 'RECEIPISSE' | 'NONE';
     has_valid_visa_or_permit: boolean;
     entry_mode?: 'FAMILY_REUNIFICATION' | 'STANDARD';
     health_insurance: boolean;
+    entered_legally?: boolean; // entrée régulière sur le territoire (visa ou dispense)
   };
   family: {
     spouse_nationality: 'FRENCH' | 'EU' | 'NON_EU' | 'NONE';
@@ -42,6 +44,11 @@ export interface UserProfile {
     housing_status?: 'OWNED_RENTED' | 'SEARCHING' | 'UNKNOWN';
     income_source?: 'SALARY' | 'PENSION' | 'RSA_ALOWANCE' | 'OTHER';
     sponsor_nationality?: 'ALGERIAN' | 'OTHER';
+    rf_family_members_count?: number;  // nombre de personnes à faire venir
+    rf_housing_surface?: number;       // surface logement en m²
+    rf_has_valid_titre_sejour?: boolean; // titre de séjour en cours de validité (CESEDA L434-1)
+    rf_marital_status?: 'MARRIED' | 'CIVIL_PARTNER' | 'CONCUBIN' | 'SINGLE'; // situation matrimoniale
+    rf_who_to_bring?: 'SPOUSE_ONLY' | 'CHILDREN_ONLY' | 'SPOUSE_AND_CHILDREN'; // regroupement partiel/total
   };
   work: {
     contract_type: 'CDI' | 'CDD' | 'SEASONAL' | 'NONE' | 'PROMESSE';
@@ -63,6 +70,18 @@ export interface UserProfile {
     main_situation?: 'STUDENT' | 'WORKER' | 'ENTREPRENEUR' | 'OTHER';
     has_work_seniority_proof?: boolean;
     has_payslips?: boolean;
+    is_researcher?: boolean;
+    has_hosting_agreement?: boolean;
+    is_artist?: boolean;
+    is_sportif_haut_niveau?: boolean;
+    is_intern?: boolean;
+    is_au_pair?: boolean;
+    is_volunteer?: boolean;
+    is_salarie_mission?: boolean;
+    has_work_accident_pension?: boolean;
+    work_accident_rate?: number;
+    served_french_military?: boolean;
+    has_legion_honneur?: boolean;
   };
   education: {
     diploma_level: 'NONE' | 'LICENCE' | 'MASTER' | 'PHD' | 'SPECIALIZED_MASTER' | 'LICENCE_PRO' | 'CGE_LEVEL_1';
@@ -93,16 +112,33 @@ export interface UserProfile {
   vulnerability: {
     has_protection_order_violence?: boolean;
     show_vulnerability?: boolean;
+    is_victim_trafficking?: boolean;
+    is_victim_domestic_violence?: boolean;
   };
   health: {
     child_needs_care?: boolean;
     treatment_available_origin?: boolean;
+    treatment_unavailable_in_origin?: boolean;
+    personal_needs_treatment?: boolean;
+  };
+  asylum: {
+    is_asylum_seeker?: boolean;
+    asylum_application_pending?: boolean;
+  };
+  regularisation: {
+    has_children_schooled_3y?: boolean;
+    has_exceptional_talent?: boolean;
+    years_presence_france?: number;
+  };
+  nationality_extra: {
+    possession_etat_francais?: boolean;
   };
   residence: {
     maintains_home_abroad?: boolean;
   };
   project: {
     target_goal?: 'NATURALIZATION' | 'RESIDENCE_PERMIT' | 'BOTH' | 'SERVICE';
+    is_real_and_serious?: boolean;
   };
   driving: {
     status?: 'STUDENT' | 'TOURIST' | 'WORKER_VP' | 'EU_NATIONAL';
@@ -150,4 +186,16 @@ export interface ProcedureRule {
   priority: number;
   source_ref: string;
   conditions: RuleCondition;
+  /** Ranking tier: PREMIUM (best), STANDARD, FALLBACK */
+  tier?: 'PREMIUM' | 'STANDARD' | 'FALLBACK';
+  /** Duration of the titre in years (0 = nationality acquisition) */
+  duration_years?: number;
+  /** Whether the titre gives the right to work */
+  gives_work_right?: boolean;
+  /** Whether this path can lead to naturalisation */
+  leads_to_naturalisation?: boolean;
+  /** Request type: FIRST_OR_RENEWAL (default), UPGRADE (requires existing titre) */
+  /** List of document IDs required for this procedure */
+  documents?: string[];
+  request_type?: 'FIRST_OR_RENEWAL' | 'UPGRADE';
 }

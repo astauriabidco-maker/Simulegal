@@ -18,6 +18,7 @@ export interface AgencyExt {
     kioskUrl: string;
     commissionRate: number;
     zipCodes: string[];
+    region?: string;
 }
 
 const API_URL = 'http://localhost:3001/agencies';

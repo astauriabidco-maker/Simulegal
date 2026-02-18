@@ -29,6 +29,18 @@ let EligibilityController = class EligibilityController {
     evaluate(category, userProfile) {
         return this.service.evaluateEligibility(userProfile, category);
     }
+    updateRule(category, ruleId, body) {
+        return this.service.updateRule(category, ruleId, body.conditions, body.changedBy, body.changeDetails);
+    }
+    updateThresholds(body) {
+        return this.service.updateThresholds(body.thresholds, body.changedBy, body.changeDetails);
+    }
+    getAuditLog(limit) {
+        return this.service.getAuditLog(limit ? parseInt(limit) : 50);
+    }
+    getRuleHistory(category, ruleId) {
+        return this.service.getRuleHistory(category, ruleId);
+    }
 };
 exports.EligibilityController = EligibilityController;
 __decorate([
@@ -52,6 +64,37 @@ __decorate([
     __metadata("design:paramtypes", [String, Object]),
     __metadata("design:returntype", void 0)
 ], EligibilityController.prototype, "evaluate", null);
+__decorate([
+    (0, common_1.Put)('rules/:category/:ruleId'),
+    __param(0, (0, common_1.Param)('category')),
+    __param(1, (0, common_1.Param)('ruleId')),
+    __param(2, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String, Object]),
+    __metadata("design:returntype", void 0)
+], EligibilityController.prototype, "updateRule", null);
+__decorate([
+    (0, common_1.Put)('thresholds'),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], EligibilityController.prototype, "updateThresholds", null);
+__decorate([
+    (0, common_1.Get)('audit-log'),
+    __param(0, (0, common_1.Query)('limit')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], EligibilityController.prototype, "getAuditLog", null);
+__decorate([
+    (0, common_1.Get)('audit-log/:category/:ruleId'),
+    __param(0, (0, common_1.Param)('category')),
+    __param(1, (0, common_1.Param)('ruleId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String]),
+    __metadata("design:returntype", void 0)
+], EligibilityController.prototype, "getRuleHistory", null);
 exports.EligibilityController = EligibilityController = __decorate([
     (0, common_1.Controller)('eligibility'),
     __metadata("design:paramtypes", [eligibility_service_1.EligibilityService])

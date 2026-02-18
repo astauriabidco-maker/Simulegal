@@ -10,12 +10,12 @@ export declare class LeadsService {
     private mapLead;
     updateStatus(id: string, status: any): Promise<any>;
     assignUser(id: string, userId: string): Promise<{
-        data: string;
         id: string;
         name: string;
         status: import(".prisma/client").$Enums.LeadStatus;
         createdAt: Date;
         updatedAt: Date;
+        data: string;
         email: string;
         phone: string;
         serviceId: string;
@@ -39,8 +39,8 @@ export declare class LeadsService {
         id: string;
         createdAt: Date;
         content: string;
-        author: string;
         leadId: string;
+        author: string;
     }>;
     create(data: any): Promise<any>;
     recordPayment(id: string, data: {
@@ -49,12 +49,12 @@ export declare class LeadsService {
         reference?: string;
     }): Promise<any>;
     delete(id: string): Promise<{
-        data: string;
         id: string;
         name: string;
         status: import(".prisma/client").$Enums.LeadStatus;
         createdAt: Date;
         updatedAt: Date;
+        data: string;
         email: string;
         phone: string;
         serviceId: string;

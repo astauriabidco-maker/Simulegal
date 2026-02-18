@@ -239,12 +239,9 @@ export default function CheckoutFlow({
                                 <div className="relative flex items-center">
                                     <input
                                         type="checkbox"
+                                        checked={hasAgreed}
                                         className="peer h-5 w-5 cursor-pointer appearance-none rounded border border-slate-300 shadow-sm transition-all checked:border-indigo-600 checked:bg-indigo-600 hover:shadow-md"
-                                        onChange={(e) => {
-                                            const btn = document.getElementById('btn-sign');
-                                            if (btn) btn.removeAttribute('disabled');
-                                            if (!e.target.checked && btn) btn.setAttribute('disabled', 'true');
-                                        }}
+                                        onChange={(e) => setHasAgreed(e.target.checked)}
                                     />
                                     <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 opacity-0 peer-checked:opacity-100 text-white pointer-events-none">
                                         <CheckCircle size={12} />
@@ -257,7 +254,7 @@ export default function CheckoutFlow({
 
                             <button
                                 id="btn-sign"
-                                disabled
+                                disabled={!hasAgreed}
                                 onClick={handleSignContract}
                                 className="w-full py-3 rounded-lg font-bold flex justify-center items-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed bg-slate-900 text-white hover:bg-slate-800 shadow-md hover:shadow-lg"
                             >

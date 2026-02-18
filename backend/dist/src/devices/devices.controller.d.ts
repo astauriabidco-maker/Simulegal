@@ -14,6 +14,8 @@ export declare class DevicesController {
             commissionRate: number;
             serviceCommissionOverrides: string | null;
             contactEmail: string;
+            iban: string | null;
+            bic: string | null;
             kioskUrl: string;
             createdAt: Date;
             updatedAt: Date;
@@ -40,6 +42,8 @@ export declare class DevicesController {
             commissionRate: number;
             serviceCommissionOverrides: string | null;
             contactEmail: string;
+            iban: string | null;
+            bic: string | null;
             kioskUrl: string;
             createdAt: Date;
             updatedAt: Date;
@@ -74,6 +78,8 @@ export declare class DevicesController {
                 commissionRate: number;
                 serviceCommissionOverrides: string | null;
                 contactEmail: string;
+                iban: string | null;
+                bic: string | null;
                 kioskUrl: string;
                 createdAt: Date;
                 updatedAt: Date;
@@ -122,6 +128,8 @@ export declare class DevicesController {
                 commissionRate: number;
                 serviceCommissionOverrides: string | null;
                 contactEmail: string;
+                iban: string | null;
+                bic: string | null;
                 kioskUrl: string;
                 createdAt: Date;
                 updatedAt: Date;

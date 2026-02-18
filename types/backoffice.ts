@@ -8,7 +8,7 @@ export interface Agency {
     id: string;
     name: string;
     type: AgencyType;
-    region: string; // ex: "IDF", "PACA", "AURA"
+    region?: string; // ex: "IDF", "PACA", "AURA"
     zipCodes: string[]; // Zones couvertes pour les rappels (ex: ['75001', '75002'])
     commissionRate: number; // 0% si OWNED (généralement), X% si FRANCHISE
     address?: string;
@@ -27,7 +27,7 @@ export interface StaffUser {
     email: string;
     phone?: string;
     isActive: boolean;
-    role: 'HQ_ADMIN' | 'AGENCY_MANAGER' | 'CASE_WORKER' | 'SALES' | 'KIOSK_AGENT';
+    role: 'SUPER_ADMIN' | 'HQ_ADMIN' | 'AGENCY_MANAGER' | 'CASE_WORKER' | 'SALES' | 'KIOSK_AGENT';
 
     // RATTACHEMENT PRIMAIRE (Où travaille-t-il physiquement ?)
     // - Si 'HQ' ou null : Il est au Siège.

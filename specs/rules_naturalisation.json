@@ -33,7 +33,12 @@
                     "val": true
                 }
             ]
-        }
+        },
+        "tier": "PREMIUM",
+        "duration_years": 0,
+        "gives_work_right": true,
+        "leads_to_naturalisation": true,
+        "request_type": "FIRST_OR_RENEWAL"
     },
     {
         "id": "nat_droit_du_sol_anticipe_13_16",
@@ -74,7 +79,12 @@
                     "val": true
                 }
             ]
-        }
+        },
+        "tier": "PREMIUM",
+        "duration_years": 0,
+        "gives_work_right": true,
+        "leads_to_naturalisation": true,
+        "request_type": "FIRST_OR_RENEWAL"
     },
     {
         "id": "nat_declaration_mariage",
@@ -85,14 +95,46 @@
         "conditions": {
             "AND": [
                 {
+                    "var": "identity.age",
+                    "op": "GTE",
+                    "val": 18
+                },
+                {
                     "var": "family.spouse_nationality",
                     "op": "EQ",
                     "val": "FRENCH"
                 },
                 {
-                    "var": "family.marriage_duration_years",
-                    "op": "GTE",
-                    "val": "@config:duration_thresholds.marriage_duration.pour_nationalite_mariage"
+                    "OR": [
+                        {
+                            "AND": [
+                                {
+                                    "var": "timeline.resides_in_france",
+                                    "op": "EQ",
+                                    "val": true
+                                },
+                                {
+                                    "var": "family.marriage_duration_years",
+                                    "op": "GTE",
+                                    "val": "@config:duration_thresholds.marriage_duration.pour_nationalite_mariage"
+                                }
+                            ]
+                        },
+                        {
+                            "AND": [
+                                {
+                                    "var": "timeline.resides_in_france",
+                                    "op": "EQ",
+                                    "val": false
+                                },
+                                {
+                                    "var": "family.marriage_duration_years",
+                                    "op": "GTE",
+                                    "val": 5
+                                }
+                            ]
+                        }
+                    ]
                 },
                 {
                     "var": "family.community_of_life",
@@ -115,7 +157,12 @@
                     "val": true
                 }
             ]
-        }
+        },
+        "tier": "PREMIUM",
+        "duration_years": 0,
+        "gives_work_right": true,
+        "leads_to_naturalisation": true,
+        "request_type": "FIRST_OR_RENEWAL"
     },
     {
         "id": "nat_declaration_fratrie",
@@ -125,6 +172,11 @@
         "source_ref": "60, 61",
         "conditions": {
             "AND": [
+                {
+                    "var": "identity.age",
+                    "op": "GTE",
+                    "val": 18
+                },
                 {
                     "var": "family.has_french_sibling",
                     "op": "EQ",
@@ -151,7 +203,12 @@
                     "val": true
                 }
             ]
-        }
+        },
+        "tier": "PREMIUM",
+        "duration_years": 0,
+        "gives_work_right": true,
+        "leads_to_naturalisation": true,
+        "request_type": "FIRST_OR_RENEWAL"
     },
     {
         "id": "nat_declaration_ascendant",
@@ -187,7 +244,12 @@
                     "val": true
                 }
             ]
-        }
+        },
+        "tier": "PREMIUM",
+        "duration_years": 0,
+        "gives_work_right": true,
+        "leads_to_naturalisation": true,
+        "request_type": "FIRST_OR_RENEWAL"
     },
     {
         "id": "nat_decret_etudes_sup",
@@ -197,6 +259,11 @@
         "source_ref": "71, 72",
         "conditions": {
             "AND": [
+                {
+                    "var": "identity.age",
+                    "op": "GTE",
+                    "val": 18
+                },
                 {
                     "var": "education.has_french_higher_education_diploma",
                     "op": "EQ",
@@ -228,7 +295,12 @@
                     "val": true
                 }
             ]
-        }
+        },
+        "tier": "STANDARD",
+        "duration_years": 0,
+        "gives_work_right": true,
+        "leads_to_naturalisation": true,
+        "request_type": "FIRST_OR_RENEWAL"
     },
     {
         "id": "nat_decret_refugie",
@@ -238,6 +310,11 @@
         "source_ref": "76",
         "conditions": {
             "AND": [
+                {
+                    "var": "identity.age",
+                    "op": "GTE",
+                    "val": 18
+                },
                 {
                     "var": "identity.nationality_group",
                     "op": "IN",
@@ -267,7 +344,12 @@
                     "val": true
                 }
             ]
-        }
+        },
+        "tier": "STANDARD",
+        "duration_years": 0,
+        "gives_work_right": true,
+        "leads_to_naturalisation": true,
+        "request_type": "FIRST_OR_RENEWAL"
     },
     {
         "id": "nat_decret_standard",
@@ -277,6 +359,11 @@
         "source_ref": "71, 72",
         "conditions": {
             "AND": [
+                {
+                    "var": "identity.age",
+                    "op": "GTE",
+                    "val": 18
+                },
                 {
                     "var": "timeline.years_continuous_residence",
                     "op": "GTE",
@@ -303,7 +390,12 @@
                     "val": true
                 }
             ]
-        }
+        },
+        "tier": "STANDARD",
+        "duration_years": 0,
+        "gives_work_right": true,
+        "leads_to_naturalisation": true,
+        "request_type": "FIRST_OR_RENEWAL"
     },
     {
         "id": "nat_reintegration_decret",
@@ -313,6 +405,11 @@
         "source_ref": "69, 70",
         "conditions": {
             "AND": [
+                {
+                    "var": "identity.age",
+                    "op": "GTE",
+                    "val": 18
+                },
                 {
                     "var": "identity.lost_french_nationality",
                     "op": "EQ",
@@ -339,6 +436,124 @@
                     "val": true
                 }
             ]
-        }
+        },
+        "tier": "STANDARD",
+        "duration_years": 0,
+        "gives_work_right": true,
+        "leads_to_naturalisation": true,
+        "request_type": "FIRST_OR_RENEWAL"
+    },
+    {
+        "id": "nat_decret_service_militaire",
+        "name": "Naturalisation – Service dans l'armée française",
+        "description": "Pour les étrangers ayant servi dans l'armée française ou ayant contracté un engagement volontaire dans les armées françaises en temps de guerre.",
+        "priority": 80,
+        "source_ref": "Art. 21-19 C.civ",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "identity.age",
+                    "op": "GTE",
+                    "val": 18
+                },
+                {
+                    "var": "work.served_french_military",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "integration.french_level",
+                    "op": "GTE",
+                    "val": "B1"
+                },
+                {
+                    "var": "civic.clean_criminal_record",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "civic.no_expulsion_order",
+                    "op": "EQ",
+                    "val": true
+                }
+            ]
+        },
+        "tier": "PREMIUM",
+        "duration_years": 0,
+        "gives_work_right": true,
+        "leads_to_naturalisation": true,
+        "request_type": "FIRST_OR_RENEWAL"
+    },
+    {
+        "id": "nat_decret_legion_honneur",
+        "name": "Naturalisation – Légion d'honneur / Services rendus",
+        "description": "Pour les étrangers décorés de la Légion d'honneur ou ayant rendu des services exceptionnels à la France.",
+        "priority": 85,
+        "source_ref": "Art. 21-19 C.civ",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "identity.age",
+                    "op": "GTE",
+                    "val": 18
+                },
+                {
+                    "var": "work.has_legion_honneur",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "civic.clean_criminal_record",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "civic.no_expulsion_order",
+                    "op": "EQ",
+                    "val": true
+                }
+            ]
+        },
+        "tier": "PREMIUM",
+        "duration_years": 0,
+        "gives_work_right": true,
+        "leads_to_naturalisation": true,
+        "request_type": "FIRST_OR_RENEWAL"
+    },
+    {
+        "id": "nat_declaration_possession_etat",
+        "name": "Déclaration – Possession d'état de Français",
+        "description": "Pour les personnes ayant joui de la possession d'état de Français pendant au moins 10 ans, de bonne foi.",
+        "priority": 75,
+        "source_ref": "Art. 21-13 C.civ",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "identity.age",
+                    "op": "GTE",
+                    "val": 18
+                },
+                {
+                    "var": "nationality_extra.possession_etat_francais",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "timeline.years_continuous_residence",
+                    "op": "GTE",
+                    "val": 10
+                },
+                {
+                    "var": "civic.clean_criminal_record",
+                    "op": "EQ",
+                    "val": true
+                }
+            ]
+        },
+        "tier": "PREMIUM",
+        "duration_years": 0,
+        "gives_work_right": true,
+        "leads_to_naturalisation": true,
+        "request_type": "FIRST_OR_RENEWAL"
     }
 ]

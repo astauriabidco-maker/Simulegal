@@ -28,19 +28,19 @@ let RolesController = class RolesController {
         return this.rolesService.findOne(id);
     }
     create(req, data) {
-        if (req.user.role !== 'SUPERADMIN' && req.user.role !== 'HQ_ADMIN') {
+        if (req.user.role !== 'SUPER_ADMIN' && req.user.role !== 'HQ_ADMIN') {
             throw new common_1.ForbiddenException('Action réservée au siège');
         }
         return this.rolesService.create(data);
     }
     update(req, id, data) {
-        if (req.user.role !== 'SUPERADMIN' && req.user.role !== 'HQ_ADMIN') {
+        if (req.user.role !== 'SUPER_ADMIN' && req.user.role !== 'HQ_ADMIN') {
             throw new common_1.ForbiddenException('Action réservée au siège');
         }
         return this.rolesService.update(id, data);
     }
     remove(req, id) {
-        if (req.user.role !== 'SUPERADMIN' && req.user.role !== 'HQ_ADMIN') {
+        if (req.user.role !== 'SUPER_ADMIN' && req.user.role !== 'HQ_ADMIN') {
             throw new common_1.ForbiddenException('Action réservée au siège');
         }
         return this.rolesService.remove(id);

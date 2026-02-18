@@ -18,8 +18,8 @@ export declare class SalesService {
                 id: string;
                 createdAt: Date;
                 text: string;
-                authorId: string;
                 prospectId: string;
+                authorId: string;
             }[];
         } & {
             id: string;
@@ -56,8 +56,8 @@ export declare class SalesService {
             id: string;
             createdAt: Date;
             text: string;
-            authorId: string;
             prospectId: string;
+            authorId: string;
         }[];
     } & {
         id: string;
@@ -116,8 +116,8 @@ export declare class SalesService {
         id: string;
         createdAt: Date;
         text: string;
-        authorId: string;
         prospectId: string;
+        authorId: string;
     }>;
     importFromCSV(buffer: Buffer): Promise<number>;
 }

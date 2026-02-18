@@ -1,11 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { UserProfile } from '@/types';
-import IdentityTimelineStep from '@/components/steps/IdentityTimelineStep';
-import MigratoryHistoryStep from '@/components/steps/MigratoryHistoryStep';
-import ActivityResourcesStep from '@/components/steps/ActivityResourcesStep';
-import FamilyVulnerabilityStep from '@/components/steps/FamilyVulnerabilityStep';
+import WizardFlow from '@/components/wizard/WizardFlow';
 import FamilyReunificationStep from './steps/FamilyReunificationStep';
 import DrivingLicenseStep from '@/components/steps/DrivingLicenseStep';
 import RdvPrefectureStep from '@/components/steps/RdvPrefectureStep';
@@ -14,10 +11,12 @@ import FrenchCourseStep from '@/components/steps/FrenchCourseStep';
 import CivicExamStep from '@/components/steps/CivicExamStep';
 import CallbackStep from '@/components/steps/CallbackStep';
 import ResultsView from '@/components/ResultsView';
+import { WizardErrorBoundary } from '@/components/WizardErrorBoundary';
 import { LEGAL_QUESTIONS } from '@/data/modules/legal';
 import { Scale, ArrowRight } from 'lucide-react';
 import { SERVICES_CATALOG } from '@/data/services';
 import { CRM } from '@/services/crmStore';
+import { SMIC_BRUT_MENSUEL } from '@/lib/computeDerivedFields';
 
 const INITIAL_STATE: UserProfile = {
     identity: {
@@ -35,6 +34,7 @@ const INITIAL_STATE: UserProfile = {
     admin: {
         has_valid_visa_or_permit: false,
         health_insurance: true,
+        entered_legally: true,
         current_visa_type: 'NONE',
         entry_mode: 'STANDARD',
     },
@@ -44,6 +44,8 @@ const INITIAL_STATE: UserProfile = {
         community_of_life: false,
         is_polygamous: false,
         has_french_child: false,
+        spouse_kept_nationality: true,
+        contributes_to_education: true,
     },
     work: {
         contract_type: 'NONE',
@@ -55,10 +57,38 @@ const INITIAL_STATE: UserProfile = {
         main_situation: 'WORKER',
         has_payslips: false,
         business_project_viable: false,
+        wants_to_work: false,
+        // Q1 factorized booleans (default all false)
+        is_researcher: false,
+        has_hosting_agreement: false,
+        is_artist: false,
+        is_sportif_haut_niveau: false,
+        is_intern: false,
+        is_au_pair: false,
+        is_volunteer: false,
+        is_salarie_mission: false,
+        is_ict_transfer: false,
+        is_manager_or_expert: false,
+        is_entrepreneur: false,
+        is_innovative_company: false,
+        job_related_to_rd: false,
+        // Q5 factorized booleans
+        served_french_military: false,
+        has_legion_honneur: false,
+        has_work_accident_pension: false,
+        work_accident_rate: 0,
+        years_experience_comparable: 0,
+        contract_duration_months: 0,
+        group_seniority_months: 0,
     },
     education: {
         diploma_level: 'NONE',
         has_french_higher_education_diploma: false,
+        is_enrolled_higher_ed: false,
+        // Q4 factorized fields
+        years_schooling_france: 0,
+        years_higher_education: 0,
+        schooling_in_france_age_6_to_16: false,
     },
     financial: {
         resources_stable_sufficient: false,
@@ -67,6 +97,7 @@ const INITIAL_STATE: UserProfile = {
     },
     investment: {
         amount: 0,
+        creates_jobs: false,
     },
     integration: {
         french_level: 'A1',
@@ -79,9 +110,31 @@ const INITIAL_STATE: UserProfile = {
     },
     vulnerability: {
         show_vulnerability: false,
+        is_victim_trafficking: false,
+        is_victim_domestic_violence: false,
+        has_protection_order_violence: false,
     },
-    health: {},
-    residence: {},
+    health: {
+        personal_needs_treatment: false,
+        treatment_unavailable_in_origin: false,
+        treatment_available_origin: true,
+        child_needs_care: false,
+    },
+    asylum: {
+        is_asylum_seeker: false,
+        asylum_application_pending: false,
+    },
+    regularisation: {
+        has_children_schooled_3y: false,
+        has_exceptional_talent: false,
+        years_presence_france: 0,
+    },
+    nationality_extra: {
+        possession_etat_francais: false,
+    },
+    residence: {
+        maintains_home_abroad: false,
+    },
     project: {
         target_goal: 'BOTH',
     },
@@ -134,7 +187,34 @@ export default function SimulatorWrapper({ serviceId, forceAgencyId, onComplete 
 
     const selectedServiceId = serviceId || '';
 
-    const isFamilyReunification = selectedServiceId === 'family_reunification';
+    // localStorage persistence key
+    const PROFILE_KEY = `simulegal_profile_${selectedServiceId || 'main'}`;
+
+    // Restore profile from localStorage on mount
+    useEffect(() => {
+        try {
+            const saved = localStorage.getItem(PROFILE_KEY);
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                // Only restore if less than 24h old
+                if (parsed._ts && Date.now() - parsed._ts < 24 * 60 * 60 * 1000) {
+                    delete parsed._ts;
+                    setUserProfile(prev => ({ ...prev, ...parsed }));
+                } else {
+                    localStorage.removeItem(PROFILE_KEY);
+                }
+            }
+        } catch { /* ignore corrupt data */ }
+    }, [PROFILE_KEY]);
+
+    // Save profile to localStorage on every change (debounced via state)
+    useEffect(() => {
+        try {
+            localStorage.setItem(PROFILE_KEY, JSON.stringify({ ...userProfile, _ts: Date.now() }));
+        } catch { /* quota exceeded */ }
+    }, [userProfile, PROFILE_KEY]);
+
+    const isFamilyReunification = selectedServiceId === 'regroupement_familial';
     const isDrivingExchange = selectedServiceId === 'permis_conduire';
     const isRdvPrefecture = selectedServiceId === 'rdv_prefecture';
     const isLegalConsultation = selectedServiceId === 'rdv_juriste';
@@ -210,7 +290,7 @@ export default function SimulatorWrapper({ serviceId, forceAgencyId, onComplete 
             if (section === 'work' || section === 'financial') {
                 const salary = nextProfile.work.salary_monthly_gross || 0;
                 const totalMonthly = salary;
-                const SMIC = 1766.92;
+                const SMIC = SMIC_BRUT_MENSUEL;
                 nextProfile.financial = {
                     ...nextProfile.financial,
                     resources_monthly_average: totalMonthly,
@@ -218,6 +298,24 @@ export default function SimulatorWrapper({ serviceId, forceAgencyId, onComplete 
                     resources_annual_total: totalMonthly * 12
                 };
             }
+
+            // ─── Computed timeline variables ───
+            const age = nextProfile.identity.age;
+            const residenceYears = nextProfile.timeline.years_continuous_residence;
+            const ageAtEntry = Math.max(0, age - residenceYears);
+            nextProfile.timeline = {
+                ...nextProfile.timeline,
+                age_at_entry: Math.max(0, ageAtEntry),  // guard: can't be negative
+                residence_since_age_6: ageAtEntry <= 6,
+                years_residence_since_age_8: Math.max(0, residenceYears - Math.max(0, 8 - ageAtEntry)),
+                years_residence_since_age_11: Math.max(0, residenceYears - Math.max(0, 11 - ageAtEntry)),
+            };
+
+            // ─── project.is_real_and_serious = true if user is filling the form ───
+            nextProfile.project = {
+                ...nextProfile.project,
+                is_real_and_serious: true,
+            };
 
             return nextProfile;
         });
@@ -232,12 +330,15 @@ export default function SimulatorWrapper({ serviceId, forceAgencyId, onComplete 
         // Family isolated mode
         if (isFamilyReunification) {
             if (currentStep === 1) {
-                const { sponsor_nationality, presence_duration, has_handicap_allowance, housing_status, income_source } = data.family;
-                const hasBasic = !!sponsor_nationality && !!presence_duration && has_handicap_allowance !== undefined && !!housing_status;
-                if (!hasBasic) return false;
-                if (has_handicap_allowance === false) {
-                    return (data.work.salary_monthly_gross || 0) > 0 && !!income_source;
-                }
+                const fam = data.family;
+                // ─── Intelligent blocking: these stop the flow at step 1 ───
+                if (fam.rf_has_valid_titre_sejour === undefined) return false;
+                if (fam.rf_has_valid_titre_sejour === false) return false; // BLOCKED
+                if (fam.is_polygamous === undefined) return false;
+                if (fam.is_polygamous === true) return false; // BLOCKED
+                if (!fam.rf_marital_status) return false;
+                if (fam.rf_marital_status === 'CIVIL_PARTNER' || fam.rf_marital_status === 'CONCUBIN') return false; // BLOCKED
+                // Pre-checks passed — all data collected inside FamilyReunificationStep sub-steps
                 return true;
             }
             return true;
@@ -301,29 +402,8 @@ export default function SimulatorWrapper({ serviceId, forceAgencyId, onComplete 
             return true;
         }
 
-        // Standard Mode
-        switch (currentStep) {
-            case 1:
-                return !!data.identity.nationality_group && data.identity.age > 0 && !!data.project.target_goal;
-            case 2:
-                return !!data.timeline.entry_date && (!!data.admin.current_visa_type &&
-                    data.civic.clean_criminal_record !== undefined &&
-                    data.civic.no_expulsion_order !== undefined);
-            case 3:
-                const { main_situation, contract_type, salary_monthly_gross } = data.work;
-                if (!main_situation) return false;
-                if (main_situation === 'WORKER') {
-                    return !!contract_type && contract_type !== 'NONE' && (salary_monthly_gross || 0) > 0;
-                }
-                if (main_situation === 'STUDENT') {
-                    return !!data.education.diploma_level && data.education.diploma_level !== 'NONE';
-                }
-                return true;
-            case 4:
-                return !!data.family.spouse_nationality;
-            default:
-                return true;
-        }
+        // Standard Mode — wizard handles its own validation
+        return true;
     };
 
     const renderStep = () => {
@@ -531,89 +611,74 @@ export default function SimulatorWrapper({ serviceId, forceAgencyId, onComplete 
             }
         }
 
-        // Standard Mode
-        switch (step) {
-            case 1:
-                return <IdentityTimelineStep data={userProfile} update={updateProfile} onNext={nextStep} canNext={canNext} />;
-            case 2:
-                return <MigratoryHistoryStep data={userProfile} update={updateProfile} onNext={nextStep} onBack={prevStep} canNext={canNext} />;
-            case 3:
-                return <ActivityResourcesStep data={userProfile} update={updateProfile} onNext={nextStep} onBack={prevStep} canNext={canNext} />;
-            case 4:
-                return <FamilyVulnerabilityStep data={userProfile} update={updateProfile} onNext={nextStep} onBack={prevStep} canNext={canNext} />;
-            case 5:
-                return <ResultsView userProfile={userProfile} onReset={() => setStep(1)} serviceId={selectedServiceId} forceAgencyId={forceAgencyId} />;
-            default:
-                return null;
-        }
+        // Standard Mode — Wizard handles everything
+        return <WizardFlow
+            userProfile={userProfile}
+            updateProfile={updateProfile}
+            serviceId={selectedServiceId}
+            forceAgencyId={forceAgencyId}
+        />;
     };
 
-    const currentTotalSteps = (isFamilyReunification || isDrivingExchange || isRdvPrefecture || isLegalConsultation || isFrenchCourse || isCivicExam || isCallback) ? 2 : 5;
+    const isServiceFlow = isFamilyReunification || isDrivingExchange || isRdvPrefecture || isLegalConsultation || isFrenchCourse || isCivicExam || isCallback;
+    const currentTotalSteps = isServiceFlow ? 2 : 5;
     const progress = (step / currentTotalSteps) * 100;
 
     const [showDebug, setShowDebug] = useState(false);
 
     return (
-        <div className="w-full max-w-4xl mx-auto p-4 md:p-8">
-            {step < currentTotalSteps && (
-                <div className="mb-10">
-                    <div className="flex justify-between items-end mb-3">
-                        <span className="text-sm font-semibold text-slate-600">
-                            {isFamilyReunification ? (
-                                <>Étape 1/1 : <span className="text-slate-400 font-medium">Questionnaire d'éligibilité</span></>
-                            ) : isDrivingExchange ? (
-                                <>Étape 1/1 : <span className="text-slate-400 font-medium">Questionnaire Permis</span></>
-                            ) : isRdvPrefecture ? (
-                                <>Étape 1/1 : <span className="text-slate-400 font-medium">Formulaire de Commande</span></>
-                            ) : isLegalConsultation ? (
-                                <>Étape 1/1 : <span className="text-slate-400 font-medium">Qualification de Consultation</span></>
-                            ) : isFrenchCourse ? (
-                                <>Étape 1/1 : <span className="text-slate-400 font-medium">Localiser un centre</span></>
-                            ) : isCivicExam ? (
-                                <>Étape 1/1 : <span className="text-slate-400 font-medium">Localiser un formateur</span></>
-                            ) : isCallback ? (
-                                <>Étape 1/1 : <span className="text-slate-400 font-medium">Qualifier mon appel</span></>
-                            ) : (
-                                <>Étape {step}/4 : <span className="text-slate-400 font-medium">
-                                    {step === 1 && "Identité & Origine"}
-                                    {step === 2 && "Parcours Migratoire"}
-                                    {step === 3 && "Activité & Ressources"}
-                                    {step === 4 && "Famille & Vulnérabilité"}
-                                </span></>
-                            )}
-                        </span>
-                        <div className="flex items-center gap-4">
-                            <button
-                                onClick={() => setShowDebug(!showDebug)}
-                                className={`text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded border transition-all ${showDebug ? 'bg-slate-900 text-white border-slate-900' : 'bg-transparent text-slate-400 border-slate-200 hover:border-slate-400'}`}
-                            >
-                                {showDebug ? 'Debug ON' : 'Debug OFF'}
-                            </button>
+        <WizardErrorBoundary>
+            <div className="w-full max-w-4xl mx-auto p-4 md:p-8">
+                {/* Progress bar only for service flows — wizard has its own */}
+                {isServiceFlow && step < currentTotalSteps && (
+                    <div className="mb-10">
+                        <div className="flex justify-between items-end mb-3">
+                            <span className="text-sm font-semibold text-slate-600">
+                                {isFamilyReunification ? (
+                                    <>Étape 1/1 : <span className="text-slate-400 font-medium">Questionnaire d'éligibilité</span></>
+                                ) : isDrivingExchange ? (
+                                    <>Étape 1/1 : <span className="text-slate-400 font-medium">Questionnaire Permis</span></>
+                                ) : isRdvPrefecture ? (
+                                    <>Étape 1/1 : <span className="text-slate-400 font-medium">Formulaire de Commande</span></>
+                                ) : isLegalConsultation ? (
+                                    <>Étape 1/1 : <span className="text-slate-400 font-medium">Qualification de Consultation</span></>
+                                ) : isFrenchCourse ? (
+                                    <>Étape 1/1 : <span className="text-slate-400 font-medium">Localiser un centre</span></>
+                                ) : isCivicExam ? (
+                                    <>Étape 1/1 : <span className="text-slate-400 font-medium">Localiser un formateur</span></>
+                                ) : isCallback ? (
+                                    <>Étape 1/1 : <span className="text-slate-400 font-medium">Qualifier mon appel</span></>
+                                ) : null}
+                            </span>
                             <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">{Math.round(progress)}%</span>
                         </div>
+                        <div className="w-full bg-slate-200/50 rounded-full h-2 overflow-hidden shadow-inner">
+                            <div
+                                className="bg-gradient-to-r from-blue-600 to-indigo-600 h-2 rounded-full transition-all duration-700 ease-out shadow-sm"
+                                style={{ width: `${progress}%` }}
+                            ></div>
+                        </div>
                     </div>
-                    <div className="w-full bg-slate-200/50 rounded-full h-2 overflow-hidden shadow-inner">
-                        <div
-                            className="bg-gradient-to-r from-blue-600 to-indigo-600 h-2 rounded-full transition-all duration-700 ease-out shadow-sm"
-                            style={{ width: `${progress}%` }}
-                        ></div>
-                    </div>
-                </div>
-            )}
+                )}
 
-            <div className="bg-white rounded-[3rem] shadow-2xl shadow-slate-200/60 border border-slate-100 min-h-[500px] flex flex-col overflow-hidden">
-                {renderStep()}
+                {isServiceFlow ? (
+                    <div className="bg-white rounded-[3rem] shadow-2xl shadow-slate-200/60 border border-slate-100 min-h-[500px] flex flex-col overflow-hidden">
+                        {renderStep()}
+                    </div>
+                ) : (
+                    renderStep()
+                )}
+
+                {/* Debug Panel (Dev Mode) */}
+                {showDebug && (
+                    <div className="mt-8 animate-in fade-in slide-in-from-top-2 duration-300">
+                        <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Debug Info (Real-time Profile)</h4>
+                        <pre className="bg-slate-900 text-emerald-400 p-6 rounded-2xl text-[10px] overflow-auto max-h-60 border border-slate-800 shadow-2xl">
+                            {JSON.stringify(userProfile, null, 2)}
+                        </pre>
+                    </div>
+                )}
             </div>
-
-            {/* Debug Panel (Dev Mode) */}
-            {showDebug && (
-                <div className="mt-8 animate-in fade-in slide-in-from-top-2 duration-300">
-                    <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Debug Info (Real-time Profile)</h4>
-                    <pre className="bg-slate-900 text-emerald-400 p-6 rounded-2xl text-[10px] overflow-auto max-h-60 border border-slate-800 shadow-2xl">
-                        {JSON.stringify(userProfile, null, 2)}
-                    </pre>
-                </div>
-            )}
-        </div>
+        </WizardErrorBoundary>
     );
 }

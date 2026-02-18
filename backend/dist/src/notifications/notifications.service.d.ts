@@ -1,19 +1,24 @@
 import { ConfigService } from '@nestjs/config';
 import { EmailTemplatesService } from './email-templates.service';
 import { SettingsService } from '../settings/settings.service';
+import { PrismaService } from '../prisma/prisma.service';
 export declare class NotificationsService {
     private configService;
     private emailTemplates;
     private settingsService;
+    private prisma;
     private twilioClient;
     private cachedSmtpConfig;
     private lastConfigCheck;
     private readonly CONFIG_TTL;
-    constructor(configService: ConfigService, emailTemplates: EmailTemplatesService, settingsService: SettingsService);
+    constructor(configService: ConfigService, emailTemplates: EmailTemplatesService, settingsService: SettingsService, prisma: PrismaService);
     private getSmtpConfig;
     private createTransporter;
     refreshSmtpConfig(): Promise<void>;
-    sendWhatsApp(phone: string, template: string, params: any): Promise<{
+    sendWhatsApp(phone: string, template: string, params: any, metadata?: {
+        leadId?: string;
+        prospectId?: string;
+    }): Promise<{
         success: boolean;
         messageId?: undefined;
         error?: undefined;

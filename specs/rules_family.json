@@ -1,12 +1,32 @@
 [
     {
         "id": "family_reunification_eligibility",
-        "name": "Éligibilité Regroupement Familial",
-        "description": "Vérifie les conditions de durée de séjour, de ressources et de logement pour le regroupement familial.",
+        "name": "Éligibilité Regroupement Familial (Droit commun)",
+        "description": "Vérifie les conditions de polygamie, titre de séjour, situation matrimoniale, durée de séjour, de ressources, de logement et de composition familiale pour le regroupement familial.",
         "priority": 100,
-        "source_ref": "CESEDA L434-1",
+        "source_ref": "CESEDA L434-1 à L434-7",
         "conditions": {
             "AND": [
+                {
+                    "var": "identity.age",
+                    "op": "GTE",
+                    "val": 18
+                },
+                {
+                    "var": "family.is_polygamous",
+                    "op": "EQ",
+                    "val": false
+                },
+                {
+                    "var": "family.rf_has_valid_titre_sejour",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "family.rf_marital_status",
+                    "op": "EQ",
+                    "val": "MARRIED"
+                },
                 {
                     "OR": [
                         {
@@ -40,7 +60,7 @@
                         {
                             "AND": [
                                 {
-                                    "var": "financial.resources_monthly_average",
+                                    "var": "work.salary_monthly_gross",
                                     "op": "GTE",
                                     "val": 1398
                                 },
@@ -62,8 +82,125 @@
                     "var": "family.housing_status",
                     "op": "NEQ",
                     "val": "SEARCHING"
+                },
+                {
+                    "var": "family.rf_family_members_count",
+                    "op": "GTE",
+                    "val": 1
                 }
             ]
-        }
+        },
+        "tier": "PREMIUM",
+        "duration_years": 1,
+        "gives_work_right": true,
+        "leads_to_naturalisation": true,
+        "request_type": "FIRST_OR_RENEWAL"
+    },
+    {
+        "id": "family_reunification_algerian",
+        "name": "Regroupement Familial — Accord franco-algérien",
+        "description": "Les ressortissants algériens bénéficient d'une condition de durée réduite à 12 mois au lieu de 18 mois (accord du 27 décembre 1968 modifié).",
+        "priority": 90,
+        "source_ref": "Accord franco-algérien 27/12/1968 art. 7",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "family.sponsor_nationality",
+                    "op": "EQ",
+                    "val": "ALGERIAN"
+                },
+                {
+                    "var": "family.is_polygamous",
+                    "op": "EQ",
+                    "val": false
+                },
+                {
+                    "var": "family.rf_has_valid_titre_sejour",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "family.rf_marital_status",
+                    "op": "EQ",
+                    "val": "MARRIED"
+                },
+                {
+                    "OR": [
+                        {
+                            "var": "family.presence_duration",
+                            "op": "EQ",
+                            "val": "MORE_18"
+                        },
+                        {
+                            "var": "family.presence_duration",
+                            "op": "EQ",
+                            "val": "12_18"
+                        }
+                    ]
+                },
+                {
+                    "OR": [
+                        {
+                            "var": "family.has_handicap_allowance",
+                            "op": "EQ",
+                            "val": true
+                        },
+                        {
+                            "AND": [
+                                {
+                                    "var": "work.salary_monthly_gross",
+                                    "op": "GTE",
+                                    "val": 1398
+                                },
+                                {
+                                    "var": "family.income_source",
+                                    "op": "NEQ",
+                                    "val": "RSA_ALOWANCE"
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "var": "family.housing_status",
+                    "op": "EQ",
+                    "val": "OWNED_RENTED"
+                },
+                {
+                    "var": "family.rf_family_members_count",
+                    "op": "GTE",
+                    "val": 1
+                }
+            ]
+        },
+        "tier": "PREMIUM",
+        "duration_years": 1,
+        "gives_work_right": true,
+        "leads_to_naturalisation": true,
+        "request_type": "FIRST_OR_RENEWAL",
+        "note": "Durée de résidence réduite à 12 mois pour les Algériens"
+    },
+    {
+        "id": "family_reunification_housing_surface",
+        "name": "Condition de surface du logement",
+        "description": "Le logement doit respecter une surface minimale : 16 m² pour le couple + 9 m² par personne supplémentaire (enfant). Vérifié par l'enquête OFII.",
+        "priority": 80,
+        "source_ref": "CESEDA R434-15 et D434-17",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "family.housing_status",
+                    "op": "EQ",
+                    "val": "OWNED_RENTED"
+                },
+                {
+                    "var": "family.rf_housing_surface",
+                    "op": "GTE",
+                    "val": 16
+                }
+            ]
+        },
+        "tier": "PREMIUM",
+        "note": "Surface minimale : 16m² couple + 9m²/personne supplémentaire. L'OFII effectue une visite sur place."
     }
 ]

@@ -100,7 +100,6 @@ export class AppointmentsController {
         }
 
         return appointment;
-        return appointment;
     }
 
     @Patch(':id')

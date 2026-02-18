@@ -187,7 +187,7 @@ export default function FranchiseCaseDetail({
                                         <p className="font-bold text-indigo-800 text-sm">Signature électronique</p>
                                     </div>
                                     <div className="text-xs text-indigo-700 space-y-1">
-                                        <p>Signé le : {new Date(lead.contract).toLocaleString('fr-FR')}</p>
+                                        <p>Signé le : {lead.contract && typeof lead.contract === 'object' && 'signedAt' in lead.contract ? new Date((lead.contract as any).signedAt).toLocaleString('fr-FR') : ''}</p>
                                     </div>
                                 </div>
                             )}

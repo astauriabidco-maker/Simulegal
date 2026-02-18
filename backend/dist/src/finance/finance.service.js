@@ -12,10 +12,13 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.FinanceService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../prisma/prisma.service");
+const settings_service_1 = require("../settings/settings.service");
 let FinanceService = class FinanceService {
     prisma;
-    constructor(prisma) {
+    settings;
+    constructor(prisma, settings) {
         this.prisma = prisma;
+        this.settings = settings;
     }
     async getGlobalStats() {
         const leads = await this.prisma.lead.findMany({
@@ -189,10 +192,106 @@ let FinanceService = class FinanceService {
             orderBy: { createdAt: 'desc' }
         });
     }
+    async generatePayoutSepaXml(payoutId) {
+        const payout = await this.prisma.payout.findUnique({
+            where: { id: payoutId },
+            include: { agency: true }
+        });
+        if (!payout)
+            throw new Error('Payout non trouvé');
+        if (!payout.agency?.iban)
+            throw new Error('IBAN manquant pour cette agence');
+        const sysSettings = await this.settings.getSettings();
+        const company = sysSettings.company;
+        const debtorIban = sysSettings.banking?.iban || 'FR7600000000000000000000000';
+        const debtorBic = sysSettings.banking?.bic || 'XXXXXXXXXXX';
+        const msgId = `MSG-${payout.reference}`;
+        const pmtId = `PMT-${payout.id}`;
+        const now = new Date().toISOString();
+        const executionDate = new Date().toISOString().split('T')[0];
+        const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<Document xmlns="urn:iso:std:iso:20022:tech:xsd:pain.001.001.03" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <CstmrCdtTrfInitn>
+    <GrpHdr>
+      <MsgId>${msgId}</MsgId>
+      <CreDtTm>${now}</CreDtTm>
+      <NbOfTxs>1</NbOfTxs>
+      <CtrlSum>${payout.amount.toFixed(2)}</CtrlSum>
+      <InitgPty>
+        <Nm>${this.escapeXml(company.name)}</Nm>
+      </InitgPty>
+    </GrpHdr>
+    <PmtInf>
+      <PmtInfId>${pmtId}</PmtInfId>
+      <PmtMtd>TRF</PmtMtd>
+      <NbOfTxs>1</NbOfTxs>
+      <CtrlSum>${payout.amount.toFixed(2)}</CtrlSum>
+      <PmtTpInf>
+        <SvcLvl>
+          <Cd>SEPA</Cd>
+        </SvcLvl>
+      </PmtTpInf>
+      <ReqdExctnDt>${executionDate}</ReqdExctnDt>
+      <Dbtr>
+        <Nm>${this.escapeXml(company.name)}</Nm>
+      </Dbtr>
+      <DbtrAcct>
+        <Id>
+          <IBAN>${debtorIban}</IBAN>
+        </Id>
+      </DbtrAcct>
+      <DbtrAgt>
+        <FinInstnId>
+          <BIC>${debtorBic}</BIC>
+        </FinInstnId>
+      </DbtrAgt>
+      <ChrgBr>SLEV</ChrgBr>
+      <CdtTrfTxInf>
+        <PmtId>
+          <EndToEndId>${payout.reference}</EndToEndId>
+        </PmtId>
+        <Amt>
+          <InstdAmt Ccy="EUR">${payout.amount.toFixed(2)}</InstdAmt>
+        </Amt>
+        <CdtrAgt>
+          <FinInstnId>
+            <BIC>${payout.agency.bic || 'XXXXXXXXXXX'}</BIC>
+          </FinInstnId>
+        </CdtrAgt>
+        <Cdtr>
+          <Nm>${this.escapeXml(payout.agency.name)}</Nm>
+        </Cdtr>
+        <CdtrAcct>
+          <Id>
+            <IBAN>${payout.agency.iban}</IBAN>
+          </Id>
+        </CdtrAcct>
+        <RmtInf>
+          <Ustrd>COMMISSION SIMULEGAL - ${payout.period}</Ustrd>
+        </RmtInf>
+      </CdtTrfTxInf>
+    </PmtInf>
+  </CstmrCdtTrfInitn>
+</Document>`;
+        return xml;
+    }
+    escapeXml(unsafe) {
+        return unsafe.replace(/[<>&'"]/g, (c) => {
+            switch (c) {
+                case '<': return '&lt;';
+                case '>': return '&gt;';
+                case '&': return '&amp;';
+                case '\'': return '&apos;';
+                case '"': return '&quot;';
+            }
+            return c;
+        });
+    }
 };
 exports.FinanceService = FinanceService;
 exports.FinanceService = FinanceService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [prisma_service_1.PrismaService])
+    __metadata("design:paramtypes", [prisma_service_1.PrismaService,
+        settings_service_1.SettingsService])
 ], FinanceService);
 //# sourceMappingURL=finance.service.js.map

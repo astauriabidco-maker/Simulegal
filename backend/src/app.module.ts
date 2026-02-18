@@ -24,6 +24,7 @@ import { SalesModule } from './sales/sales.module';
 import { InvoicesModule } from './invoices/invoices.module';
 import { PaymentsModule } from './payments/payments.module';
 import { WhatsappModule } from './whatsapp/whatsapp.module';
+import { VeilleModule } from './veille/veille.module';
 
 @Module({
   imports: [
@@ -48,7 +49,8 @@ import { WhatsappModule } from './whatsapp/whatsapp.module';
     InvoicesModule,
     PaymentsModule,
     AbsencesModule,
-    WhatsappModule
+    WhatsappModule,
+    VeilleModule
   ],
   controllers: [AppController],
   providers: [AppService],

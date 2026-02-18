@@ -195,9 +195,15 @@ export const AVAILABLE_SERVICES: ServiceMetadata[] = [
         category: 'IMMIGRATION'
     },
     {
-        id: 'carte_resident_refugie_apatride',
-        name: '🛡️ Carte Résident Réfugié/Apatride',
-        description: 'Protection internationale accordée par l\'OFPRA',
+        id: 'carte_resident_refugie',
+        name: '🛡️ Carte Résident Réfugié (10 ans)',
+        description: 'Protection internationale accordée par l\'OFPRA — réfugiés',
+        category: 'IMMIGRATION'
+    },
+    {
+        id: 'cs_pluriannuelle_apatride',
+        name: '📄 Carte Séjour Pluriannuelle Apatride (4 ans)',
+        description: 'Protection internationale — apatrides',
         category: 'IMMIGRATION'
     },
     {

@@ -62,7 +62,7 @@ export default function AgencyKiosk({ agency, onReset }: AgencyKioskProps) {
                     <div className="w-20" />
                 </div>
                 <SimulatorWrapper
-                    initialServiceId={selectedService.id}
+                    serviceId={selectedService.id}
                     forceAgencyId={agency.id}
                     onComplete={() => setStep('SUCCESS')}
                 />

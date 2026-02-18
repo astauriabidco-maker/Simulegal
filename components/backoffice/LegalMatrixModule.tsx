@@ -20,11 +20,14 @@ import {
     Share2,
     Search,
     Filter,
+    Download,
     ChevronDown,
-    Activity
+    Activity,
+    FileText
 } from 'lucide-react';
 import EligibilityStore from '../../services/EligibilityStore';
 import { RuleCondition } from '../../types';
+import { DOC_CATALOG } from '../../config/DocumentTemplates';
 
 const CRITERIA = [
     { id: 'identity.age', label: 'Âge', group: 'Général', color: 'bg-blue-500' },
@@ -65,6 +68,58 @@ export default function LegalMatrixModule() {
                     proc.id.includes('talent') ? 'Travail' : 'Autres'
         }));
     }, [procedures]);
+
+    // ─── Global Stats ─────────────────────────────────────────
+    const globalStats = useMemo(() => {
+        const stats = {
+            totalRules: matrixMetadata.length,
+            byCategory: {} as Record<string, number>,
+            variableUsage: {} as Record<string, number>
+        };
+
+        matrixMetadata.forEach(m => {
+            // Category count
+            stats.byCategory[m.category] = (stats.byCategory[m.category] || 0) + 1;
+
+            // Variable count
+            m.variables.forEach(v => {
+                stats.variableUsage[v] = (stats.variableUsage[v] || 0) + 1;
+            });
+        });
+
+        // Top variables
+        const topVariables = Object.entries(stats.variableUsage)
+            .sort(([, a], [, b]) => b - a)
+            .slice(0, 5)
+            .map(([id, count]) => {
+                const criteria = CRITERIA.find(c => c.id === id);
+                return { id, label: criteria?.label || id, count, color: criteria?.color || 'bg-slate-400' };
+            });
+
+        return { ...stats, topVariables };
+    }, [matrixMetadata]);
+
+    // ─── Export CSV ───────────────────────────────────────────
+    const exportToCSV = () => {
+        const headers = ['ID', 'Nom', 'Catégorie', ...CRITERIA.map(c => c.label)];
+        const rows = matrixMetadata.map(m => [
+            m.id,
+            m.name,
+            m.category,
+            ...CRITERIA.map(c => m.variables.has(c.id) ? '1' : '0')
+        ]);
+
+        const csvContent = [
+            headers.join(';'),
+            ...rows.map(r => r.join(';'))
+        ].join('\n');
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `matrice_juridique_${new Date().toISOString().split('T')[0]}.csv`;
+        link.click();
+    };
 
     const filteredProcedures = useMemo(() => {
         return matrixMetadata.filter(p =>
@@ -121,14 +176,18 @@ export default function LegalMatrixModule() {
                 <div className="flex items-center gap-3">
                     <div className="text-right hidden md:block">
                         <p className="text-[10px] font-black uppercase text-slate-400">Analyse Structurelle</p>
-                        <p className="text-xs font-black text-indigo-600 leading-none">37 procédures chargées</p>
+                        <p className="text-xs font-black text-indigo-600 leading-none">{matrixMetadata.length} procédures chargées</p>
                     </div>
+                    <button onClick={exportToCSV}
+                        className="px-6 py-4 rounded-2xl font-black flex items-center gap-2 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-all active:scale-95">
+                        <Download size={20} /> CSV
+                    </button>
                     <button
                         onClick={() => setShowGraph(true)}
                         disabled={!selectedProcedureId}
                         className={`px-8 py-4 rounded-2xl font-black flex items-center gap-2 transition-all shadow-xl active:scale-95 ${selectedProcedureId
-                                ? 'bg-slate-900 text-white shadow-slate-200'
-                                : 'bg-slate-100 text-slate-300 cursor-not-allowed shadow-none'
+                            ? 'bg-slate-900 text-white shadow-slate-200'
+                            : 'bg-slate-100 text-slate-300 cursor-not-allowed shadow-none'
                             }`}
                     >
                         <Workflow size={20} /> Graphe
@@ -180,16 +239,16 @@ export default function LegalMatrixModule() {
                                             onMouseLeave={() => setHoveredRow(null)}
                                             onClick={() => setSelectedProcedureId(proc.id)}
                                             className={`group transition-all cursor-pointer ${selectedProcedureId === proc.id ? 'bg-indigo-50' :
-                                                    hoveredRow === proc.id ? 'bg-slate-50' : 'bg-white'
+                                                hoveredRow === proc.id ? 'bg-slate-50' : 'bg-white'
                                                 }`}
                                         >
                                             <td className={`p-6 sticky left-0 z-30 border-r border-slate-50 transition-all ${selectedProcedureId === proc.id ? 'bg-indigo-100/50' :
-                                                    hoveredRow === proc.id ? 'bg-slate-100/80 shadow-r-xl' : 'bg-white'
+                                                hoveredRow === proc.id ? 'bg-slate-100/80 shadow-r-xl' : 'bg-white'
                                                 }`}>
                                                 <div className="flex items-center gap-4">
                                                     <span className={`w-1 h-8 rounded-full transition-all ${proc.category === 'Résidence' ? 'bg-emerald-500' :
-                                                            proc.category === 'Famille' ? 'bg-pink-500' :
-                                                                proc.category === 'Travail' ? 'bg-indigo-500' : 'bg-slate-300'
+                                                        proc.category === 'Famille' ? 'bg-pink-500' :
+                                                            proc.category === 'Travail' ? 'bg-indigo-500' : 'bg-slate-300'
                                                         } ${hoveredRow === proc.id ? 'scale-y-125' : 'scale-y-100'}`} />
                                                     <div>
                                                         <p className={`font-black uppercase tracking-tighter text-sm transition-all ${selectedProcedureId === proc.id ? 'text-indigo-600' : 'text-slate-800'
@@ -215,7 +274,7 @@ export default function LegalMatrixModule() {
                                                         <div className="flex justify-center items-center">
                                                             {isActive ? (
                                                                 <div className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all shadow-sm ${selectedProcedureId === proc.id ? 'bg-indigo-600 text-white rotate-0' :
-                                                                        isCrossed ? 'bg-indigo-500 text-white scale-110 shadow-indigo-200' : 'bg-indigo-50 text-indigo-400 group-hover:scale-90 group-hover:opacity-50'
+                                                                    isCrossed ? 'bg-indigo-500 text-white scale-110 shadow-indigo-200' : 'bg-indigo-50 text-indigo-400 group-hover:scale-90 group-hover:opacity-50'
                                                                     }`}>
                                                                     <CheckCircle size={18} />
                                                                 </div>
@@ -240,14 +299,57 @@ export default function LegalMatrixModule() {
                 {/* SIDEBAR D'INTELLIGENCE AUGMENTÉE */}
                 <div className="w-[450px] border-l border-slate-200 bg-white flex flex-col p-8 overflow-y-auto space-y-10 shadow-2xl z-30">
                     {!selectedProcedureId ? (
-                        <div className="flex flex-col items-center justify-center h-full text-center space-y-6">
-                            <div className="w-24 h-24 bg-slate-50 rounded-[2.5rem] flex items-center justify-center text-slate-300 shadow-inner">
-                                <Activity size={48} />
+                        <div className="flex flex-col h-full space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
+                            <div className="text-center space-y-4">
+                                <div className="w-20 h-20 bg-slate-50 rounded-[2.5rem] flex items-center justify-center text-slate-300 shadow-inner mx-auto">
+                                    <Activity size={40} />
+                                </div>
+                                <div>
+                                    <h4 className="text-xl font-black uppercase text-slate-900">Vue D'ensemble</h4>
+                                    <p className="text-xs font-bold text-slate-400">Statistiques globales du moteur</p>
+                                </div>
                             </div>
-                            <div className="space-y-2">
-                                <h4 className="text-xl font-black uppercase text-slate-900">Analyseur de Toile</h4>
-                                <p className="text-sm font-medium text-slate-400 leading-relaxed max-w-[250px] mx-auto">
-                                    Cliquez sur une procédure pour décoder son ADN juridique et voir ses corrélations.
+
+                            {/* Top Variables */}
+                            <div className="space-y-4">
+                                <h5 className="text-xs font-black uppercase tracking-widest text-slate-400 border-b border-slate-100 pb-2">Top Critères Utilisés</h5>
+                                <div className="space-y-3">
+                                    {globalStats.topVariables.map((v, i) => (
+                                        <div key={v.id} className="flex items-center justify-between group">
+                                            <div className="flex items-center gap-3">
+                                                <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-xs font-black text-white ${v.color}`}>
+                                                    #{i + 1}
+                                                </div>
+                                                <div>
+                                                    <p className="text-xs font-black text-slate-700 uppercase">{v.label}</p>
+                                                    <p className="text-[10px] text-slate-400 font-mono">{v.id}</p>
+                                                </div>
+                                            </div>
+                                            <span className="text-sm font-black text-indigo-600 bg-indigo-50 px-2 py-1 rounded-lg">
+                                                {v.count}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Categories Distribution */}
+                            <div className="space-y-4">
+                                <h5 className="text-xs font-black uppercase tracking-widest text-slate-400 border-b border-slate-100 pb-2">Répartition par Catégorie</h5>
+                                <div className="grid grid-cols-2 gap-3">
+                                    {Object.entries(globalStats.byCategory).map(([cat, count]) => (
+                                        <div key={cat} className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                                            <p className="text-[10px] font-black uppercase text-slate-400 mb-1">{cat}</p>
+                                            <p className="text-xl font-black text-slate-900">{count}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="bg-indigo-600 rounded-3xl p-6 text-white text-center mt-auto">
+                                <BrainCircuit size={32} className="mx-auto mb-3 opacity-80" />
+                                <p className="text-sm font-bold opacity-90">
+                                    Sélectionnez une procédure dans la matrice pour voir son analyse détaillée.
                                 </p>
                             </div>
                         </div>
@@ -338,9 +440,44 @@ export default function LegalMatrixModule() {
                                     <p className="text-xs font-black text-amber-700 uppercase tracking-widest">Audit IA</p>
                                 </div>
                                 <p className="text-xs font-medium text-amber-900 leading-relaxed italic relative z-10">
-                                    "Attention : La procédure sélectionnée partage {matrixMetadata.find(m => m.id === selectedProcedureId)?.variables.size} critères avec le tronc commun CESEDA. Toute modification ici impactera la cohérence globale du moteur."
+                                    "Attention : La procédure sélectionnée partage {matrixMetadata.find(m => m.id === selectedProcedureId)?.variables.size} critères avec le tronc commun CESEDA."
                                 </p>
                             </div>
+
+                            {/* Documents Requis (New Phase 3) */}
+                            {(() => {
+                                const proc = procedures.find(p => p.id === selectedProcedureId);
+                                if (proc?.documents && proc.documents.length > 0) {
+                                    return (
+                                        <div className="space-y-4 border-t border-slate-100 pt-8">
+                                            <h6 className="text-xs font-black uppercase tracking-widest text-slate-400 px-2 flex items-center gap-2">
+                                                <FileText size={14} /> Pièces Justificatives ({proc.documents.length})
+                                            </h6>
+                                            <div className="space-y-2">
+                                                {proc.documents.map((docId) => {
+                                                    const doc = DOC_CATALOG[docId];
+                                                    return (
+                                                        <div key={docId} className="flex items-start gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100">
+                                                            <div className={`mt-1 min-w-[20px] h-[20px] rounded-full flex items-center justify-center text-[10px] font-bold text-white ${doc?.category === 'IDENTITY' ? 'bg-blue-400' :
+                                                                doc?.category === 'FINANCIAL' ? 'bg-amber-400' :
+                                                                    doc?.category === 'CIVIL' ? 'bg-pink-400' :
+                                                                        'bg-emerald-400'
+                                                                }`}>
+                                                                {docId.slice(0, 1)}
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-xs font-bold text-slate-800">{doc?.label || docId}</p>
+                                                                {doc?.description && <p className="text-[10px] text-slate-400 leading-snug">{doc.description}</p>}
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    );
+                                }
+                                return null;
+                            })()}
                         </div>
                     )}
                 </div>

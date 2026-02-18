@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Building2, Store, QrCode, MapPin, TrendingUp, Percent, Check, X, FileText, Download, Copy, AlertTriangle, Layers, Settings, BarChart3, Users } from 'lucide-react';
+import { Plus, Search, Building2, Store, QrCode, MapPin, TrendingUp, Percent, Check, X, FileText, Download, Copy, AlertTriangle, Layers, Settings, BarChart3, Users, DollarSign } from 'lucide-react';
 import { AgencyExt, AgencyStore } from '../../services/AgencyStore';
 import FranceMap from './FranceMap';
 

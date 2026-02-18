@@ -10,7 +10,15 @@ export declare class SettingsController {
         storage: any;
         updatedAt: Date;
     }>;
-    updateSection(data: any, section: string): Promise<void>;
+    updateSection(section: string, data: any): Promise<{
+        id: string;
+        updatedAt: Date;
+        company: string;
+        payment: string;
+        notifications: string;
+        integrations: string;
+        storage: string;
+    }>;
     update(data: any, section: string): Promise<{
         id: string;
         updatedAt: Date;

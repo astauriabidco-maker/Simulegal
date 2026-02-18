@@ -40,8 +40,8 @@ export declare class FranchiseLeadsController {
         type: string;
         createdAt: Date;
         content: string;
-        author: string;
         leadId: string;
+        author: string;
     }>;
     getAnalytics(): Promise<{
         total: number;

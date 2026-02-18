@@ -44,11 +44,10 @@ export const LeadRouter = {
      * Logique de matching par code postal sur les données réelles
      */
     findAgencyByZipCode: (zipCode: string, agencies: AgencyExt[]): string | null => {
-        // On cherche une agence dont la liste des zipCodes (séparés par virgules) contient le zipCode
+        // zipCodes is already a string[] (parsed by the backend), match by prefix
         const match = agencies.find(a => {
-            if (!a.zipCodes) return false;
-            const codes = a.zipCodes.split(',').map(c => c.trim());
-            return codes.some(c => zipCode.startsWith(c));
+            if (!a.zipCodes || !Array.isArray(a.zipCodes)) return false;
+            return a.zipCodes.some(c => zipCode.startsWith(c.trim()));
         });
 
         return match ? match.id : null;

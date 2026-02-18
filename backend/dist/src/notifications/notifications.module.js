@@ -13,13 +13,14 @@ const notifications_service_1 = require("./notifications.service");
 const notifications_controller_1 = require("./notifications.controller");
 const email_templates_service_1 = require("./email-templates.service");
 const settings_module_1 = require("../settings/settings.module");
+const prisma_module_1 = require("../prisma/prisma.module");
 let NotificationsModule = class NotificationsModule {
 };
 exports.NotificationsModule = NotificationsModule;
 exports.NotificationsModule = NotificationsModule = __decorate([
     (0, common_1.Global)(),
     (0, common_1.Module)({
-        imports: [config_1.ConfigModule, settings_module_1.SettingsModule],
+        imports: [config_1.ConfigModule, settings_module_1.SettingsModule, prisma_module_1.PrismaModule],
         controllers: [notifications_controller_1.NotificationsController],
         providers: [notifications_service_1.NotificationsService, email_templates_service_1.EmailTemplatesService],
         exports: [notifications_service_1.NotificationsService, email_templates_service_1.EmailTemplatesService],

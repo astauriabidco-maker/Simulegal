@@ -38,7 +38,7 @@ export const SERVICES_CATALOG: Service[] = [
         price: 35000 // 350€
     },
     {
-        id: 'regroup_fam',
+        id: 'regroupement_familial',
         title: 'Regroupement Familial',
         description: 'Procédure pour faire venir votre famille en France en toute sécurité.',
         pole: 'PROCEDURES',

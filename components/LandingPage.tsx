@@ -92,6 +92,9 @@ export default function LandingPage({ onStartSimulator }: LandingPageProps) {
                         COMMENCER MON DIAGNOSTIC GRATUIT
                         <ArrowRight className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
                     </button>
+                    <p className="mt-5 text-blue-200/60 text-sm font-semibold tracking-wide">
+                        ⏱ ~3 minutes • 100% gratuit • Résultats instantanés
+                    </p>
 
                     <div className="mt-20 flex flex-wrap items-center justify-center gap-10 opacity-40 grayscale contrast-125">
                         <span className="text-sm font-black text-white uppercase tracking-[0.2em] border-r border-white/20 pr-10 last:border-0 last:pr-0">CESEDA Compliance</span>
@@ -129,8 +132,8 @@ export default function LandingPage({ onStartSimulator }: LandingPageProps) {
                                                 )}
 
                                                 <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-8 transition-all duration-300 ${pole.id === 'PROCEDURES' ? 'bg-blue-50 text-blue-600 group-hover:bg-blue-600 group-hover:text-white' :
-                                                        pole.id === 'INTEGRATION' ? 'bg-indigo-50 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white' :
-                                                            'bg-purple-50 text-purple-600 group-hover:bg-purple-600 group-hover:text-white'
+                                                    pole.id === 'INTEGRATION' ? 'bg-indigo-50 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white' :
+                                                        'bg-purple-50 text-purple-600 group-hover:bg-purple-600 group-hover:text-white'
                                                     }`}>
                                                     <Icon className="w-7 h-7" />
                                                 </div>

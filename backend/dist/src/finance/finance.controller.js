@@ -80,6 +80,14 @@ let FinanceController = class FinanceController {
         }
         return this.financeService.getCreditNotes();
     }
+    async downloadSepa(req, id, res) {
+        if (req.user.role !== 'SUPER_ADMIN' && req.user.role !== 'HQ_ADMIN') {
+            throw new common_1.ForbiddenException('Accès réservé au siège');
+        }
+        const xml = await this.financeService.generatePayoutSepaXml(id);
+        res.header('Content-Disposition', `attachment; filename=SEPA-PAYOUT-${id}.xml`);
+        return res.send(xml);
+    }
 };
 exports.FinanceController = FinanceController;
 __decorate([
@@ -150,6 +158,16 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", void 0)
 ], FinanceController.prototype, "getCreditNotes", null);
+__decorate([
+    (0, common_1.Get)('payouts/:id/sepa'),
+    (0, common_1.Header)('Content-Type', 'application/xml'),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Param)('id')),
+    __param(2, (0, common_1.Res)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, Object]),
+    __metadata("design:returntype", Promise)
+], FinanceController.prototype, "downloadSepa", null);
 exports.FinanceController = FinanceController = __decorate([
     (0, common_1.Controller)('finance'),
     (0, common_1.UseGuards)((0, passport_1.AuthGuard)('jwt')),

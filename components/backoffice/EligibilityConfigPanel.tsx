@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import EligibilityStore from '../../services/EligibilityStore';
 import { ProcedureRule, RuleCondition } from '../../types';
 import {
@@ -19,7 +19,9 @@ import {
     Trash2,
     Settings,
     Layers,
-    Binary
+    Binary,
+    History,
+    User
 } from 'lucide-react';
 
 // Cartographie des variables techniques vers des noms lisibles
@@ -219,18 +221,28 @@ export default function EligibilityConfigPanel() {
     const [thresholds, setThresholds] = useState<any>(null);
     const [rulesSejour, setRulesSejour] = useState<ProcedureRule[]>([]);
     const [rulesNat, setRulesNat] = useState<ProcedureRule[]>([]);
-    const [category, setCategory] = useState<'thresholds' | 'rules'>('thresholds');
+    const [category, setCategory] = useState<'thresholds' | 'rules' | 'audit'>('thresholds');
     const [subCategory, setSubCategory] = useState<'sejour' | 'naturalisation'>('sejour');
     const [showNotification, setShowNotification] = useState(false);
     const [notificationMessage, setNotificationMessage] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
     const [editMode, setEditMode] = useState<'visual' | 'json'>('visual');
+    const [auditLog, setAuditLog] = useState<any[]>([]);
+    const [auditLoading, setAuditLoading] = useState(false);
+
+    const loadAuditLog = useCallback(async () => {
+        setAuditLoading(true);
+        const log = await EligibilityStore.fetchAuditLog(50);
+        setAuditLog(log);
+        setAuditLoading(false);
+    }, []);
 
     useEffect(() => {
         setThresholds(EligibilityStore.getThresholds());
         setRulesSejour(EligibilityStore.getRules('sejour'));
         setRulesNat(EligibilityStore.getRules('naturalisation'));
-    }, []);
+        loadAuditLog();
+    }, [loadAuditLog]);
 
     const showNotificationMsg = (message: string) => {
         setNotificationMessage(message);
@@ -311,6 +323,13 @@ export default function EligibilityConfigPanel() {
                             }`}
                     >
                         🧠 Logique (Règles métier)
+                    </button>
+                    <button
+                        onClick={() => { setCategory('audit'); loadAuditLog(); }}
+                        className={`px-4 py-2 rounded-lg font-bold text-sm transition-all flex items-center gap-1.5 ${category === 'audit' ? 'bg-indigo-600 text-white' : 'text-slate-600 hover:text-slate-900'
+                            }`}
+                    >
+                        <History size={16} /> Historique ({auditLog.length})
                     </button>
                 </div>
             </div>
@@ -535,6 +554,69 @@ export default function EligibilityConfigPanel() {
                                     </div>
                                 </div>
                             ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Audit Trail Tab */}
+            {category === 'audit' && (
+                <div className="space-y-6 max-w-4xl">
+                    <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-sm">
+                        <div className="flex items-center gap-3 border-b border-slate-100 pb-4 mb-6">
+                            <History className="text-indigo-600" size={24} />
+                            <h2 className="text-xl font-black text-slate-900">Historique des modifications</h2>
+                            <button onClick={loadAuditLog}
+                                className="ml-auto px-4 py-2 bg-slate-100 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-200 transition-all flex items-center gap-1">
+                                <RotateCcw size={14} /> Actualiser
+                            </button>
+                        </div>
+
+                        {auditLoading ? (
+                            <div className="text-center py-12">
+                                <div className="animate-spin w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full mx-auto mb-3"></div>
+                                <p className="text-sm font-bold text-slate-400">Chargement...</p>
+                            </div>
+                        ) : auditLog.length === 0 ? (
+                            <div className="text-center py-12">
+                                <History className="mx-auto text-slate-300 mb-3" size={40} />
+                                <p className="text-sm font-bold text-slate-400">Aucune modification enregistrée</p>
+                                <p className="text-xs text-slate-300 mt-1">Les modifications apparaîtront ici dès qu'une règle sera éditée via le backend.</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-4">
+                                {auditLog.map((entry: any) => {
+                                    const date = new Date(entry.createdAt).toLocaleDateString('fr-FR', {
+                                        day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                                    });
+                                    const actionColor = entry.action === 'CREATE' ? 'bg-emerald-100 text-emerald-700'
+                                        : entry.action === 'DELETE' ? 'bg-red-100 text-red-700'
+                                            : 'bg-amber-100 text-amber-700';
+                                    return (
+                                        <div key={entry.id} className="p-5 bg-slate-50 rounded-2xl border border-slate-100 hover:border-indigo-200 transition-colors">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <div className="flex items-center gap-2">
+                                                    <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-lg ${actionColor}`}>
+                                                        {entry.action}
+                                                    </span>
+                                                    <span className="text-[10px] font-black uppercase tracking-widest px-2 py-1 bg-slate-200 text-slate-600 rounded-lg">
+                                                        {entry.category}
+                                                    </span>
+                                                </div>
+                                                <span className="text-xs font-bold text-slate-400">{date}</span>
+                                            </div>
+                                            <h4 className="font-black text-slate-900">{entry.ruleName}</h4>
+                                            {entry.changeDetails && (
+                                                <p className="text-sm text-slate-500 font-medium mt-1">{entry.changeDetails}</p>
+                                            )}
+                                            <div className="flex items-center gap-2 mt-2">
+                                                <User size={12} className="text-slate-400" />
+                                                <span className="text-xs font-bold text-slate-500">{entry.changedBy}</span>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
                     </div>
                 </div>
             )}

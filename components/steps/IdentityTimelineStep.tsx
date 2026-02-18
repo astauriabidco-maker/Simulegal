@@ -73,6 +73,7 @@ export default function IdentityTimelineStep({ data, update, onNext, canNext }: 
                         <option value="FRANCE">Française (Né en France / Double nationalité)</option>
                         <option value="TUNISIAN">Tunisienne</option>
                         <option value="ALGERIAN">Algérienne</option>
+                        <option value="MOROCCAN">Marocaine</option>
                         <option value="EU">Ressortissant UE / EEE / Suisse</option>
                         <option value="REFUGEE">Bénéficiaire du statut de Réfugié / Protection Subsidiaire</option>
                         <option value="STATELESS">Apatride</option>

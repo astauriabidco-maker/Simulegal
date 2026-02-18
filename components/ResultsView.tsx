@@ -4,7 +4,7 @@ import React, { useMemo } from 'react';
 import { UserProfile, ProcedureRule } from '@/types';
 import { evaluateRule } from '@/lib/engine';
 import EligibilityStore from '@/services/EligibilityStore';
-import { ArrowRight, Bell, Scale, CheckCircle2, AlertTriangle, AlertCircle, FileText, Smartphone, Car, Info, XCircle, MapPin, Languages, GraduationCap, Phone, Clock } from 'lucide-react';
+import { ArrowRight, Bell, Scale, CheckCircle2, AlertTriangle, AlertCircle, FileText, Smartphone, Car, Info, XCircle, MapPin, Languages, GraduationCap, Phone, Clock, Home } from 'lucide-react';
 
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -23,7 +23,7 @@ interface ResultsViewProps {
 export default function ResultsView({ userProfile, onReset, serviceId, forceAgencyId }: ResultsViewProps) {
     const [showLeadModal, setShowLeadModal] = React.useState(false);
     const [leadForm, setLeadForm] = React.useState({ name: '', phone: '' });
-    const isFamilyReunification = serviceId === 'family_reunification';
+    const isFamilyReunification = serviceId === 'regroupement_familial';
     const isDrivingExchange = serviceId === 'permis_conduire';
     const isRdvPrefecture = serviceId === 'rdv_prefecture';
     const isLegalConsultation = serviceId === 'rdv_juriste';
@@ -59,6 +59,30 @@ export default function ResultsView({ userProfile, onReset, serviceId, forceAgen
             .filter((rule) => evaluateRule(userProfile, rule.conditions));
     }, [userProfile, isFamilyReunification]);
 
+    /* ─── Tier-based ranking helpers ─── */
+    const TIER_ORDER: Record<string, number> = { PREMIUM: 3, STANDARD: 2, FALLBACK: 1 };
+    const tierSort = (a: ProcedureRule, b: ProcedureRule) => {
+        const ta = TIER_ORDER[a.tier || 'FALLBACK'] || 0;
+        const tb = TIER_ORDER[b.tier || 'FALLBACK'] || 0;
+        if (ta !== tb) return tb - ta;                         // tier DESC
+        if ((a.duration_years || 0) !== (b.duration_years || 0))
+            return (b.duration_years || 0) - (a.duration_years || 0); // duration DESC
+        return b.priority - a.priority;                        // priority as tiebreaker
+    };
+
+    const tierBadge = (rule: ProcedureRule) => {
+        const t = rule.tier || 'FALLBACK';
+        if (t === 'PREMIUM') return { label: '⭐ Meilleure option', cls: 'bg-amber-100 text-amber-800 border-amber-200' };
+        if (t === 'STANDARD') return { label: '✅ Bonne option', cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
+        return { label: '📋 Option de repli', cls: 'bg-slate-100 text-slate-500 border-slate-200' };
+    };
+
+    const durationLabel = (rule: ProcedureRule) => {
+        const y = rule.duration_years;
+        if (!y || y === 0) return 'Acquisition de nationalité';
+        return `Durée : ${y} an${y > 1 ? 's' : ''}`;
+    };
+
     const eligibleStays = useMemo(() => {
         if (isFamilyReunification) return [];
         const rulesSejour = EligibilityStore.getRules('sejour');
@@ -66,18 +90,31 @@ export default function ResultsView({ userProfile, onReset, serviceId, forceAgen
             .filter((rule) => evaluateRule(userProfile, rule.conditions));
 
         if (userProfile.admin.current_visa_type === 'RESIDENT_CARD') {
-            const allowedResidencyIds = ['carte_resident_longue_duree_ue', 'carte_resident_refugie_apatride', 'carte_resident_conjoint_francais', 'carte_resident_regroupement_familial'];
+            const allowedResidencyIds = ['carte_resident_longue_duree_ue', 'carte_resident_refugie', 'carte_resident_apatride_apres_4ans', 'carte_resident_conjoint_francais', 'carte_resident_regroupement_familial'];
             results = results.filter(r => allowedResidencyIds.includes(r.id));
         }
 
-        results.sort((a, b) => b.priority - a.priority);
+        // Tier-based sort: PREMIUM > STANDARD > FALLBACK, then duration DESC
+        results.sort(tierSort);
 
-        const hasStrongOption = results.some(r => r.priority >= 60);
-        if (hasStrongOption) {
-            results = results.filter(r => r.priority >= 20);
+        // Filter FALLBACK if better tiers exist
+        const hasBetterTier = results.some(r => r.tier === 'PREMIUM' || r.tier === 'STANDARD');
+        if (hasBetterTier) {
+            results = results.filter(r => r.tier !== 'FALLBACK');
         }
 
-        return results;
+        // Separate: keep only FIRST_OR_RENEWAL for the main section
+        return results.filter(r => r.request_type !== 'UPGRADE');
+    }, [userProfile, isFamilyReunification]);
+
+    /* ─── Upgrade path results (parcours ascendant) ─── */
+    const eligibleUpgrades = useMemo(() => {
+        if (isFamilyReunification) return [];
+        const rulesSejour = EligibilityStore.getRules('sejour');
+        return rulesSejour
+            .filter((rule) => rule.request_type === 'UPGRADE')
+            .filter((rule) => evaluateRule(userProfile, rule.conditions))
+            .sort(tierSort);
     }, [userProfile, isFamilyReunification]);
 
     const eligibleNaturalization = useMemo(() => {
@@ -85,7 +122,7 @@ export default function ResultsView({ userProfile, onReset, serviceId, forceAgen
         const rulesNaturalisation = EligibilityStore.getRules('naturalisation');
         return rulesNaturalisation
             .filter((rule) => evaluateRule(userProfile, rule.conditions))
-            .sort((a, b) => b.priority - a.priority);
+            .sort(tierSort);
     }, [userProfile, isFamilyReunification]);
 
     const targetGoal = userProfile.project.target_goal || 'BOTH';
@@ -94,30 +131,38 @@ export default function ResultsView({ userProfile, onReset, serviceId, forceAgen
     const isFamilyEligible = isFamilyReunification && familyResults.length > 0;
 
     const getFamilyFailureReason = () => {
-        const rulesFamily = EligibilityStore.getRules('family');
-        const rule = rulesFamily[0];
-        const conditions = rule.conditions.AND || [];
+        // Semantic checks — priority-ordered, no dependency on rules_family.json
 
-        const durationCondition = conditions[0];
-        const resourceConditionGroup = conditions[1];
-        const housingCondition = conditions[2];
+        // 1. POLYGAMY — absolute exclusion (CESEDA L434-6)
+        if (userProfile.family.is_polygamous === true) return 'POLYGAMY';
 
-        if (!evaluateRule(userProfile, durationCondition)) return 'DURATION';
+        // 2. TITRE DE SÉJOUR — must have valid permit (CESEDA L434-1)
+        if (userProfile.family.rf_has_valid_titre_sejour === false) return 'TITRE_SEJOUR';
 
-        // Detailed Resource Diagnostics
+        // 3. MARITAL STATUS — must be married (CESEDA L434-2)
+        const marital = userProfile.family.rf_marital_status;
+        if (marital && marital !== 'MARRIED' && marital !== 'SINGLE') return 'MARITAL';
+
+        // 4. DURATION — presence in France
+        const duration = userProfile.family.presence_duration;
+        const isAlgerian = userProfile.family.sponsor_nationality === 'ALGERIAN';
+        if (duration === 'LESS_12') return 'DURATION';
+        if (duration === '12_18' && !isAlgerian) return 'DURATION';
+
+        // 5. RESOURCES — income source and amount
         if (userProfile.family.has_handicap_allowance === false) {
             if (userProfile.family.income_source === 'RSA_ALOWANCE') return 'SOURCE_RSA';
-            if ((userProfile.financial.resources_monthly_average || 0) < 1398) return 'AMOUNT_LOW';
-        } else if (userProfile.family.has_handicap_allowance === undefined) {
-            // Fallback to general resource check if not captured by specific sub-steps
-            if (!evaluateRule(userProfile, resourceConditionGroup)) return 'RESOURCES_GENERAL';
+            if ((userProfile.work.salary_monthly_gross || 0) < 1398) return 'AMOUNT_LOW';
         }
 
-        // Housing Diagnostics
-        const housingConditions = conditions.slice(2);
-        for (const cond of housingConditions) {
-            if (!evaluateRule(userProfile, cond)) return 'HOUSING';
-        }
+        // 6. HOUSING — must have a home
+        const housing = userProfile.family.housing_status;
+        if (housing === 'SEARCHING' || housing === 'UNKNOWN' || !housing) return 'HOUSING';
+
+        // 7. SURFACE — minimum surface based on family composition
+        const memberCount = userProfile.family.rf_family_members_count || 1;
+        const minSurface = 16 + Math.max(0, (memberCount - 1)) * 9;
+        if ((userProfile.family.rf_housing_surface || 0) < minSurface) return 'SURFACE';
 
         return 'UNKNOWN';
     };
@@ -191,10 +236,10 @@ export default function ResultsView({ userProfile, onReset, serviceId, forceAgen
 
                                 <div className="pt-8 flex flex-col sm:flex-row gap-6 items-center">
                                     <button
-                                        onClick={() => handleCheckout(499, "Accompagnement Regroupement Familial")}
+                                        onClick={() => handleCheckout(390, "Accompagnement Regroupement Familial")}
                                         className="group px-10 py-6 bg-white text-indigo-600 text-xl font-black rounded-2xl hover:bg-slate-50 transition-all flex items-center gap-3 shadow-xl"
                                     >
-                                        Commander : Accompagnement Dossier
+                                        Commander — 390€
                                         <ArrowRight className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
                                     </button>
                                     <div className="text-indigo-200 font-bold text-sm text-center sm:text-left">
@@ -210,6 +255,39 @@ export default function ResultsView({ userProfile, onReset, serviceId, forceAgen
                                     <AlertTriangle className="w-16 h-16" />
                                 </div>
                                 <div className="flex-1 space-y-6">
+                                    {getFamilyFailureReason() === 'POLYGAMY' && (
+                                        <div className="space-y-4">
+                                            <h3 className="text-4xl font-black text-slate-900 leading-tight">Regroupement familial interdit</h3>
+                                            <p className="text-xl text-slate-500 font-medium leading-relaxed">L'article L434-6 du CESEDA interdit le regroupement familial en situation de polygamie. Cette exclusion est absolue et ne peut faire l'objet d'aucune dérogation.</p>
+                                            <button className="flex items-center gap-4 px-10 py-6 bg-slate-900 text-white font-black rounded-2xl hover:bg-slate-800 transition-all shadow-lg">
+                                                <Scale className="w-6 h-6" />
+                                                Consulter un juriste
+                                            </button>
+                                        </div>
+                                    )}
+
+                                    {getFamilyFailureReason() === 'TITRE_SEJOUR' && (
+                                        <div className="space-y-4">
+                                            <h3 className="text-4xl font-black text-slate-900 leading-tight">Titre de séjour requis</h3>
+                                            <p className="text-xl text-slate-500 font-medium leading-relaxed">L'article L434-1 du CESEDA exige un titre de séjour en cours de validité d'une durée d'au moins 1 an. Vous devez d'abord régulariser votre situation administrative.</p>
+                                            <button className="flex items-center gap-4 px-10 py-6 bg-slate-900 text-white font-black rounded-2xl hover:bg-slate-800 transition-all shadow-lg">
+                                                <Scale className="w-6 h-6" />
+                                                Consulter un juriste
+                                            </button>
+                                        </div>
+                                    )}
+
+                                    {getFamilyFailureReason() === 'MARITAL' && (
+                                        <div className="space-y-4">
+                                            <h3 className="text-4xl font-black text-slate-900 leading-tight">Situation conjugale non éligible</h3>
+                                            <p className="text-xl text-slate-500 font-medium leading-relaxed">Le regroupement familial est réservé aux conjoints mariés (CESEDA L434-2). Si vous êtes pacsé(e) ou concubin(e), vous pouvez demander un titre « vie privée et familiale » — c'est une procédure différente.</p>
+                                            <button className="flex items-center gap-4 px-10 py-6 bg-indigo-600 text-white font-black rounded-2xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100">
+                                                <Scale className="w-6 h-6" />
+                                                Explorer les alternatives
+                                            </button>
+                                        </div>
+                                    )}
+
                                     {getFamilyFailureReason() === 'DURATION' && (
                                         <div className="space-y-4">
                                             <h3 className="text-4xl font-black text-slate-900 leading-tight">Délai de résidence insuffisant</h3>
@@ -256,7 +334,19 @@ export default function ResultsView({ userProfile, onReset, serviceId, forceAgen
                                         </div>
                                     )}
 
-                                    {(getFamilyFailureReason() === 'RESOURCES_GENERAL' || getFamilyFailureReason() === 'UNKNOWN') && (
+                                    {getFamilyFailureReason() === 'SURFACE' && (
+                                        <div className="space-y-4">
+                                            <h3 className="text-4xl font-black text-slate-900 leading-tight">Surface du logement insuffisante</h3>
+                                            <p className="text-xl text-slate-500 font-medium">Pour {userProfile.family.rf_family_members_count || 1} personne(s), la surface minimale requise est de {16 + Math.max(0, ((userProfile.family.rf_family_members_count || 1) - 1)) * 9} m². Votre logement fait {userProfile.family.rf_housing_surface || 0} m².</p>
+                                            <button className="flex items-center gap-4 px-10 py-6 bg-amber-600 text-white font-black rounded-2xl hover:bg-amber-700 transition-all shadow-lg shadow-amber-100">
+                                                <Home className="w-6 h-6" />
+                                                Consulter le Guide Surface OFII
+                                            </button>
+                                            <p className="text-xs text-slate-400 font-bold uppercase tracking-[0.1em]">Règle : 16 m² pour le couple + 9 m² par personne supplémentaire (CESEDA R434-15).</p>
+                                        </div>
+                                    )}
+
+                                    {getFamilyFailureReason() === 'UNKNOWN' && (
                                         <div className="space-y-4">
                                             <h3 className="text-4xl font-black text-slate-900 leading-tight">Dossier Incomplet</h3>
                                             <p className="text-xl text-slate-500 font-medium">Certaines conditions de ressources ou de logement ne semblent pas remplies pour le moment.</p>
@@ -510,6 +600,7 @@ export default function ResultsView({ userProfile, onReset, serviceId, forceAgen
                                 <div className="h-0.5 bg-slate-100 flex-1" />
                             </div>
 
+                            {/* ─── Best option card ─── */}
                             <div className="relative group">
                                 <div className="p-10 rounded-[3rem] relative overflow-hidden border-4 border-indigo-50 bg-white shadow-2xl shadow-indigo-100/40 transition-all duration-300">
                                     <div className="flex flex-col lg:flex-row gap-12 items-start relative z-10">
@@ -518,6 +609,17 @@ export default function ResultsView({ userProfile, onReset, serviceId, forceAgen
                                                 <span className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest shadow-sm ${handleProcedureDetails(userProfile.admin.current_visa_type || 'NONE', eligibleStays[0].id).color}`}>
                                                     {handleProcedureDetails(userProfile.admin.current_visa_type || 'NONE', eligibleStays[0].id).label}
                                                 </span>
+                                                <span className={`px-3 py-1.5 rounded-lg text-[10px] font-bold border ${tierBadge(eligibleStays[0]).cls}`}>
+                                                    {tierBadge(eligibleStays[0]).label}
+                                                </span>
+                                                <span className="px-3 py-1.5 rounded-lg text-[10px] font-bold bg-indigo-50 text-indigo-600 border border-indigo-100">
+                                                    {durationLabel(eligibleStays[0])}
+                                                </span>
+                                                {eligibleStays[0].gives_work_right && (
+                                                    <span className="px-3 py-1.5 rounded-lg text-[10px] font-bold bg-green-50 text-green-600 border border-green-100">
+                                                        💼 Droit au travail
+                                                    </span>
+                                                )}
                                             </div>
 
                                             <div className="space-y-4">
@@ -542,6 +644,95 @@ export default function ResultsView({ userProfile, onReset, serviceId, forceAgen
                                     </div>
                                 </div>
                             </div>
+
+                            {/* ─── Alternatives section ─── */}
+                            {eligibleStays.length > 1 && (
+                                <div className="mt-10">
+                                    <div className="flex items-center gap-6 mb-6">
+                                        <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.4em] whitespace-nowrap">
+                                            Autres options éligibles ({eligibleStays.length - 1})
+                                        </h3>
+                                        <div className="h-0.5 bg-slate-100 flex-1" />
+                                    </div>
+                                    <div className="grid gap-4">
+                                        {eligibleStays.slice(1).map((rule) => {
+                                            const details = handleProcedureDetails(userProfile.admin.current_visa_type || 'NONE', rule.id);
+                                            const badge = tierBadge(rule);
+                                            return (
+                                                <div key={rule.id} className="p-6 rounded-2xl border-2 border-slate-100 bg-white hover:border-indigo-200 hover:shadow-lg transition-all duration-200 cursor-pointer">
+                                                    <div className="flex flex-wrap items-center gap-3 mb-3">
+                                                        <span className={`px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wide ${details.color}`}>
+                                                            {details.label}
+                                                        </span>
+                                                        <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold border ${badge.cls}`}>
+                                                            {badge.label}
+                                                        </span>
+                                                        <span className="px-2.5 py-1 rounded-md text-[10px] font-bold bg-slate-50 text-slate-500 border border-slate-100">
+                                                            {durationLabel(rule)}
+                                                        </span>
+                                                        {rule.gives_work_right && (
+                                                            <span className="text-[10px] font-bold text-green-600">💼 Travail</span>
+                                                        )}
+                                                        {rule.leads_to_naturalisation && (
+                                                            <span className="text-[10px] font-bold text-blue-600">🇫🇷 → Naturalisation</span>
+                                                        )}
+                                                    </div>
+                                                    <h5 className="text-lg font-bold text-slate-900">{rule.name}</h5>
+                                                    <p className="text-sm text-slate-500 mt-1 line-clamp-2">{rule.description}</p>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* ─── Parcours d'évolution (upgrade path) ─── */}
+                            {eligibleUpgrades.length > 0 && (
+                                <div className="mt-12">
+                                    <div className="flex items-center gap-6 mb-6">
+                                        <h3 className="text-xs font-black text-violet-500 uppercase tracking-[0.4em] whitespace-nowrap">
+                                            📈 Votre parcours d'évolution ({eligibleUpgrades.length})
+                                        </h3>
+                                        <div className="h-0.5 bg-violet-100 flex-1" />
+                                    </div>
+                                    <p className="text-sm text-slate-500 mb-6">
+                                        Avec votre titre actuel et votre durée de résidence, vous pouvez passer au titre supérieur :
+                                    </p>
+                                    <div className="grid gap-4">
+                                        {eligibleUpgrades.map((rule, idx) => {
+                                            const badge = tierBadge(rule);
+                                            return (
+                                                <div key={rule.id} className="relative p-6 rounded-2xl border-2 border-violet-100 bg-gradient-to-r from-violet-50/50 to-white hover:border-violet-300 hover:shadow-lg transition-all duration-200 cursor-pointer">
+                                                    {/* Timeline dot */}
+                                                    <div className="absolute -left-3 top-8 w-6 h-6 rounded-full bg-violet-500 border-4 border-white shadow-md flex items-center justify-center">
+                                                        <span className="text-white text-[8px] font-black">{idx + 1}</span>
+                                                    </div>
+                                                    <div className="flex flex-wrap items-center gap-3 mb-3 ml-4">
+                                                        <span className="px-3 py-1 rounded-lg text-[10px] font-bold bg-violet-100 text-violet-700 border border-violet-200 uppercase tracking-wide">
+                                                            🔄 Renouvellement / Upgrade
+                                                        </span>
+                                                        <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold border ${badge.cls}`}>
+                                                            {badge.label}
+                                                        </span>
+                                                        <span className="px-2.5 py-1 rounded-md text-[10px] font-bold bg-slate-50 text-slate-500 border border-slate-100">
+                                                            {durationLabel(rule)}
+                                                        </span>
+                                                        {rule.gives_work_right && (
+                                                            <span className="text-[10px] font-bold text-green-600">💼 Travail</span>
+                                                        )}
+                                                        {rule.leads_to_naturalisation && (
+                                                            <span className="text-[10px] font-bold text-blue-600">🇫🇷 → Naturalisation</span>
+                                                        )}
+                                                    </div>
+                                                    <h5 className="text-lg font-bold text-slate-900 ml-4">{rule.name}</h5>
+                                                    <p className="text-sm text-slate-500 mt-1 ml-4 line-clamp-2">{rule.description}</p>
+                                                    <p className="text-xs text-violet-400 mt-2 ml-4 font-medium">Réf. : {rule.source_ref}</p>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
                         </section>
                     ) : (
                         (!hasNatEligible || targetGoal !== 'NATURALIZATION') && (
@@ -557,7 +748,149 @@ export default function ResultsView({ userProfile, onReset, serviceId, forceAgen
                 </div>
             )}
 
-            <div className="mt-auto pt-12 border-t border-slate-100 opacity-50">
+            {/* ─── Legal disclaimer ─── */}
+            <div className="mt-12 p-6 bg-amber-50/70 border-2 border-amber-100 rounded-2xl">
+                <div className="flex gap-3 items-start">
+                    <span className="text-xl">⚖️</span>
+                    <div className="space-y-2">
+                        <h4 className="text-sm font-bold text-amber-900">Information importante</h4>
+                        <p className="text-xs text-amber-800 leading-relaxed">
+                            Les résultats de ce simulateur n'ont <strong>aucune valeur juridique</strong>. Ils constituent une
+                            indication préliminaire d'éligibilité basée sur les informations que vous avez renseignées et les
+                            textes du Code de l'entrée et du séjour des étrangers (CESEDA). Seule une consultation avec un
+                            professionnel du droit des étrangers peut confirmer votre éligibilité. Chaque dossier est unique
+                            et peut dépendre de circonstances non couvertes par cet outil.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            {/* ─── Recap of user answers ─── */}
+            {(() => {
+                const nationalityLabels: Record<string, string> = {
+                    EU: '🇪🇺 UE / EEE / Suisse', ALGERIAN: '🇩🇿 Algérienne', TUNISIAN: '🇹🇳 Tunisienne',
+                    MOROCCAN: '🇲🇦 Marocaine', NON_EU: '🌍 Non-UE', FRANCE: '🇫🇷 Française',
+                    REFUGEE: '🛡️ Réfugié / Protection', STATELESS: '🌐 Apatride',
+                };
+                const visaLabels: Record<string, string> = {
+                    'VLS-TS': 'Visa long séjour (VLS-TS)', STUDENT: 'Titre étudiant', WORKER: 'Titre salarié',
+                    VPF: 'Vie Privée et Familiale', VISITOR: 'Visiteur', PASSEPORT_TALENT: 'Passeport Talent',
+                    RESIDENT_CARD: 'Carte de Résident', RECEIPISSE: 'Récépissé', NONE: 'Aucun titre',
+                };
+                const contractLabels: Record<string, string> = { CDI: 'CDI', CDD: 'CDD', SEASONAL: 'Saisonnier', NONE: 'Aucun', PROMESSE: 'Promesse d\'embauche' };
+                const situationLabels: Record<string, string> = { STUDENT: 'Étudiant', WORKER: 'Salarié', ENTREPRENEUR: 'Indépendant', OTHER: 'Autre' };
+                const goalLabels: Record<string, string> = { RESIDENCE_PERMIT: 'Titre de Séjour', NATURALIZATION: 'Naturalisation', BOTH: 'Les deux', SERVICE: 'Service' };
+                const diplomaLabels: Record<string, string> = { NONE: 'Aucun', LICENCE: 'Licence', MASTER: 'Master', PHD: 'Doctorat', SPECIALIZED_MASTER: 'Master spécialisé', LICENCE_PRO: 'Licence pro', CGE_LEVEL_1: 'Grande école (niveau 1)' };
+
+                type RecapLine = { label: string; value: string };
+                type RecapGroup = { title: string; icon: string; lines: RecapLine[] };
+
+                const boolStr = (v: boolean | undefined) => v ? 'Oui' : 'Non';
+                const p = userProfile;
+
+                const groups: RecapGroup[] = [
+                    {
+                        title: 'Identité', icon: '👤', lines: [
+                            { label: 'Objectif', value: goalLabels[p.project.target_goal || ''] || '—' },
+                            { label: 'Nationalité', value: nationalityLabels[p.identity.nationality_group] || p.identity.nationality_group },
+                            { label: 'Âge', value: p.identity.age ? `${p.identity.age} ans` : '—' },
+                            { label: 'Né(e) en France', value: boolStr(p.identity.born_in_france) },
+                        ].filter(l => l.value && l.value !== '—'),
+                    },
+                    {
+                        title: 'Administratif', icon: '📋', lines: [
+                            { label: 'Titre actuel', value: visaLabels[p.admin.current_visa_type || ''] || '—' },
+                            ...(p.timeline.entry_date ? [{ label: 'Date d\'entrée', value: new Date(p.timeline.entry_date).toLocaleDateString('fr-FR') }] : []),
+                            ...(p.timeline.years_continuous_residence > 0 ? [{ label: 'Résidence continue', value: `${p.timeline.years_continuous_residence} ans` }] : []),
+                            ...(p.admin.entered_legally !== undefined ? [{ label: 'Entrée régulière', value: boolStr(p.admin.entered_legally) }] : []),
+                        ].filter(l => l.value && l.value !== '—'),
+                    },
+                    {
+                        title: 'Travail', icon: '💼', lines: [
+                            ...(p.work.main_situation ? [{ label: 'Situation principale', value: situationLabels[p.work.main_situation] || p.work.main_situation }] : []),
+                            ...(p.work.contract_type && p.work.contract_type !== 'NONE' ? [{ label: 'Contrat', value: contractLabels[p.work.contract_type] || p.work.contract_type }] : []),
+                            ...(p.work.salary_monthly_gross > 0 ? [{ label: 'Salaire brut mensuel', value: `${p.work.salary_monthly_gross.toLocaleString('fr-FR')} €` }] : []),
+                            ...(p.work.contract_duration_months ? [{ label: 'Durée du contrat', value: `${p.work.contract_duration_months} mois` }] : []),
+                            { label: 'Autorisation de travail', value: boolStr(p.work.has_work_authorization) },
+                            { label: 'Métier en tension', value: boolStr(p.work.job_in_tension_list) },
+                        ].filter(l => l.value && l.value !== '—'),
+                    },
+                    {
+                        title: 'Études', icon: '🎓', lines: [
+                            ...(p.education.diploma_level && p.education.diploma_level !== 'NONE' ? [{ label: 'Diplôme', value: diplomaLabels[p.education.diploma_level] || p.education.diploma_level }] : []),
+                            ...(p.education.is_enrolled_higher_ed ? [{ label: 'Inscrit en supérieur', value: boolStr(p.education.is_enrolled_higher_ed) }] : []),
+                            ...(p.education.years_schooling_france ? [{ label: 'Scolarité en France', value: `${p.education.years_schooling_france} ans` }] : []),
+                        ],
+                    },
+                    {
+                        title: 'Intégration', icon: '🗣️', lines: [
+                            { label: 'Niveau de français', value: p.integration.french_level || '—' },
+                            { label: 'Examen civique réussi', value: boolStr(p.integration.civic_exam_passed) },
+                            { label: 'Adhésion valeurs républicaines', value: boolStr(p.integration.adheres_to_republican_values) },
+                        ].filter(l => l.value && l.value !== '—'),
+                    },
+                    {
+                        title: 'Famille', icon: '💍', lines: [
+                            { label: 'Conjoint', value: p.family.spouse_nationality === 'NONE' ? 'Célibataire' : p.family.spouse_nationality === 'FRENCH' ? 'Conjoint français' : p.family.spouse_nationality === 'EU' ? 'Conjoint UE' : 'Conjoint non-UE' },
+                            ...(p.family.marriage_duration_years > 0 ? [{ label: 'Durée du mariage', value: `${p.family.marriage_duration_years} ans` }] : []),
+                            { label: 'Enfant français', value: boolStr(p.family.has_french_child) },
+                            ...(p.family.is_pacsed_with_french ? [{ label: 'Pacsé(e) avec un(e) Français(e)', value: boolStr(p.family.is_pacsed_with_french) }] : []),
+                        ],
+                    },
+                    {
+                        title: 'Civique', icon: '⚖️', lines: [
+                            { label: 'Casier vierge', value: boolStr(p.civic.clean_criminal_record) },
+                            { label: 'Pas de mesure d\'éloignement', value: boolStr(p.civic.no_expulsion_order) },
+                            { label: 'Couverture maladie', value: boolStr(p.admin.health_insurance) },
+                        ],
+                    },
+                    {
+                        title: 'Vulnérabilité', icon: '🩺', lines: [
+                            ...(p.vulnerability.is_victim_domestic_violence ? [{ label: 'Victime de violences', value: 'Oui' }] : []),
+                            ...(p.vulnerability.is_victim_trafficking ? [{ label: 'Victime de traite', value: 'Oui' }] : []),
+                            ...(p.vulnerability.has_protection_order_violence ? [{ label: 'Ordonnance de protection', value: 'Oui' }] : []),
+                            ...(p.health.personal_needs_treatment ? [{ label: 'Besoin de soins médicaux', value: 'Oui' }] : []),
+                        ],
+                    },
+                    {
+                        title: 'Régularisation', icon: '📋', lines: [
+                            ...(p.regularisation.has_children_schooled_3y ? [{ label: 'Enfants scolarisés 3+ ans', value: 'Oui' }] : []),
+                            ...(p.regularisation.has_exceptional_talent ? [{ label: 'Talent exceptionnel', value: 'Oui' }] : []),
+                        ],
+                    },
+                ].filter(g => g.lines.length > 0);
+
+                return (
+                    <details className="mt-8 group">
+                        <summary className="cursor-pointer select-none flex items-center gap-3 p-4 bg-slate-50 hover:bg-slate-100 rounded-2xl transition-colors">
+                            <span className="text-lg">📝</span>
+                            <span className="text-sm font-bold text-slate-700 flex-1">Récapitulatif de vos réponses</span>
+                            <span className="text-xs text-slate-400 group-open:hidden">Cliquez pour afficher ▸</span>
+                            <span className="text-xs text-slate-400 hidden group-open:inline">▾ Masquer</span>
+                        </summary>
+
+                        <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {groups.map(g => (
+                                <div key={g.title} className="p-4 bg-white border border-slate-100 rounded-xl shadow-sm">
+                                    <h5 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3 flex items-center gap-2">
+                                        <span>{g.icon}</span> {g.title}
+                                    </h5>
+                                    <dl className="space-y-1.5">
+                                        {g.lines.map(line => (
+                                            <div key={line.label} className="flex items-baseline justify-between gap-2 text-xs">
+                                                <dt className="text-slate-500 shrink-0">{line.label}</dt>
+                                                <dd className="text-slate-800 font-medium text-right">{line.value}</dd>
+                                            </div>
+                                        ))}
+                                    </dl>
+                                </div>
+                            ))}
+                        </div>
+                    </details>
+                );
+            })()}
+
+            <div className="mt-auto pt-6 border-t border-slate-100 opacity-50">
                 <p className="text-sm text-slate-400 font-bold text-center uppercase tracking-widest">
                     Simulégale © 2026 • Confidentialité garantie • Analyse CESEDA v2.4
                 </p>

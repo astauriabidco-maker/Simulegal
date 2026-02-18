@@ -1,3 +1,4 @@
+import type { Response } from 'express';
 import { FinanceService } from './finance.service';
 export declare class FinanceController {
     private readonly financeService;
@@ -25,6 +26,8 @@ export declare class FinanceController {
             commissionRate: number;
             serviceCommissionOverrides: string | null;
             contactEmail: string;
+            iban: string | null;
+            bic: string | null;
             kioskUrl: string;
             createdAt: Date;
             updatedAt: Date;
@@ -72,17 +75,19 @@ export declare class FinanceController {
             commissionRate: number;
             serviceCommissionOverrides: string | null;
             contactEmail: string;
+            iban: string | null;
+            bic: string | null;
             kioskUrl: string;
             createdAt: Date;
             updatedAt: Date;
         } | null;
     } & {
-        data: string;
         id: string;
         name: string;
         status: import(".prisma/client").$Enums.LeadStatus;
         createdAt: Date;
         updatedAt: Date;
+        data: string;
         email: string;
         phone: string;
         serviceId: string;
@@ -100,12 +105,12 @@ export declare class FinanceController {
     })[]>;
     getTransactions(req: any): Promise<({
         lead: {
-            data: string;
             id: string;
             name: string;
             status: import(".prisma/client").$Enums.LeadStatus;
             createdAt: Date;
             updatedAt: Date;
+            data: string;
             email: string;
             phone: string;
             serviceId: string;
@@ -133,12 +138,12 @@ export declare class FinanceController {
     })[]>;
     getCreditNotes(req: any): Promise<({
         lead: {
-            data: string;
             id: string;
             name: string;
             status: import(".prisma/client").$Enums.LeadStatus;
             createdAt: Date;
             updatedAt: Date;
+            data: string;
             email: string;
             phone: string;
             serviceId: string;
@@ -162,4 +167,5 @@ export declare class FinanceController {
         amount: number;
         reason: string;
     })[]>;
+    downloadSepa(req: any, id: string, res: Response): Promise<Response<any, Record<string, any>>>;
 }

@@ -52,18 +52,21 @@ const nodemailer = __importStar(require("nodemailer"));
 const twilio_1 = __importDefault(require("twilio"));
 const email_templates_service_1 = require("./email-templates.service");
 const settings_service_1 = require("../settings/settings.service");
+const prisma_service_1 = require("../prisma/prisma.service");
 let NotificationsService = class NotificationsService {
     configService;
     emailTemplates;
     settingsService;
+    prisma;
     twilioClient;
     cachedSmtpConfig = null;
     lastConfigCheck = 0;
     CONFIG_TTL = 60000;
-    constructor(configService, emailTemplates, settingsService) {
+    constructor(configService, emailTemplates, settingsService, prisma) {
         this.configService = configService;
         this.emailTemplates = emailTemplates;
         this.settingsService = settingsService;
+        this.prisma = prisma;
         const accountSid = this.configService.get('TWILIO_ACCOUNT_SID');
         const authToken = this.configService.get('TWILIO_AUTH_TOKEN');
         if (accountSid && authToken) {
@@ -128,13 +131,29 @@ let NotificationsService = class NotificationsService {
         this.lastConfigCheck = 0;
         console.log('[SMTP] 🔄 Configuration cache cleared');
     }
-    async sendWhatsApp(phone, template, params) {
+    async sendWhatsApp(phone, template, params, metadata) {
         if (!this.twilioClient) {
             console.warn('[Twilio] Client not initialized. Check env vars.');
             return { success: false };
         }
         const from = this.configService.get('TWILIO_WHATSAPP_NUMBER') || 'whatsapp:+14155238886';
         const to = `whatsapp:${phone.replace(/^0/, '+33').replace(/\s/g, '')}`;
+        try {
+            await this.prisma.communication.create({
+                data: {
+                    direction: 'OUTBOUND',
+                    type: 'WHATSAPP',
+                    content: params.message || 'Template message',
+                    sender: from,
+                    senderName: 'SYSTEM',
+                    leadId: metadata?.leadId,
+                    prospectId: metadata?.prospectId
+                }
+            });
+        }
+        catch (persistError) {
+            console.warn('[WhatsApp] Persistence failed:', persistError.message);
+        }
         try {
             const result = await this.twilioClient.messages.create({
                 body: params.message,
@@ -233,7 +252,7 @@ let NotificationsService = class NotificationsService {
         const message = `Bonjour ${lead.name}, votre RDV SimuLegal est confirmé pour le ${dateStr}.${meetingInfo}`;
         console.log(`[Notifications] Processing confirmation for ${lead.phone}/${lead.email}`);
         await Promise.all([
-            this.sendWhatsApp(lead.phone || '0600000000', 'booking_confirmation', { message }),
+            this.sendWhatsApp(lead.phone || '0600000000', 'booking_confirmation', { message }, { leadId: lead.id }),
             lead.email ? this.sendEmail(lead.email, 'Confirmation de votre Rendez-vous SimuLegal', message) : Promise.resolve(),
             this.sendSMS(lead.phone || '0600000000', message)
         ]);
@@ -244,19 +263,19 @@ let NotificationsService = class NotificationsService {
             await this.sendWhatsApp(lead.phone, 'coach_ofii_alert', {
                 name: lead.name,
                 message: `⚠️ Important : Votre dossier est à l'étape Enquête Logement/OFII. Préparez votre logement. Checklist : simulegal.fr/guide-ofii`
-            });
+            }, { leadId: lead.id });
         }
         if (newStage === 'HUNTING') {
             await this.sendWhatsApp(lead.phone, 'hunting_start', {
                 name: lead.name,
                 message: `⚡️ Recherche activée. Nous surveillons les créneaux de RDV pour vous.`
-            });
+            }, { leadId: lead.id });
         }
         if (newStage === 'BOOKED') {
             await this.sendWhatsApp(lead.phone, 'booking_success', {
                 name: lead.name,
                 message: `✅ RDV RÉSERVÉ ! Détails disponibles dans votre espace client.`
-            });
+            }, { leadId: lead.id });
         }
     }
     async onDocumentRejected(lead, docLabel) {
@@ -264,14 +283,14 @@ let NotificationsService = class NotificationsService {
         await this.sendWhatsApp(lead.phone, 'document_rejected', {
             name: lead.name,
             message: `⚠️ Attention ${lead.name} : Votre document "${docLabel}" a été refusé par nos services. Merci de vous connecter à votre espace client pour le renvoyer.`
-        });
+        }, { leadId: lead.id });
     }
     async onJuristAssigned(lead, juristName) {
         console.log(`[Notifications] Jurist assigned to ${lead.name}: ${juristName}`);
         await this.sendWhatsApp(lead.phone, 'jurist_assigned', {
             name: lead.name,
             message: `💼 Bonne nouvelle ${lead.name} : Votre dossier est maintenant pris en charge par ${juristName}. Vous pouvez suivre l'avancement dans votre espace.`
-        });
+        }, { leadId: lead.id });
     }
     async onFranchiseOnboarding(lead, tempPassword) {
         const message = `Félicitations ${lead.name} ! Votre agence SimuLegal est maintenant active.\n\n` +
@@ -281,7 +300,7 @@ let NotificationsService = class NotificationsService {
             `Connectez-vous sur : https://admin.simulegal.fr`;
         await Promise.all([
             this.sendEmail(lead.email, 'Bienvenue chez SimuLegal - Vos accès Gérant', message),
-            this.sendWhatsApp(lead.phone, 'franchise_welcome', { message })
+            this.sendWhatsApp(lead.phone, 'franchise_welcome', { message }, { leadId: lead.id })
         ]);
     }
 };
@@ -290,6 +309,7 @@ exports.NotificationsService = NotificationsService = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [config_1.ConfigService,
         email_templates_service_1.EmailTemplatesService,
-        settings_service_1.SettingsService])
+        settings_service_1.SettingsService,
+        prisma_service_1.PrismaService])
 ], NotificationsService);
 //# sourceMappingURL=notifications.service.js.map

@@ -1,19 +1,73 @@
 [
     {
-        "id": "carte_resident_refugie_apatride",
-        "name": "Carte de Résident - Réfugié / Apatride (10 ans)",
-        "description": "Délivrée de plein droit dès la reconnaissance du statut (Art. L. 424-1 et L. 424-3).",
+        "id": "carte_resident_refugie",
+        "name": "Carte de Résident – Réfugié (10 ans, de plein droit)",
+        "description": "Délivrée de plein droit dès la reconnaissance du statut de réfugié. Carte de résident de 10 ans (Art. L. 424-1 CESEDA).",
         "priority": 98,
-        "source_ref": "CESEDA L. 424-1, L. 424-3",
+        "source_ref": "CESEDA L. 424-1",
         "conditions": {
             "AND": [
                 {
                     "var": "identity.nationality_group",
-                    "op": "IN",
-                    "val": [
-                        "REFUGEE",
-                        "STATELESS"
-                    ]
+                    "op": "EQ",
+                    "val": "REFUGEE"
+                },
+                {
+                    "var": "civic.clean_criminal_record",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "civic.no_expulsion_order",
+                    "op": "EQ",
+                    "val": true
+                }
+            ]
+        }
+    },
+    {
+        "id": "cs_pluriannuelle_apatride",
+        "name": "Carte de séjour pluriannuelle – Apatride (4 ans)",
+        "description": "Carte de séjour pluriannuelle de 4 ans délivrée dès la reconnaissance du statut d'apatride (Art. L. 424-18 CESEDA). Une carte de résident de 10 ans peut être sollicitée après 4 ans.",
+        "priority": 97,
+        "source_ref": "CESEDA L. 424-18",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "identity.nationality_group",
+                    "op": "EQ",
+                    "val": "STATELESS"
+                },
+                {
+                    "var": "civic.clean_criminal_record",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "civic.no_expulsion_order",
+                    "op": "EQ",
+                    "val": true
+                }
+            ]
+        }
+    },
+    {
+        "id": "carte_resident_apatride_apres_4ans",
+        "name": "Carte de Résident – Apatride (10 ans, après 4 ans de séjour)",
+        "description": "Après 4 ans de résidence régulière sous carte de séjour pluriannuelle apatride, possibilité d'obtenir une carte de résident de 10 ans (Art. L. 424-19 CESEDA).",
+        "priority": 96,
+        "source_ref": "CESEDA L. 424-19",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "identity.nationality_group",
+                    "op": "EQ",
+                    "val": "STATELESS"
+                },
+                {
+                    "var": "timeline.years_continuous_residence",
+                    "op": "GTE",
+                    "val": 4
                 },
                 {
                     "var": "civic.clean_criminal_record",
@@ -55,6 +109,11 @@
                     "var": "admin.health_insurance",
                     "op": "EQ",
                     "val": true
+                },
+                {
+                    "var": "family.is_polygamous",
+                    "op": "EQ",
+                    "val": false
                 },
                 {
                     "var": "integration.french_level",
@@ -179,6 +238,11 @@
                     "var": "family.community_of_life",
                     "op": "EQ",
                     "val": true
+                },
+                {
+                    "var": "family.is_polygamous",
+                    "op": "EQ",
+                    "val": false
                 }
             ]
         }
@@ -438,6 +502,11 @@
                     "var": "family.is_polygamous",
                     "op": "EQ",
                     "val": false
+                },
+                {
+                    "var": "admin.entered_legally",
+                    "op": "EQ",
+                    "val": true
                 }
             ]
         }
@@ -469,6 +538,11 @@
                     "var": "family.is_polygamous",
                     "op": "EQ",
                     "val": false
+                },
+                {
+                    "var": "admin.entered_legally",
+                    "op": "EQ",
+                    "val": true
                 }
             ]
         }
@@ -493,6 +567,16 @@
                 },
                 {
                     "var": "family.community_of_life",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "family.is_polygamous",
+                    "op": "EQ",
+                    "val": false
+                },
+                {
+                    "var": "admin.entered_legally",
                     "op": "EQ",
                     "val": true
                 }
@@ -578,9 +662,9 @@
                     "val": true
                 },
                 {
-                    "var": "health.treatment_available_origin",
+                    "var": "health.treatment_unavailable_in_origin",
                     "op": "EQ",
-                    "val": false
+                    "val": true
                 },
                 {
                     "var": "family.child_residence_france",
@@ -716,6 +800,14 @@
         "conditions": {
             "AND": [
                 {
+                    "var": "admin.current_visa_type",
+                    "op": "IN",
+                    "val": [
+                        "STUDENT",
+                        "VLS-TS"
+                    ]
+                },
+                {
                     "var": "education.is_enrolled_higher_ed",
                     "op": "EQ",
                     "val": true
@@ -847,7 +939,7 @@
     {
         "id": "aes_metiers_tension",
         "name": "Admission Exceptionnelle au Séjour (AES) - Métiers en tension",
-        "description": "Régularisation par le travail pour les métiers en tension (Circulaire Valls / Loi Immigration).",
+        "description": "Régularisation par le travail pour les métiers en tension (Circulaire Valls / Loi Immigration). ⚠️ Procédure discrétionnaire : l'appréciation du préfet est souveraine.",
         "priority": 45,
         "source_ref": "AES_Circulaire_Valls",
         "conditions": {
@@ -943,7 +1035,7 @@
                     "val": true
                 },
                 {
-                    "var": "admin.has_valid_visa_or_permit",
+                    "var": "admin.entered_legally",
                     "op": "EQ",
                     "val": true
                 }
@@ -1022,6 +1114,810 @@
                 },
                 {
                     "var": "family.community_of_life",
+                    "op": "EQ",
+                    "val": true
+                }
+            ]
+        }
+    },
+    {
+        "id": "carte_resident_10ans_general",
+        "name": "Carte de résident 10 ans (cas général)",
+        "description": "Après 5 ans de séjour régulier avec une carte de séjour pluriannuelle, sous conditions de ressources et d'intégration.",
+        "priority": 96,
+        "source_ref": "L. 414-2",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "identity.nationality_group",
+                    "op": "NEQ",
+                    "val": "EU"
+                },
+                {
+                    "var": "timeline.years_continuous_residence",
+                    "op": "GTE",
+                    "val": 5
+                },
+                {
+                    "var": "admin.has_valid_visa_or_permit",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "financial.resources_stable_sufficient",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "integration.french_level",
+                    "op": "GTE",
+                    "val": "B1"
+                },
+                {
+                    "var": "integration.adheres_to_republican_values",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "integration.civic_exam_passed",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "civic.clean_criminal_record",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "civic.no_expulsion_order",
+                    "op": "EQ",
+                    "val": true
+                }
+            ]
+        }
+    },
+    {
+        "id": "carte_resident_retraite",
+        "name": "Carte de résident « retraité »",
+        "description": "Pour les retraités étrangers ayant résidé régulièrement en France avec une activité professionnelle et souhaitant maintenir un domicile en France.",
+        "priority": 60,
+        "source_ref": "L. 414-11",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "identity.nationality_group",
+                    "op": "NEQ",
+                    "val": "EU"
+                },
+                {
+                    "var": "identity.age",
+                    "op": "GTE",
+                    "val": 60
+                },
+                {
+                    "var": "residence.maintains_home_abroad",
+                    "op": "EQ",
+                    "val": false
+                },
+                {
+                    "var": "civic.clean_criminal_record",
+                    "op": "EQ",
+                    "val": true
+                }
+            ]
+        }
+    },
+    {
+        "id": "carte_resident_permanent",
+        "name": "Carte de résident permanent",
+        "description": "Délivrée au renouvellement d'une première carte de résident, sans condition de durée supplémentaire.",
+        "priority": 94,
+        "source_ref": "L. 414-8",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "identity.nationality_group",
+                    "op": "NEQ",
+                    "val": "EU"
+                },
+                {
+                    "var": "admin.current_visa_type",
+                    "op": "EQ",
+                    "val": "RESIDENT_CARD"
+                },
+                {
+                    "var": "integration.french_level",
+                    "op": "GTE",
+                    "val": "B1"
+                },
+                {
+                    "var": "integration.adheres_to_republican_values",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "civic.clean_criminal_record",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "civic.no_expulsion_order",
+                    "op": "EQ",
+                    "val": true
+                }
+            ]
+        }
+    },
+    {
+        "id": "passeport_talent_chercheur",
+        "name": "Passeport talent – Chercheur",
+        "description": "Pour les chercheurs titulaires d'un diplôme de niveau Master avec une convention d'accueil d'un organisme de recherche.",
+        "priority": 85,
+        "source_ref": "L. 421-14",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "identity.nationality_group",
+                    "op": "NEQ",
+                    "val": "EU"
+                },
+                {
+                    "var": "work.is_researcher",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "work.has_hosting_agreement",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "education.diploma_level",
+                    "op": "IN",
+                    "val": [
+                        "MASTER",
+                        "PHD",
+                        "SPECIALIZED_MASTER"
+                    ]
+                },
+                {
+                    "var": "civic.clean_criminal_record",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "civic.no_expulsion_order",
+                    "op": "EQ",
+                    "val": true
+                }
+            ]
+        }
+    },
+    {
+        "id": "passeport_talent_artiste",
+        "name": "Passeport talent – Artiste / Interprète",
+        "description": "Pour les artistes-auteurs ou interprètes exerçant une activité artistique rémunérée.",
+        "priority": 75,
+        "source_ref": "L. 421-16",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "identity.nationality_group",
+                    "op": "NEQ",
+                    "val": "EU"
+                },
+                {
+                    "var": "work.is_artist",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "civic.clean_criminal_record",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "civic.no_expulsion_order",
+                    "op": "EQ",
+                    "val": true
+                }
+            ]
+        }
+    },
+    {
+        "id": "passeport_talent_sportif",
+        "name": "Passeport talent – Sportif de haut niveau",
+        "description": "Pour les sportifs de haut niveau reconnus par le Ministère des Sports.",
+        "priority": 75,
+        "source_ref": "L. 421-17",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "identity.nationality_group",
+                    "op": "NEQ",
+                    "val": "EU"
+                },
+                {
+                    "var": "work.is_sportif_haut_niveau",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "civic.clean_criminal_record",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "civic.no_expulsion_order",
+                    "op": "EQ",
+                    "val": true
+                }
+            ]
+        }
+    },
+    {
+        "id": "vpf_liens_personnels",
+        "name": "VPF – Liens personnels et familiaux intenses",
+        "description": "Pour les étrangers justifiant de liens personnels et familiaux intenses en France, au regard de leur durée et stabilité.",
+        "priority": 65,
+        "source_ref": "L. 423-23",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "identity.nationality_group",
+                    "op": "NEQ",
+                    "val": "EU"
+                },
+                {
+                    "var": "timeline.years_continuous_residence",
+                    "op": "GTE",
+                    "val": 5
+                },
+                {
+                    "var": "integration.french_level",
+                    "op": "GTE",
+                    "val": "A2"
+                },
+                {
+                    "var": "integration.civic_exam_passed",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "civic.clean_criminal_record",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "civic.no_expulsion_order",
+                    "op": "EQ",
+                    "val": true
+                }
+            ]
+        }
+    },
+    {
+        "id": "vpf_victime_traite",
+        "name": "VPF – Victime de traite / proxénétisme",
+        "description": "Titre de séjour pour les victimes de traite des êtres humains ou de proxénétisme coopérant avec les autorités.",
+        "priority": 90,
+        "source_ref": "L. 425-1",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "vulnerability.is_victim_trafficking",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "civic.no_expulsion_order",
+                    "op": "EQ",
+                    "val": true
+                }
+            ]
+        }
+    },
+    {
+        "id": "vpf_rente_accident_travail",
+        "name": "VPF – Rente accident du travail (≥20%)",
+        "description": "Pour les étrangers bénéficiant d'une rente d'accident du travail ou de maladie professionnelle d'un taux ≥20%.",
+        "priority": 70,
+        "source_ref": "L. 425-9",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "identity.nationality_group",
+                    "op": "NEQ",
+                    "val": "EU"
+                },
+                {
+                    "var": "work.has_work_accident_pension",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "work.work_accident_rate",
+                    "op": "GTE",
+                    "val": 20
+                },
+                {
+                    "var": "civic.clean_criminal_record",
+                    "op": "EQ",
+                    "val": true
+                }
+            ]
+        }
+    },
+    {
+        "id": "vpf_etranger_malade",
+        "name": "VPF – Étranger malade (soins indisponibles)",
+        "description": "Pour les étrangers dont l'état de santé nécessite une prise en charge médicale dont le défaut pourrait avoir des conséquences graves, et dont le traitement n'est pas disponible dans le pays d'origine.",
+        "priority": 85,
+        "source_ref": "L. 425-9",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "identity.nationality_group",
+                    "op": "NEQ",
+                    "val": "EU"
+                },
+                {
+                    "var": "health.personal_needs_treatment",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "health.treatment_unavailable_in_origin",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "civic.no_expulsion_order",
+                    "op": "EQ",
+                    "val": true
+                }
+            ]
+        }
+    },
+    {
+        "id": "cs_salarie_mission",
+        "name": "CS Salarié en mission (hors ICT)",
+        "description": "Pour les salariés détachés en France dans le cadre d'une mobilité intra-groupe, hors transfert ICT.",
+        "priority": 70,
+        "source_ref": "L. 421-25",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "identity.nationality_group",
+                    "op": "NEQ",
+                    "val": "EU"
+                },
+                {
+                    "var": "work.is_salarie_mission",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "work.salary_monthly_gross",
+                    "op": "GTE",
+                    "val": "@config:financial_thresholds.salary_monthly_gross.smic"
+                },
+                {
+                    "var": "civic.clean_criminal_record",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "civic.no_expulsion_order",
+                    "op": "EQ",
+                    "val": true
+                }
+            ]
+        }
+    },
+    {
+        "id": "cs_stagiaire",
+        "name": "CS Stagiaire",
+        "description": "Pour les étrangers effectuant un stage dans le cadre d'une formation ou d'une convention de stage.",
+        "priority": 55,
+        "source_ref": "L. 421-11",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "identity.nationality_group",
+                    "op": "NEQ",
+                    "val": "EU"
+                },
+                {
+                    "var": "work.is_intern",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "civic.clean_criminal_record",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "civic.no_expulsion_order",
+                    "op": "EQ",
+                    "val": true
+                }
+            ]
+        }
+    },
+    {
+        "id": "cs_jeune_au_pair",
+        "name": "CS Jeune au pair",
+        "description": "Pour les jeunes étrangers (18-30 ans) accueillis par une famille en échange de services et cours de français.",
+        "priority": 50,
+        "source_ref": "L. 421-28",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "identity.nationality_group",
+                    "op": "NEQ",
+                    "val": "EU"
+                },
+                {
+                    "var": "work.is_au_pair",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "identity.age",
+                    "op": "GTE",
+                    "val": 18
+                },
+                {
+                    "var": "identity.age",
+                    "op": "LTE",
+                    "val": 30
+                },
+                {
+                    "var": "civic.clean_criminal_record",
+                    "op": "EQ",
+                    "val": true
+                }
+            ]
+        }
+    },
+    {
+        "id": "cs_volontaire",
+        "name": "CS Volontaire associatif / Service civique",
+        "description": "Pour les étrangers effectuant un volontariat associatif ou un service civique en France.",
+        "priority": 50,
+        "source_ref": "L. 421-30",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "identity.nationality_group",
+                    "op": "NEQ",
+                    "val": "EU"
+                },
+                {
+                    "var": "work.is_volunteer",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "civic.clean_criminal_record",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "civic.no_expulsion_order",
+                    "op": "EQ",
+                    "val": true
+                }
+            ]
+        }
+    },
+    {
+        "id": "aps_demandeur_asile",
+        "name": "APS Demandeur d'asile (en cours d'instruction)",
+        "description": "Autorisation provisoire de séjour délivrée pendant l'instruction de la demande d'asile.",
+        "priority": 92,
+        "source_ref": "L. 541-1",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "asylum.is_asylum_seeker",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "asylum.asylum_application_pending",
+                    "op": "EQ",
+                    "val": true
+                }
+            ]
+        }
+    },
+    {
+        "id": "aps_parent_etranger_malade",
+        "name": "APS Parent accompagnant enfant malade",
+        "description": "APS pour le parent d'un enfant étranger malade nécessitant des soins en France.",
+        "priority": 80,
+        "source_ref": "L. 425-10",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "health.child_needs_care",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "health.treatment_unavailable_in_origin",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "civic.no_expulsion_order",
+                    "op": "EQ",
+                    "val": true
+                }
+            ]
+        }
+    },
+    {
+        "id": "aps_victime_violences_conjugales",
+        "name": "APS Victime de violences conjugales",
+        "description": "Autorisation provisoire de séjour pour les victimes de violences conjugales ayant déposé plainte ou obtenu une ordonnance de protection.",
+        "priority": 88,
+        "source_ref": "L. 425-6",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "vulnerability.is_victim_domestic_violence",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "vulnerability.has_protection_order_violence",
+                    "op": "EQ",
+                    "val": true
+                }
+            ]
+        }
+    },
+    {
+        "id": "aes_vie_privee_familiale",
+        "name": "AES – Vie privée et familiale (10 ans de présence)",
+        "description": "Admission exceptionnelle au séjour pour les personnes justifiant d'au moins 10 ans de présence habituelle en France. ⚠️ Procédure discrétionnaire : l'appréciation du préfet est souveraine.",
+        "priority": 55,
+        "source_ref": "Circ. Valls 2012",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "admin.current_visa_type",
+                    "op": "EQ",
+                    "val": "NONE"
+                },
+                {
+                    "var": "regularisation.years_presence_france",
+                    "op": "GTE",
+                    "val": 10
+                },
+                {
+                    "var": "integration.french_level",
+                    "op": "GTE",
+                    "val": "A2"
+                },
+                {
+                    "var": "civic.clean_criminal_record",
+                    "op": "EQ",
+                    "val": true
+                }
+            ]
+        }
+    },
+    {
+        "id": "aes_parent_enfant_scolarise",
+        "name": "AES – Parent d'enfant scolarisé (3 ans)",
+        "description": "Admission exceptionnelle pour les parents d'enfants scolarisés depuis au moins 3 ans. ⚠️ Procédure discrétionnaire : l'appréciation du préfet est souveraine.",
+        "priority": 60,
+        "source_ref": "Circ. Valls 2012",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "admin.current_visa_type",
+                    "op": "EQ",
+                    "val": "NONE"
+                },
+                {
+                    "var": "regularisation.has_children_schooled_3y",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "timeline.years_continuous_residence",
+                    "op": "GTE",
+                    "val": 5
+                },
+                {
+                    "var": "civic.clean_criminal_record",
+                    "op": "EQ",
+                    "val": true
+                }
+            ]
+        }
+    },
+    {
+        "id": "aes_talent_exceptionnel",
+        "name": "AES – Talent exceptionnel / Renommée",
+        "description": "Admission exceptionnelle au séjour pour les personnes dont le talent exceptionnel ou la renommée constituent un atout pour la France. ⚠️ Procédure discrétionnaire : l'appréciation du préfet est souveraine.",
+        "priority": 65,
+        "source_ref": "L. 435-1",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "regularisation.has_exceptional_talent",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "civic.clean_criminal_record",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "civic.no_expulsion_order",
+                    "op": "EQ",
+                    "val": true
+                }
+            ]
+        }
+    },
+    {
+        "id": "accord_tunisien_salarie",
+        "name": "Certificat de résidence tunisien – Salarié",
+        "description": "Titre de séjour pour les ressortissants tunisiens salariés, en vertu de l'accord franco-tunisien de 1988.",
+        "priority": 70,
+        "source_ref": "Accord Franco-Tunisien 1988 (Art. 3)",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "identity.nationality_group",
+                    "op": "EQ",
+                    "val": "TUNISIAN"
+                },
+                {
+                    "var": "work.contract_type",
+                    "op": "IN",
+                    "val": [
+                        "CDI",
+                        "CDD"
+                    ]
+                },
+                {
+                    "var": "work.has_work_authorization",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "civic.clean_criminal_record",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "civic.no_expulsion_order",
+                    "op": "EQ",
+                    "val": true
+                }
+            ]
+        }
+    },
+    {
+        "id": "accord_tunisien_conjoint_francais",
+        "name": "Certificat de résidence tunisien – Conjoint de Français",
+        "description": "Titre de séjour pour les ressortissants tunisiens conjoints de Français (durée réduite à 1 an de mariage).",
+        "priority": 82,
+        "source_ref": "Accord Franco-Tunisien 1988 (Art. 10)",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "identity.nationality_group",
+                    "op": "EQ",
+                    "val": "TUNISIAN"
+                },
+                {
+                    "var": "family.spouse_nationality",
+                    "op": "EQ",
+                    "val": "FRENCH"
+                },
+                {
+                    "var": "family.marriage_duration_years",
+                    "op": "GTE",
+                    "val": "@config:duration_thresholds.marriage_duration.pour_carte_resident_conjoint_francais_tunisien"
+                },
+                {
+                    "var": "family.community_of_life",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "civic.clean_criminal_record",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "civic.no_expulsion_order",
+                    "op": "EQ",
+                    "val": true
+                }
+            ]
+        }
+    },
+    {
+        "id": "accord_marocain_salarie",
+        "name": "Titre de séjour marocain – Salarié",
+        "description": "Titre de séjour pour les ressortissants marocains salariés, en vertu de l'accord franco-marocain de 1987.",
+        "priority": 70,
+        "source_ref": "Accord Franco-Marocain 1987 (Art. 3)",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "identity.nationality_group",
+                    "op": "EQ",
+                    "val": "MOROCCAN"
+                },
+                {
+                    "var": "work.contract_type",
+                    "op": "IN",
+                    "val": [
+                        "CDI",
+                        "CDD"
+                    ]
+                },
+                {
+                    "var": "work.has_work_authorization",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "civic.clean_criminal_record",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "civic.no_expulsion_order",
+                    "op": "EQ",
+                    "val": true
+                }
+            ]
+        }
+    },
+    {
+        "id": "accord_marocain_conjoint_francais",
+        "name": "Titre de séjour marocain – Conjoint de Français",
+        "description": "Titre de séjour pour les ressortissants marocains conjoints de Français.",
+        "priority": 82,
+        "source_ref": "Accord Franco-Marocain 1987 (Art. 5)",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "identity.nationality_group",
+                    "op": "EQ",
+                    "val": "MOROCCAN"
+                },
+                {
+                    "var": "family.spouse_nationality",
+                    "op": "EQ",
+                    "val": "FRENCH"
+                },
+                {
+                    "var": "family.community_of_life",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "civic.clean_criminal_record",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "civic.no_expulsion_order",
                     "op": "EQ",
                     "val": true
                 }

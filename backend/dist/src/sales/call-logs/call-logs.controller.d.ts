@@ -9,9 +9,9 @@ export declare class CallLogsController {
         id: string;
         status: string;
         notes: string | null;
-        userId: string;
-        prospectId: string;
         direction: string;
+        prospectId: string;
+        userId: string;
         duration: number;
         twilioCallSid: string | null;
         startedAt: Date;
@@ -25,9 +25,9 @@ export declare class CallLogsController {
         id: string;
         status: string;
         notes: string | null;
-        userId: string;
-        prospectId: string;
         direction: string;
+        prospectId: string;
+        userId: string;
         duration: number;
         twilioCallSid: string | null;
         startedAt: Date;
@@ -37,9 +37,9 @@ export declare class CallLogsController {
         id: string;
         status: string;
         notes: string | null;
-        userId: string;
-        prospectId: string;
         direction: string;
+        prospectId: string;
+        userId: string;
         duration: number;
         twilioCallSid: string | null;
         startedAt: Date;

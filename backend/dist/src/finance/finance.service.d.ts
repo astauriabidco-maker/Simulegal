@@ -1,7 +1,9 @@
 import { PrismaService } from '../prisma/prisma.service';
+import { SettingsService } from '../settings/settings.service';
 export declare class FinanceService {
     private prisma;
-    constructor(prisma: PrismaService);
+    private settings;
+    constructor(prisma: PrismaService, settings: SettingsService);
     getGlobalStats(): Promise<{
         totalGMV: any;
         totalPartnerDebt: number;
@@ -26,6 +28,8 @@ export declare class FinanceService {
             commissionRate: number;
             serviceCommissionOverrides: string | null;
             contactEmail: string;
+            iban: string | null;
+            bic: string | null;
             kioskUrl: string;
             createdAt: Date;
             updatedAt: Date;
@@ -73,17 +77,19 @@ export declare class FinanceService {
             commissionRate: number;
             serviceCommissionOverrides: string | null;
             contactEmail: string;
+            iban: string | null;
+            bic: string | null;
             kioskUrl: string;
             createdAt: Date;
             updatedAt: Date;
         } | null;
     } & {
-        data: string;
         id: string;
         name: string;
         status: import(".prisma/client").$Enums.LeadStatus;
         createdAt: Date;
         updatedAt: Date;
+        data: string;
         email: string;
         phone: string;
         serviceId: string;
@@ -101,12 +107,12 @@ export declare class FinanceService {
     })[]>;
     getTransactions(): Promise<({
         lead: {
-            data: string;
             id: string;
             name: string;
             status: import(".prisma/client").$Enums.LeadStatus;
             createdAt: Date;
             updatedAt: Date;
+            data: string;
             email: string;
             phone: string;
             serviceId: string;
@@ -134,12 +140,12 @@ export declare class FinanceService {
     })[]>;
     getCreditNotes(): Promise<({
         lead: {
-            data: string;
             id: string;
             name: string;
             status: import(".prisma/client").$Enums.LeadStatus;
             createdAt: Date;
             updatedAt: Date;
+            data: string;
             email: string;
             phone: string;
             serviceId: string;
@@ -163,4 +169,6 @@ export declare class FinanceService {
         amount: number;
         reason: string;
     })[]>;
+    generatePayoutSepaXml(payoutId: string): Promise<string>;
+    private escapeXml;
 }

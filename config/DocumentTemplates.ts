@@ -640,7 +640,15 @@ export const SERVICE_TEMPLATES: Record<string, string[]> = {
     // ========================================
     // CARTE DE RÉSIDENT - SUITE
     // ========================================
-    'carte_resident_refugie_apatride': [
+    'carte_resident_refugie': [
+        'PASSPORT',
+        'BIRTH_CERTIFICATE',
+        'RESIDENCE_PROOF',
+        'PHOTOS_35x45',
+        'PROTECTION_ORDER'
+    ],
+
+    'cs_pluriannuelle_apatride': [
         'PASSPORT',
         'BIRTH_CERTIFICATE',
         'RESIDENCE_PROOF',

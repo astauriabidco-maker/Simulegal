@@ -30,8 +30,8 @@ export declare class SalesController {
                 id: string;
                 createdAt: Date;
                 text: string;
-                authorId: string;
                 prospectId: string;
+                authorId: string;
             }[];
         } & {
             id: string;
@@ -67,8 +67,8 @@ export declare class SalesController {
             id: string;
             createdAt: Date;
             text: string;
-            authorId: string;
             prospectId: string;
+            authorId: string;
         }[];
     } & {
         id: string;
@@ -127,8 +127,8 @@ export declare class SalesController {
         id: string;
         createdAt: Date;
         text: string;
-        authorId: string;
         prospectId: string;
+        authorId: string;
     }>;
     reassignProspect(id: string, data: {
         salesUserId?: string;

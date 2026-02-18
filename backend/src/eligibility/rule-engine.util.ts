@@ -11,6 +11,23 @@ export interface RuleCondition {
 }
 
 /**
+ * Ordre sémantique des niveaux CECRL (Cadre Européen).
+ */
+const FRENCH_LEVEL_ORDER: Record<string, number> = {
+    A1: 1, A2: 2, B1: 3, B2: 4, C1: 5, C2: 6
+};
+
+/**
+ * Compare deux niveaux de français sémantiquement.
+ */
+function compareFrenchLevel(a: string, b: string): number | null {
+    const orderA = FRENCH_LEVEL_ORDER[a];
+    const orderB = FRENCH_LEVEL_ORDER[b];
+    if (orderA === undefined || orderB === undefined) return null;
+    return orderA - orderB;
+}
+
+/**
  * Retrieves a nested value from an object using a dot-separated path.
  */
 function getValueByPath(obj: any, path: string): any {
@@ -56,13 +73,17 @@ export function evaluateRule(data: any, condition: RuleCondition, thresholds: an
             return false;
         }
 
+        // Comparaison sémantique pour les niveaux de français
+        const isFrenchLevel = condition.var === 'integration.french_level';
+        const frenchCmp = isFrenchLevel ? compareFrenchLevel(String(userValue), String(targetValue)) : null;
+
         switch (condition.op) {
             case 'EQ': return userValue === targetValue;
             case 'NEQ': return userValue !== targetValue;
-            case 'GT': return userValue > targetValue;
-            case 'GTE': return userValue >= targetValue;
-            case 'LT': return userValue < targetValue;
-            case 'LTE': return userValue <= targetValue;
+            case 'GT': return frenchCmp !== null ? frenchCmp > 0 : userValue > targetValue;
+            case 'GTE': return frenchCmp !== null ? frenchCmp >= 0 : userValue >= targetValue;
+            case 'LT': return frenchCmp !== null ? frenchCmp < 0 : userValue < targetValue;
+            case 'LTE': return frenchCmp !== null ? frenchCmp <= 0 : userValue <= targetValue;
             case 'IN': return Array.isArray(targetValue) && targetValue.includes(userValue);
             default:
                 logger.warn(`Unsupported operator: ${condition.op}`);
@@ -72,3 +93,4 @@ export function evaluateRule(data: any, condition: RuleCondition, thresholds: an
 
     return false;
 }
+

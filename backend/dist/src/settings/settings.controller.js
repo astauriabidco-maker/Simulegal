@@ -26,7 +26,8 @@ let SettingsController = class SettingsController {
     async getSettings() {
         return this.settingsService.getSettings();
     }
-    async updateSection(data, section) {
+    async updateSection(section, data) {
+        return this.settingsService.updateSection(section, data);
     }
     async update(data, section) {
         return this.settingsService.updateSection(section, data);
@@ -43,10 +44,10 @@ __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
     (0, roles_decorator_1.Roles)('SUPER_ADMIN'),
     (0, common_1.Patch)(':section'),
-    __param(0, (0, common_1.Body)()),
-    __param(1, (0, common_1.Body)('section')),
+    __param(0, (0, common_1.Param)('section')),
+    __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:paramtypes", [String, Object]),
     __metadata("design:returntype", Promise)
 ], SettingsController.prototype, "updateSection", null);
 __decorate([

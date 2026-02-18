@@ -20,7 +20,7 @@ export class RolesController {
 
     @Post()
     create(@Request() req: any, @Body() data: { label: string; description: string; permissions: string }) {
-        if (req.user.role !== 'SUPERADMIN' && req.user.role !== 'HQ_ADMIN') {
+        if (req.user.role !== 'SUPER_ADMIN' && req.user.role !== 'HQ_ADMIN') {
             throw new ForbiddenException('Action réservée au siège');
         }
         return this.rolesService.create(data);
@@ -28,7 +28,7 @@ export class RolesController {
 
     @Patch(':id')
     update(@Request() req: any, @Param('id') id: string, @Body() data: any) {
-        if (req.user.role !== 'SUPERADMIN' && req.user.role !== 'HQ_ADMIN') {
+        if (req.user.role !== 'SUPER_ADMIN' && req.user.role !== 'HQ_ADMIN') {
             throw new ForbiddenException('Action réservée au siège');
         }
         return this.rolesService.update(id, data);
@@ -36,7 +36,7 @@ export class RolesController {
 
     @Delete(':id')
     remove(@Request() req: any, @Param('id') id: string) {
-        if (req.user.role !== 'SUPERADMIN' && req.user.role !== 'HQ_ADMIN') {
+        if (req.user.role !== 'SUPER_ADMIN' && req.user.role !== 'HQ_ADMIN') {
             throw new ForbiddenException('Action réservée au siège');
         }
         return this.rolesService.remove(id);
