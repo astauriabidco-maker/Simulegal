@@ -94,7 +94,16 @@
         "duration_years": 1,
         "gives_work_right": true,
         "leads_to_naturalisation": true,
-        "request_type": "FIRST_OR_RENEWAL"
+        "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "PASSPORT",
+            "RESIDENCE_PROOF",
+            "TAX_NOTICE",
+            "MARRIAGE_CERTIFICATE",
+            "BIRTH_CERTIFICATE",
+            "BANK_STATEMENTS",
+            "TITRE_SEJOUR_ACTUEL"
+        ]
     },
     {
         "id": "family_reunification_algerian",
@@ -178,6 +187,16 @@
         "gives_work_right": true,
         "leads_to_naturalisation": true,
         "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "PASSPORT",
+            "RESIDENCE_PROOF",
+            "TAX_NOTICE",
+            "MARRIAGE_CERTIFICATE",
+            "BIRTH_CERTIFICATE",
+            "BANK_STATEMENTS",
+            "TITRE_SEJOUR_ACTUEL",
+            "COMMUNITY_PROOF"
+        ],
         "note": "Durée de résidence réduite à 12 mois pour les Algériens"
     },
     {

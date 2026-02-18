@@ -395,7 +395,17 @@
         "duration_years": 0,
         "gives_work_right": true,
         "leads_to_naturalisation": true,
-        "request_type": "FIRST_OR_RENEWAL"
+        "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "PASSPORT_ALL_PAGES",
+            "BIRTH_CERTIFICATE",
+            "RESIDENCE_PROOF_5Y",
+            "TAX_NOTICE_3Y",
+            "FRENCH_B2",
+            "CRIMINAL_RECORD",
+            "PHOTOS_35x45",
+            "FISCAL_STAMP_55"
+        ]
     },
     {
         "id": "nat_reintegration_decret",
