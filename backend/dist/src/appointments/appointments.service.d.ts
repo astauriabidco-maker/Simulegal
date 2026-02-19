@@ -16,8 +16,8 @@ export declare class AppointmentsService {
         status: import(".prisma/client").$Enums.LeadStatus;
         createdAt: Date;
         updatedAt: Date;
-        data: string;
         email: string;
+        data: string;
         phone: string;
         serviceId: string;
         serviceName: string;

@@ -41,11 +41,46 @@ function NoteComposer({ note, onSave, onClose }: {
     const [severity, setSeverity] = useState<'high' | 'medium' | 'low'>(note?.severity || 'medium');
     const [sourceUrl, setSourceUrl] = useState(note?.sourceUrl || '');
     const [authorName, setAuthorName] = useState(note?.authorName || '');
+    const [linkedRuleIds, setLinkedRuleIds] = useState<string[]>(note?.linkedRuleIds || []);
+    const [ruleSearchQuery, setRuleSearchQuery] = useState('');
+
+    // Load all available rules for linking
+    const allRules = useMemo(() => {
+        const categories = [
+            { key: 'sejour', label: '🛂 Séjour' },
+            { key: 'naturalisation', label: '🇫🇷 Nat.' },
+            { key: 'family', label: '👨‍👩‍👧 Famille' },
+            { key: 'asile', label: '🛡️ Asile' },
+        ];
+        const result: { id: string; name: string; catLabel: string }[] = [];
+        try {
+            const { EligibilityStore } = require('../../services/EligibilityStore');
+            categories.forEach(cat => {
+                const rules = EligibilityStore.getRules(cat.key);
+                rules.forEach((r: any) => result.push({ id: r.id, name: r.name, catLabel: cat.label }));
+            });
+        } catch { /* fallback: empty */ }
+        return result;
+    }, []);
+
+    const filteredRules = useMemo(() => {
+        if (!ruleSearchQuery) return allRules.slice(0, 15);
+        return allRules.filter(r =>
+            r.name.toLowerCase().includes(ruleSearchQuery.toLowerCase()) ||
+            r.id.toLowerCase().includes(ruleSearchQuery.toLowerCase())
+        ).slice(0, 15);
+    }, [allRules, ruleSearchQuery]);
+
+    const toggleRuleLink = (ruleId: string) => {
+        setLinkedRuleIds(prev =>
+            prev.includes(ruleId) ? prev.filter(id => id !== ruleId) : [...prev, ruleId]
+        );
+    };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (!title.trim() || !summary.trim()) return;
-        onSave({ title, summary, category, severity, sourceUrl, authorName });
+        onSave({ title, summary, category, severity, sourceUrl, authorName, linkedRuleIds });
     };
 
     return (
@@ -111,6 +146,39 @@ function NoteComposer({ note, onSave, onClose }: {
                             placeholder="Ex: Me. Dupont"
                             className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
                     </div>
+
+                    {/* Linked Rules */}
+                    <div>
+                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">
+                            🔗 Règles impactées ({linkedRuleIds.length} sélectionnée{linkedRuleIds.length > 1 ? 's' : ''})
+                        </label>
+                        <input
+                            type="text"
+                            value={ruleSearchQuery}
+                            onChange={(e) => setRuleSearchQuery(e.target.value)}
+                            placeholder="Rechercher une règle..."
+                            className="w-full h-10 px-4 mb-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        />
+                        <div className="max-h-32 overflow-auto border border-slate-200 rounded-xl p-2 space-y-1 bg-slate-50">
+                            {filteredRules.map(rule => (
+                                <label key={rule.id} className={`flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer text-xs transition-colors ${linkedRuleIds.includes(rule.id) ? 'bg-indigo-100 text-indigo-800 font-bold' : 'hover:bg-slate-100 text-slate-600'
+                                    }`}>
+                                    <input
+                                        type="checkbox"
+                                        checked={linkedRuleIds.includes(rule.id)}
+                                        onChange={() => toggleRuleLink(rule.id)}
+                                        className="rounded border-slate-300"
+                                    />
+                                    <span className="text-[10px] font-black text-slate-400">{rule.catLabel}</span>
+                                    <span className="truncate">{rule.name}</span>
+                                </label>
+                            ))}
+                            {filteredRules.length === 0 && (
+                                <p className="text-xs text-slate-400 text-center py-2">Aucune règle trouvée</p>
+                            )}
+                        </div>
+                    </div>
+
                     <div className="flex gap-3 pt-2">
                         <button type="button" onClick={onClose}
                             className="flex-1 h-12 border-2 border-slate-200 rounded-xl text-sm font-black text-slate-500 hover:bg-slate-50 transition-all uppercase tracking-widest">

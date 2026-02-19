@@ -12,16 +12,16 @@ export declare class UsersController {
         name: string;
         createdAt: Date;
         updatedAt: Date;
-        expertises: string;
-        agencyId: string | null;
         email: string;
-        role: import(".prisma/client").$Enums.UserRole;
         password: string;
+        role: import(".prisma/client").$Enums.UserRole;
         roleId: string | null;
+        agencyId: string | null;
         homeAgencyId: string | null;
         scopeAgencyIds: string;
         permissions: string;
         lastLogin: Date | null;
         isSystemUser: boolean;
+        expertises: string;
     }>;
 }

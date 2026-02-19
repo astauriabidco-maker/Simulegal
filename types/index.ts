@@ -144,6 +144,7 @@ export interface UserProfile {
     status?: 'STUDENT' | 'TOURIST' | 'WORKER_VP' | 'EU_NATIONAL';
     license_country?: 'MAGHREB' | 'ACCORD' | 'NO_ACCORD' | 'USA_CANADA';
     residence_start_date?: string; // MM/YYYY
+    license_issue_date?: string; // MM/YYYY
   };
   rdv_prefecture: {
     prefecture_dept?: string;
@@ -153,6 +154,8 @@ export interface UserProfile {
   rdv_juriste: {
     subject?: 'oqtf_contentieux' | 'refus_recours' | 'conseil_dossier' | 'verification_dossier' | 'autre';
     mode?: 'remote' | 'physical';
+    slotId?: string;
+    slotDate?: string;
   };
   french: {
     goal?: 'NATURALIZATION' | 'RESIDENCE' | 'PROFESSIONAL';

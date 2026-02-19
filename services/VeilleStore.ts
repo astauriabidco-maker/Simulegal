@@ -14,12 +14,13 @@ export interface VeilleNote {
     authorName?: string;
     applied: boolean;
     appliedAt?: string;
+    linkedRuleIds?: string[];  // IDs des règles impactées
 }
 
 const STORAGE_KEY = 'v2_veille_juridique';
 const API_URL = typeof window !== 'undefined'
-    ? (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001')
-    : 'http://localhost:3001';
+    ? (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000')
+    : 'http://localhost:5000';
 
 const SEED_DATA: VeilleNote[] = [
     {
@@ -58,6 +59,10 @@ const SEED_DATA: VeilleNote[] = [
 // ─── Helpers ──────────────────────────────────────────────────────
 
 function mapBackendToNote(item: any): VeilleNote {
+    let linkedRuleIds: string[] = [];
+    try {
+        linkedRuleIds = item.linkedRuleIds ? JSON.parse(item.linkedRuleIds) : [];
+    } catch { linkedRuleIds = []; }
     return {
         id: item.id,
         date: item.createdAt || item.date,
@@ -69,6 +74,7 @@ function mapBackendToNote(item: any): VeilleNote {
         authorName: item.authorName || undefined,
         applied: !!item.applied,
         appliedAt: item.appliedAt || undefined,
+        linkedRuleIds,
     };
 }
 

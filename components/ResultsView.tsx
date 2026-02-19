@@ -32,24 +32,52 @@ export default function ResultsView({ userProfile, onReset, serviceId, forceAgen
     const isCallback = serviceId === 'rappel_echeances';
 
 
+    // Pre-calculate derived fields for rules
+    const augmentedProfile = useMemo(() => {
+        const p = JSON.parse(JSON.stringify(userProfile)); // Deep clone to avoid mutation issues
+
+        // Driving: residence_duration_months
+        if (p.driving?.residence_start_date) {
+            try {
+                const [mStr, yStr] = p.driving.residence_start_date.split('/');
+                const month = parseInt(mStr, 10);
+                const year = parseInt(yStr, 10);
+                if (!isNaN(month) && !isNaN(year)) {
+                    const startDate = new Date(year, month - 1, 1);
+                    const today = new Date();
+                    const diff = (today.getFullYear() - startDate.getFullYear()) * 12 + (today.getMonth() - startDate.getMonth());
+                    p.driving.residence_duration_months = Math.max(0, diff);
+                }
+            } catch (e) {
+                console.warn('Invalid date format', p.driving.residence_start_date);
+            }
+        }
+        return p;
+    }, [userProfile]);
+
+    const drivingResults = useMemo(() => {
+        if (!isDrivingExchange) return [];
+        const rulesPermis = EligibilityStore.getRules('permis');
+        return rulesPermis.filter((rule) => evaluateRule(augmentedProfile, rule.conditions));
+    }, [augmentedProfile, isDrivingExchange]);
+
     const getDrivingResult = () => {
         const { status, license_country, residence_start_date } = userProfile.driving;
 
-        if (status === 'STUDENT') return 'STUDENT_NO_NEED';
+        // 1. Success cases via Rule Engine
+        if (drivingResults.some(r => r.id === 'echange_permis_standard' || r.id === 'echange_permis_refugie')) return 'SUCCESS';
+        if (drivingResults.some(r => r.id === 'echange_permis_etudiant')) return 'STUDENT_NO_NEED';
+
+        // 2. Failure Analysis (fallback logic remains useful for specific error messages)
         if (status === 'TOURIST') return 'TOURIST_IMPOSSIBLE';
         if (license_country === 'NO_ACCORD') return 'NO_ACCORD_IMPOSSIBLE';
 
-        if (!residence_start_date) return 'UNKNOWN';
+        if (!residence_start_date && status !== 'STUDENT') return 'UNKNOWN';
 
-        // Calculate delay
-        const [month, year] = residence_start_date.split('/').map(Number);
-        const startDate = new Date(year, month - 1, 1);
-        const today = new Date('2026-01-13'); // Using system time
+        // Check delay specifically if relevant
+        if (augmentedProfile.driving?.residence_duration_months > 12) return 'DELAY_EXCEEDED';
 
-        const diffMonths = (today.getFullYear() - startDate.getFullYear()) * 12 + (today.getMonth() - startDate.getMonth());
-
-        if (diffMonths > 12) return 'DELAY_EXCEEDED';
-        return 'SUCCESS';
+        return 'UNKNOWN'; // Should ideally be covered by one of the above
     };
 
     const familyResults = useMemo(() => {
@@ -196,11 +224,77 @@ export default function ResultsView({ userProfile, onReset, serviceId, forceAgen
         return { label: 'Nouvelle Procédure', color: 'bg-slate-500 text-white' };
     };
 
+    const [isProcessing, setIsProcessing] = React.useState(false);
+    const [pendingAction, setPendingAction] = React.useState<{ amount: number, label: string } | null>(null);
+
+    const performCheckout = async (contactInfo: { name: string, phone: string, email?: string }) => {
+        setIsProcessing(true);
+        try {
+            const amount = pendingAction?.amount || 0;
+            const label = pendingAction?.label || 'Service Simulegal';
+
+            // 1. Create Lead
+            const leadPayload = {
+                name: contactInfo.name,
+                email: contactInfo.email || `${contactInfo.phone.replace(/\D/g, '')}@no-email.com`, // Fallback
+                phone: contactInfo.phone,
+                serviceId: serviceId || 'generic',
+                serviceName: label,
+                originAgencyId: forceAgencyId,
+                data: JSON.stringify(userProfile),
+                status: 'NEW' // Explicitly set status to NEW
+            };
+
+            const leadRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3005'}/public/leads`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(leadPayload)
+            });
+
+            if (!leadRes.ok) throw new Error('Erreur lors de la création du dossier');
+            const lead = await leadRes.json();
+
+            // 2. Create Checkout Session
+            const checkoutRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3005'}/public/leads/checkout`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    leadId: lead.id,
+                    amount: amount,
+                    label: label,
+                    successUrl: `${window.location.origin}/success`,
+                    cancelUrl: `${window.location.origin}/cancel`
+                })
+            });
+
+            if (!checkoutRes.ok) throw new Error('Erreur lors de l\'initialisation du paiement');
+            const session = await checkoutRes.json();
+
+            // 3. Redirect to Payment
+            window.location.href = session.url;
+
+        } catch (error) {
+            console.error('Checkout error:', error);
+            alert("Une erreur est survenue lors de la préparation de votre commande. Veuillez réessayer.");
+            setIsProcessing(false);
+            setPendingAction(null);
+        }
+    };
+
     const handleCheckout = (amount: number, label: string) => {
-        if (typeof window !== 'undefined' && window.openAuthAndPaymentFlow) {
-            window.openAuthAndPaymentFlow(serviceId || 'generic', amount * 100, label, forceAgencyId);
+        // Prepare action
+        setPendingAction({ amount, label });
+
+        // Check if we have contact info in profile
+        if (userProfile.identity?.name && (userProfile.identity?.phone || userProfile.identity?.email)) {
+            performCheckout({
+                name: userProfile.identity.name,
+                phone: userProfile.identity.phone || '',
+                email: userProfile.identity.email
+            });
         } else {
-            alert(`Simulation : Commande de "${label}" pour ${amount}€`);
+            // Open modal to ask for contact info
+            setShowLeadModal(true);
         }
     };
 
@@ -1237,65 +1331,137 @@ export default function ResultsView({ userProfile, onReset, serviceId, forceAgen
                 </div>
             )}
 
-            {/* LEAD GENERATION MODAL */}
+            {/* LEAD GENERATION & CHECKOUT MODAL */}
             {showLeadModal && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 backdrop-blur-xl bg-slate-900/40 animate-in fade-in duration-300">
-                    <div className="bg-white w-full max-w-xl rounded-[3.5rem] shadow-2xl relative overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-10 duration-500">
+                    <div className="bg-white w-full max-w-xl rounded-[3.5rem] shadow-2xl relative overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-10 duration-500 max-h-[90vh] overflow-y-auto">
                         <button
-                            onClick={() => setShowLeadModal(false)}
-                            className="absolute top-10 right-10 p-3 hover:bg-slate-100 rounded-full transition-colors text-slate-400 hover:text-slate-900"
+                            onClick={() => {
+                                setShowLeadModal(false);
+                                setIsProcessing(false);
+                                setPendingAction(null);
+                            }}
+                            className="absolute top-6 right-6 p-3 hover:bg-slate-100 rounded-full transition-colors text-slate-400 hover:text-slate-900 z-50 bg-white/80 backdrop-blur"
                         >
                             <XCircle className="w-6 h-6" />
                         </button>
 
-                        <div className="p-16 space-y-10">
-                            <div className="space-y-4">
-                                <div className="w-20 h-20 bg-emerald-50 text-emerald-600 rounded-[2rem] flex items-center justify-center mb-6">
-                                    <Smartphone className="w-10 h-10" />
+                        <div className="p-8 md:p-12 space-y-8">
+                            <div className="space-y-4 text-center">
+                                <div className={cn(
+                                    "w-16 h-16 rounded-2xl flex items-center justify-center mb-4 mx-auto",
+                                    pendingAction ? "bg-indigo-50 text-indigo-600" : "bg-emerald-50 text-emerald-600"
+                                )}>
+                                    {pendingAction ? <Scale className="w-8 h-8" /> : <Smartphone className="w-8 h-8" />}
                                 </div>
-                                <h2 className="text-4xl font-black text-slate-900 leading-tight">Demande de rappel</h2>
-                                <p className="text-xl text-slate-500 font-medium">
-                                    Un conseiller spécialisé vous contactera pour organiser votre test de niveau gratuit.
-                                </p>
+                                <h2 className="text-3xl font-black text-slate-900 leading-tight">
+                                    {pendingAction ? "Validation de la commande" : "Demande de rappel"}
+                                </h2>
+                                {!pendingAction && (
+                                    <p className="text-slate-500 font-medium">
+                                        Un conseiller spécialisé vous contactera sous 24h.
+                                    </p>
+                                )}
                             </div>
 
+                            {/* RECAPITULATIF COMMANDE (Si Paiement) */}
+                            {pendingAction && (
+                                <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 space-y-4">
+                                    <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-200 pb-2">Récapitulatif</h3>
+                                    <div className="flex justify-between items-start">
+                                        <div>
+                                            <p className="font-bold text-slate-900 text-lg">{pendingAction.label}</p>
+                                            <p className="text-sm text-slate-500">Service d'accompagnement juridique</p>
+                                        </div>
+                                        <p className="font-black text-xl text-indigo-600">{pendingAction.amount} €</p>
+                                    </div>
+                                    <div className="flex gap-2 items-start text-xs text-slate-500 bg-white p-3 rounded-lg border border-slate-100">
+                                        <Info className="w-4 h-4 shrink-0 text-indigo-500" />
+                                        <p>Ce tarif inclut l'analyse du dossier, le suivi administratif et l'accès à votre espace client sécurisé.</p>
+                                    </div>
+                                </div>
+                            )}
+
                             <div className="space-y-6">
-                                <div className="space-y-2">
-                                    <label className="text-sm font-black text-slate-400 uppercase tracking-widest ml-2">Nom Complet</label>
-                                    <input
-                                        type="text"
-                                        value={leadForm.name}
-                                        onChange={(e) => setLeadForm({ ...leadForm, name: e.target.value })}
-                                        placeholder="Jean Dupont"
-                                        className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-8 py-5 text-xl font-bold focus:outline-none focus:border-emerald-600 focus:bg-white transition-all"
-                                    />
+                                <div className="grid md:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-2">Nom Complet</label>
+                                        <input
+                                            type="text"
+                                            value={leadForm.name}
+                                            onChange={(e) => setLeadForm({ ...leadForm, name: e.target.value })}
+                                            placeholder="Jean Dupont"
+                                            className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl px-4 py-3 font-bold focus:outline-none focus:border-indigo-600 focus:bg-white transition-all"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-2">Téléphone</label>
+                                        <input
+                                            type="tel"
+                                            value={leadForm.phone}
+                                            onChange={(e) => setLeadForm({ ...leadForm, phone: e.target.value })}
+                                            placeholder="06 12 34 56 78"
+                                            className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl px-4 py-3 font-bold focus:outline-none focus:border-indigo-600 focus:bg-white transition-all"
+                                        />
+                                    </div>
                                 </div>
-                                <div className="space-y-2">
-                                    <label className="text-sm font-black text-slate-400 uppercase tracking-widest ml-2">Numéro de Téléphone</label>
-                                    <input
-                                        type="tel"
-                                        value={leadForm.phone}
-                                        onChange={(e) => setLeadForm({ ...leadForm, phone: e.target.value })}
-                                        placeholder="06 12 34 56 78"
-                                        className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-8 py-5 text-xl font-bold focus:outline-none focus:border-emerald-600 focus:bg-white transition-all"
-                                    />
-                                </div>
+
+                                {/* SECTION LEGALE (Uniquement si Paiement) */}
+                                {pendingAction && (
+                                    <div className="space-y-4 pt-4 border-t border-slate-100">
+                                        <label className="flex items-start gap-3 p-3 hover:bg-slate-50 rounded-xl cursor-pointer transition-colors group">
+                                            <input type="checkbox" className="mt-1 w-5 h-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" id="accept-cgu" />
+                                            <span className="text-sm text-slate-600 leading-snug">
+                                                Je reconnais avoir lu et accepté les <a href="#" className="font-bold underline decoration-slate-300 underline-offset-2 hover:text-indigo-600">Conditions Générales de Vente (CGV)</a> et la Politique de Confidentialité.
+                                            </span>
+                                        </label>
+
+                                        <label className="flex items-start gap-3 p-3 hover:bg-slate-50 rounded-xl cursor-pointer transition-colors group">
+                                            <input type="checkbox" className="mt-1 w-5 h-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" id="accept-mandate" />
+                                            <span className="text-sm text-slate-600 leading-snug">
+                                                <strong>Mandat Express :</strong> Je donne mandat à Simulegal (SAS) pour effectuer en mon nom les démarches de pré-qualification et de constitution de dossier relatives au service commandé.
+                                            </span>
+                                        </label>
+                                    </div>
+                                )}
 
                                 <button
                                     onClick={() => {
-                                        alert(`Merci ${leadForm.name} ! Un conseiller va vous rappeler au ${leadForm.phone}.`);
-                                        setShowLeadModal(false);
+                                        // Basic Client-Side Validation required for checkboxes if pendingAction
+                                        if (pendingAction) {
+                                            const cgu = document.getElementById('accept-cgu') as HTMLInputElement;
+                                            const mand = document.getElementById('accept-mandate') as HTMLInputElement;
+                                            if (!cgu?.checked || !mand?.checked) {
+                                                alert("Veuillez accepter les conditions générales et le mandat pour continuer.");
+                                                return;
+                                            }
+                                            performCheckout({ name: leadForm.name, phone: leadForm.phone });
+                                        } else {
+                                            performCheckout({ name: leadForm.name, phone: leadForm.phone });
+                                            alert(`Merci ${leadForm.name} ! Un conseiller va vous rappeler au ${leadForm.phone}.`);
+                                            setShowLeadModal(false);
+                                        }
                                     }}
-                                    disabled={!leadForm.name || !leadForm.phone}
-                                    className="w-full py-8 bg-slate-900 text-white text-2xl font-black rounded-[2rem] hover:bg-black transition-all shadow-2xl disabled:opacity-50 disabled:cursor-not-allowed mt-4"
+                                    disabled={!leadForm.name || !leadForm.phone || isProcessing}
+                                    className={cn(
+                                        "w-full py-6 text-white text-xl font-black rounded-2xl hover:scale-[1.02] transition-all shadow-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex justify-center items-center gap-3",
+                                        pendingAction ? "bg-indigo-600 hover:bg-indigo-700 shadow-indigo-200" : "bg-slate-900 hover:bg-black"
+                                    )}
                                 >
-                                    Valider ma demande
+                                    {isProcessing && <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>}
+                                    {pendingAction ? "Signer le mandat & Payer" : "Valider ma demande"}
                                 </button>
+
+                                {pendingAction && (
+                                    <p className="text-center text-xs text-slate-400 font-medium">
+                                        En cliquant sur ce bouton, vous validez votre commande avec obligation de paiement.
+                                    </p>
+                                )}
                             </div>
                         </div>
 
-                        <div className="bg-slate-50 py-8 text-center text-[10px] font-black text-slate-400 uppercase tracking-[0.4em]">
-                            Assistance Partenaire SimuLegal
+                        <div className="bg-slate-50 py-4 text-center text-[10px] font-black text-slate-400 uppercase tracking-[0.4em]">
+                            Simulegal Secure Checkout
                         </div>
                     </div>
                 </div>

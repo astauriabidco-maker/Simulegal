@@ -1,11 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import { UserProfile } from '@/types';
-import { ArrowRight, ArrowLeft, BookOpen, MapPin, CheckCircle2, Clock, Info, AlertCircle, Phone, Scale, History } from 'lucide-react';
+import { ArrowRight, Phone, MessageSquare, MapPin } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { CALLBACK_QUESTIONS } from '@/data/modules/callback';
 
 function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs));
@@ -17,184 +16,106 @@ interface CallbackStepProps {
     onNext: () => void;
 }
 
-type CallbackSubStep = 1 | 2 | 3;
-
 export default function CallbackStep({ userProfile, updateProfile, onNext }: CallbackStepProps) {
-    const [subStep, setSubStep] = useState<CallbackSubStep>(1);
-
-    const handleUpdate = (updates: Partial<UserProfile['callback']>) => {
-        updateProfile({
-            callback: {
-                ...userProfile.callback,
-                ...updates
-            }
-        });
+    const handleUpdate = (section: 'callback' | 'identity', updates: any) => {
+        updateProfile({ [section]: { ...(userProfile[section] as any), ...updates } });
     };
 
-    const nextSubStep = () => {
-        setSubStep((s) => (s + 1) as CallbackSubStep);
-    };
-
-    const prevSubStep = () => setSubStep((s) => (s - 1) as CallbackSubStep);
-
-    const isSubStepValid = () => {
-        const { callback } = userProfile;
-        if (subStep === 1) return !!callback?.callback_subject;
-        if (subStep === 2) return !!callback?.callback_urgency;
-        if (subStep === 3) return !!callback?.location_zip && /^\d{5}$/.test(callback.location_zip);
-        return true;
-    };
-
-    const renderProgressDots = () => {
-        return (
-            <div className="flex gap-2 mb-8 justify-center">
-                {[1, 2, 3].map((i) => (
-                    <div
-                        key={i}
-                        className={cn(
-                            "h-1.5 rounded-full transition-all duration-300",
-                            subStep === i ? "w-8 bg-indigo-600" : "w-2 bg-slate-200"
-                        )}
-                    />
-                ))}
-            </div>
-        );
-    };
-
-    const q1 = CALLBACK_QUESTIONS[0];
-    const q2 = CALLBACK_QUESTIONS[1];
-    const q3 = CALLBACK_QUESTIONS[2];
-
-    const getSubjectIcon = (val: string) => {
-        switch (val) {
-            case 'INFO': return <Info size={24} />;
-            case 'BLOCKED': return <AlertCircle size={24} />;
-            case 'URGENT_LEGAL': return <Scale size={24} />;
-            case 'FOLLOW_UP': return <History size={24} />;
-            default: return <Info size={24} />;
-        }
+    const isValid = () => {
+        const { identity, callback } = userProfile;
+        return !!identity.phone && !!identity.name && !!callback?.callback_subject && /^\d{5}$/.test(callback?.location_zip || '');
     };
 
     return (
         <div className="flex-1 flex flex-col p-8 md:p-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            {renderProgressDots()}
+            <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300">
+                <div className="space-y-3 text-center mb-6">
+                    <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                        <Phone className="w-8 h-8" />
+                    </div>
+                    <h2 className="text-3xl font-black text-slate-900 tracking-tight">On vous rappelle !</h2>
+                    <p className="text-slate-500 font-medium max-w-md mx-auto">
+                        Laissez-nous vos coordonnées, un conseiller SimuLegal vous recontacte rapidement.
+                    </p>
+                </div>
 
-            {subStep === 1 && (
-                <div className="space-y-8 animate-in fade-in zoom-in-95 duration-300">
-                    <div className="space-y-3 text-center">
-                        <div className="w-16 h-16 bg-slate-50 text-slate-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                            <BookOpen className="w-8 h-8" />
-                        </div>
-                        <h2 className="text-3xl font-black text-slate-900 tracking-tight">{q1.label}</h2>
-                        <p className="text-slate-500 font-medium max-w-md mx-auto">Cela nous permet de vous orienter vers l'interlocuteur idéal.</p>
+                <div className="max-w-md mx-auto w-full space-y-4">
+                    {/* Nom */}
+                    <div>
+                        <label className="block text-sm font-bold text-slate-700 mb-2">Votre Nom</label>
+                        <input
+                            type="text"
+                            value={userProfile.identity.name || ''}
+                            onChange={(e) => handleUpdate('identity', { name: e.target.value })}
+                            placeholder="Jean Dupont"
+                            className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl px-4 py-3 font-semibold text-slate-900 focus:outline-none focus:border-emerald-600 focus:bg-white transition-all"
+                        />
                     </div>
 
-                    <div className="grid grid-cols-1 gap-4 max-w-lg mx-auto">
-                        {q1?.options?.map((opt) => (
-                            <button
-                                key={opt.value}
-                                onClick={() => handleUpdate({ callback_subject: opt.value as any })}
-                                className={cn(
-                                    "flex items-center p-6 rounded-3xl border-2 transition-all text-left gap-4",
-                                    userProfile.callback?.callback_subject === opt.value
-                                        ? "border-indigo-600 bg-indigo-50/50 ring-4 ring-indigo-100"
-                                        : "border-slate-100 hover:border-indigo-200 hover:bg-slate-50"
-                                )}
-                            >
-                                <span className={cn("text-xl font-bold transition-colors", userProfile.callback?.callback_subject === opt.value ? "text-indigo-900" : "text-slate-900")}>
-                                    {opt.label}
-                                </span>
-                            </button>
-                        ))}
+                    {/* Téléphone */}
+                    <div>
+                        <label className="block text-sm font-bold text-slate-700 mb-2">Votre Téléphone (Mobile)</label>
+                        <input
+                            type="tel"
+                            value={userProfile.identity.phone || ''}
+                            onChange={(e) => handleUpdate('identity', { phone: e.target.value })}
+                            placeholder="06 12 34 56 78"
+                            className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl px-4 py-3 font-semibold text-slate-900 focus:outline-none focus:border-emerald-600 focus:bg-white transition-all"
+                        />
+                    </div>
+
+                    {/* Localisation (Code Postal) */}
+                    <div>
+                        <label className="block text-sm font-bold text-slate-700 mb-2 flex items-center gap-2">
+                            <MapPin className="w-4 h-4 text-slate-400" /> Code Postal
+                        </label>
+                        <input
+                            type="text"
+                            maxLength={5}
+                            value={userProfile.callback?.location_zip || ''}
+                            onChange={(e) => handleUpdate('callback', { location_zip: e.target.value.replace(/\D/g, '') })}
+                            placeholder="75000"
+                            className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl px-4 py-3 font-semibold text-slate-900 focus:outline-none focus:border-emerald-600 focus:bg-white transition-all"
+                        />
+                    </div>
+
+                    {/* Sujet */}
+                    <div>
+                        <label className="block text-sm font-bold text-slate-700 mb-2 flex items-center gap-2">
+                            <MessageSquare className="w-4 h-4 text-slate-400" /> Motif de l'appel
+                        </label>
+                        <select
+                            value={userProfile.callback?.callback_subject || ''}
+                            onChange={(e) => handleUpdate('callback', { callback_subject: e.target.value })}
+                            className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl px-4 py-3 font-semibold text-slate-900 focus:outline-none focus:border-emerald-600 focus:bg-white transition-all appearance-none"
+                        >
+                            <option value="" disabled>Sélectionnez un motif...</option>
+                            <option value="INFO">Information générale</option>
+                            <option value="URGENT_LEGAL">Problème Urgent</option>
+                            <option value="FOLLOW_UP">Suivi de dossier</option>
+                            <option value="BLOCKED">Je suis bloqué</option>
+                        </select>
                     </div>
                 </div>
-            )}
+            </div>
 
-            {subStep === 2 && (
-                <div className="space-y-8 animate-in fade-in zoom-in-95 duration-300">
-                    <div className="space-y-3 text-center">
-                        <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                            <Clock className="w-8 h-8" />
-                        </div>
-                        <h2 className="text-3xl font-black text-slate-900 tracking-tight">{q2.label}</h2>
-                        <p className="text-slate-500 font-medium max-w-md mx-auto">Vos demandes sont traitées par ordre d'urgence.</p>
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-4 max-w-lg mx-auto">
-                        {q2?.options?.map((opt) => (
-                            <button
-                                key={opt.value}
-                                onClick={() => handleUpdate({ callback_urgency: opt.value as any })}
-                                className={cn(
-                                    "flex items-center justify-between p-6 rounded-[2.5rem] border-2 transition-all text-left group",
-                                    userProfile.callback?.callback_urgency === opt.value
-                                        ? "border-blue-600 bg-blue-50/50 ring-4 ring-blue-100"
-                                        : "border-slate-100 hover:border-blue-200 hover:bg-slate-50"
-                                )}
-                            >
-                                <span className={cn("text-xl font-bold transition-colors", userProfile.callback?.callback_urgency === opt.value ? "text-blue-900" : "text-slate-900")}>
-                                    {opt.label}
-                                </span>
-                                {userProfile.callback?.callback_urgency === opt.value && (
-                                    <CheckCircle2 className="w-6 h-6 text-blue-600" />
-                                )}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-            )}
-
-            {subStep === 3 && (
-                <div className="space-y-8 animate-in fade-in zoom-in-95 duration-300">
-                    <div className="space-y-3 text-center">
-                        <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                            <MapPin className="w-8 h-8" />
-                        </div>
-                        <h2 className="text-3xl font-black text-slate-900 tracking-tight">{q3.label}</h2>
-                        <p className="text-slate-500 font-medium max-w-md mx-auto">{q3.description}</p>
-                    </div>
-
-                    <div className="max-w-md mx-auto w-full">
-                        <div className="relative group">
-                            <input
-                                type="text"
-                                maxLength={5}
-                                value={userProfile.callback?.location_zip || ''}
-                                onChange={(e) => handleUpdate({ location_zip: e.target.value.replace(/\D/g, '') })}
-                                placeholder={q3.placeholder}
-                                className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-8 py-6 text-3xl font-black text-slate-900 placeholder:text-slate-300 focus:outline-none focus:border-emerald-600 focus:bg-white focus:ring-8 focus:ring-emerald-50 transition-all text-center tracking-[0.5em]"
-                            />
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            <div className="mt-auto pt-10 flex items-center justify-between border-t border-slate-100">
-                {subStep > 1 ? (
-                    <button
-                        onClick={prevSubStep}
-                        className="flex items-center gap-3 px-8 py-4 text-slate-400 font-black hover:text-slate-600 transition-colors"
-                    >
-                        <ArrowLeft className="w-5 h-5" />
-                        Précédent
-                    </button>
-                ) : (
-                    <div />
-                )}
-
+            <div className="mt-8 pt-6 border-t border-slate-100 text-center">
                 <button
-                    onClick={subStep === 3 ? onNext : nextSubStep}
-                    disabled={!isSubStepValid()}
+                    onClick={onNext}
+                    disabled={!isValid()}
                     className={cn(
-                        "flex items-center gap-4 px-12 py-5 rounded-2xl font-black text-lg transition-all shadow-xl",
-                        isSubStepValid()
-                            ? "bg-slate-900 text-white hover:bg-slate-800 shadow-slate-200"
+                        "w-full max-w-md mx-auto flex items-center justify-center gap-4 px-8 py-5 rounded-2xl font-black text-lg transition-all shadow-xl",
+                        isValid()
+                            ? "bg-slate-900 text-white hover:bg-slate-800 shadow-slate-200 hover:scale-[1.02]"
                             : "bg-slate-100 text-slate-300 cursor-not-allowed shadow-none"
                     )}
                 >
-                    {subStep === 3 ? "VALIDER MA DEMANDE" : "Continuer"}
+                    ÊTRE RAPPELÉ GRATUITEMENT
                     <ArrowRight className="w-5 h-5" />
                 </button>
+                <p className="mt-4 text-xs text-slate-400 font-medium">
+                    En cliquant, vous acceptez que SimuLegal vous contacte dans le cadre de votre démarche.
+                </p>
             </div>
         </div>
     );

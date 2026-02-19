@@ -41,6 +41,18 @@ let EligibilityController = class EligibilityController {
     getRuleHistory(category, ruleId) {
         return this.service.getRuleHistory(category, ruleId);
     }
+    getDocumentCatalog() {
+        return this.service.getDocumentCatalog();
+    }
+    generateChecklist(category, userProfile) {
+        return this.service.generateChecklist(userProfile, category);
+    }
+    runConsistencyCheck() {
+        return this.service.runConsistencyCheck();
+    }
+    checkThresholdsHealth() {
+        return this.service.checkThresholdsStaleness();
+    }
 };
 exports.EligibilityController = EligibilityController;
 __decorate([
@@ -95,6 +107,32 @@ __decorate([
     __metadata("design:paramtypes", [String, String]),
     __metadata("design:returntype", void 0)
 ], EligibilityController.prototype, "getRuleHistory", null);
+__decorate([
+    (0, common_1.Get)('documents/catalog'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], EligibilityController.prototype, "getDocumentCatalog", null);
+__decorate([
+    (0, common_1.Post)('checklist/:category'),
+    __param(0, (0, common_1.Param)('category')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", void 0)
+], EligibilityController.prototype, "generateChecklist", null);
+__decorate([
+    (0, common_1.Get)('consistency-check'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], EligibilityController.prototype, "runConsistencyCheck", null);
+__decorate([
+    (0, common_1.Get)('thresholds/health'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], EligibilityController.prototype, "checkThresholdsHealth", null);
 exports.EligibilityController = EligibilityController = __decorate([
     (0, common_1.Controller)('eligibility'),
     __metadata("design:paramtypes", [eligibility_service_1.EligibilityService])

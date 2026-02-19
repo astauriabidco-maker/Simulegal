@@ -42,7 +42,8 @@ export default function AdminPage() {
             if (currentUser) {
                 try {
                     const token = AuthStore.getToken();
-                    const response = await fetch('http://localhost:3001/admin/stats', {
+                    const baseUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3005');
+                    const response = await fetch(`${baseUrl}/admin/dashboard/stats`, {
                         headers: { 'Authorization': `Bearer ${token}` }
                     });
 

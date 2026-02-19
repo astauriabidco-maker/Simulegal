@@ -21,30 +21,156 @@ import {
     Layers,
     Binary,
     History,
-    User
+    User,
+    AlertTriangle,
+    Brain
 } from 'lucide-react';
 
-// Cartographie des variables techniques vers des noms lisibles
+// Cartographie COMPLÈTE des variables techniques vers des noms lisibles (96 variables)
 const VARIABLE_LABELS: Record<string, string> = {
+    // ── Identité ──
     'identity.age': 'Âge',
-    'identity.nationality_group': 'Groupe Nationalité',
-    'identity.born_in_france': 'Né en France',
+    'identity.nationality_group': 'Groupe nationalité',
+    'identity.born_in_france': 'Né(e) en France',
+    'identity.lost_french_nationality': 'A perdu la nationalité française',
+
+    // ── Chronologie / Résidence ──
     'timeline.years_continuous_residence': 'Années de résidence continue',
+    'timeline.years_residence_since_age_11': 'Années de résidence depuis 11 ans',
+    'timeline.years_residence_since_age_8': 'Années de résidence depuis 8 ans',
+    'timeline.age_at_entry': 'Âge à l\'entrée en France',
+    'timeline.resides_in_france': 'Réside en France',
+    'timeline.residence_since_age_6': 'Résidence depuis l\'âge de 6 ans',
+
+    // ── Situation administrative ──
     'admin.current_visa_type': 'Type de visa actuel',
+    'admin.entered_legally': 'Entré légalement',
+    'admin.entry_mode': 'Mode d\'entrée',
+    'admin.has_valid_visa_or_permit': 'Visa / titre de séjour valide',
+    'admin.health_insurance': 'Assurance maladie',
+
+    // ── Famille ──
     'family.spouse_nationality': 'Nationalité du conjoint',
     'family.marriage_duration_years': 'Années de mariage',
     'family.community_of_life': 'Communauté de vie',
     'family.has_french_child': 'Enfant français',
-    'work.contract_type': 'Type de contrat (CDI/CDD...)',
+    'family.child_residence_france': 'Enfant réside en France',
+    'family.cohabitation_duration_years': 'Durée cohabitation (années)',
+    'family.contributes_to_education': 'Contribue à l\'éducation',
+    'family.has_french_sibling': 'Frère/Sœur français(e)',
+    'family.is_ascendant_of_french': 'Ascendant de Français',
+    'family.is_pacsed_with_french': 'Pacsé(e) avec un Français',
+    'family.is_polygamous': 'Situation de polygamie',
+    'family.spouse_kept_nationality': 'Conjoint a conservé sa nationalité',
+    'family.spouse_has_passport_talent': 'Conjoint titulaire Passeport Talent',
+    'family.has_handicap_allowance': 'Allocation handicap (AAH)',
+    'family.housing_status': 'Situation de logement',
+    'family.income_source': 'Source de revenus',
+    'family.presence_duration': 'Durée de présence',
+    'family.rf_family_members_count': 'Nombre membres famille (RF)',
+    'family.rf_has_valid_titre_sejour': 'Titre de séjour valide (RF)',
+    'family.rf_housing_surface': 'Surface logement m² (RF)',
+    'family.rf_marital_status': 'Situation matrimoniale (RF)',
+    'family.sponsor_nationality': 'Nationalité du demandeur (RF)',
+
+    // ── Travail / Emploi ──
+    'work.contract_type': 'Type de contrat (CDI/CDD…)',
     'work.salary_monthly_gross': 'Salaire mensuel brut',
     'work.annual_gross_salary': 'Salaire annuel brut',
+    'work.has_work_authorization': 'Autorisation de travail',
+    'work.has_payslips': 'Bulletins de salaire',
+    'work.wants_to_work': 'Souhaite travailler',
+    'work.contract_duration_months': 'Durée contrat (mois)',
+    'work.company_role': 'Rôle dans l\'entreprise',
+    'work.group_seniority_months': 'Ancienneté groupe (mois)',
+    'work.business_project_viable': 'Projet d\'entreprise viable',
+    'work.job_in_tension_list': 'Métier en tension',
+    'work.job_related_to_rd': 'Emploi lié à la R&D',
+    'work.years_experience_comparable': 'Années d\'expérience comparable',
+    'work.has_hosting_agreement': 'Convention d\'accueil',
+    'work.has_legion_honneur': 'Légion d\'honneur',
+    'work.has_work_accident_pension': 'Rente accident du travail',
+    'work.work_accident_rate': 'Taux incapacité accident (%)',
+    'work.served_french_military': 'Service militaire français',
+    'work.is_artist': 'Artiste / Interprète',
+    'work.is_au_pair': 'Jeune au pair',
+    'work.is_entrepreneur': 'Entrepreneur',
+    'work.is_ict_transfer': 'Transfert intra-groupe (ICT)',
+    'work.is_innovative_company': 'Entreprise innovante (JEI)',
+    'work.is_intern': 'Stagiaire',
+    'work.is_manager_or_expert': 'Cadre dirigeant / Expert',
+    'work.is_researcher': 'Chercheur',
+    'work.is_salarie_mission': 'Salarié en mission',
+    'work.is_sportif_haut_niveau': 'Sportif de haut niveau',
+    'work.is_volunteer': 'Volontaire / Service civique',
+
+    // ── Études / Éducation ──
     'education.diploma_level': 'Niveau de diplôme',
-    'integration.french_level': 'Niveau de français (A1-C1)',
+    'education.has_french_higher_education_diploma': 'Diplôme supérieur français',
+    'education.is_enrolled_higher_ed': 'Inscrit dans l\'enseignement supérieur',
+    'education.schooling_in_france_age_6_to_16': 'Scolarisé en France (6-16 ans)',
+    'education.years_higher_education': 'Années d\'études supérieures',
+    'education.years_schooling_france': 'Années de scolarité en France',
+
+    // ── Intégration / Civisme ──
+    'integration.french_level': 'Niveau de français (A1–C1)',
     'integration.civic_exam_passed': 'Examen civique obtenu',
+    'integration.adheres_to_republican_values': 'Adhésion aux valeurs républicaines',
     'civic.clean_criminal_record': 'Casier judiciaire vierge',
     'civic.no_expulsion_order': 'Aucune mesure d\'éloignement (OQTF)',
-    'financial.resources_stable_sufficient': 'Ressources stables et suffisantes'
+
+    // ── Finances ──
+    'financial.resources_stable_sufficient': 'Ressources stables et suffisantes',
+    'financial.resources_annual_total': 'Ressources annuelles totales',
+    'financial.resources_monthly_average': 'Ressources mensuelles moyennes',
+    'investment.amount': 'Montant investissement',
+    'investment.creates_jobs': 'Création d\'emplois',
+
+    // ── Asile ──
+    'asylum.is_asylum_seeker': 'Demandeur d\'asile',
+    'asylum.asylum_application_pending': 'Demande d\'asile en cours',
+
+    // ── Santé ──
+    'health.personal_needs_treatment': 'Besoin de soins personnels',
+    'health.treatment_unavailable_in_origin': 'Soins indisponibles au pays',
+    'health.child_needs_care': 'Enfant nécessitant des soins',
+
+    // ── Vulnérabilité ──
+    'vulnerability.is_victim_domestic_violence': 'Victime de violences conjugales',
+    'vulnerability.has_protection_order_violence': 'Ordonnance de protection',
+    'vulnerability.is_victim_trafficking': 'Victime de traite',
+
+    // ── Régularisation / AES ──
+    'regularisation.years_presence_france': 'Années de présence en France',
+    'regularisation.has_children_schooled_3y': 'Enfants scolarisés 3 ans',
+    'regularisation.has_exceptional_talent': 'Talent exceptionnel',
+
+    // ── Nationalité (extra) ──
+    'nationality_extra.possession_etat_francais': 'Possession d\'état de Français',
+
+    // ── Logement / Résidence ──
+    'residence.maintains_home_abroad': 'Conserve domicile à l\'étranger',
+
+    // ── Projet ──
+    'project.is_real_and_serious': 'Projet réel et sérieux',
 };
+
+// Groupes pour l'affichage <optgroup> dans le sélecteur
+const VARIABLE_GROUPS: { label: string; prefix: string[] }[] = [
+    { label: '👤 Identité', prefix: ['identity.'] },
+    { label: '📅 Chronologie / Résidence', prefix: ['timeline.', 'residence.'] },
+    { label: '📋 Situation administrative', prefix: ['admin.'] },
+    { label: '👨‍👩‍👧 Famille', prefix: ['family.'] },
+    { label: '💼 Travail / Emploi', prefix: ['work.'] },
+    { label: '🎓 Études / Éducation', prefix: ['education.'] },
+    { label: '🇫🇷 Intégration / Civisme', prefix: ['integration.', 'civic.'] },
+    { label: '💰 Finances / Investissement', prefix: ['financial.', 'investment.'] },
+    { label: '🛡️ Asile', prefix: ['asylum.'] },
+    { label: '🏥 Santé', prefix: ['health.'] },
+    { label: '⚠️ Vulnérabilité', prefix: ['vulnerability.'] },
+    { label: '📄 Régularisation', prefix: ['regularisation.'] },
+    { label: '🏠 Nationalité / Divers', prefix: ['nationality_extra.', 'project.'] },
+];
 
 const OPERATORS = [
     { value: 'EQ', label: 'égal à' },
@@ -67,7 +193,7 @@ const ConditionBuilder: React.FC<ConditionBuilderProps> = ({ condition, onChange
     const groupType = condition.AND ? 'AND' : (condition.OR ? 'OR' : null);
 
     const handleAddCondition = (type: 'AND' | 'OR') => {
-        const newSub = { var: 'identity.age', op: 'GTE' as any, val: 18 };
+        const newSub = { var: 'civic.clean_criminal_record', op: 'EQ' as any, val: true };
         if (type === groupType) {
             onChange({ ...condition, [type]: [...(condition[type] || []), newSub] });
         } else {
@@ -154,11 +280,21 @@ const ConditionBuilder: React.FC<ConditionBuilderProps> = ({ condition, onChange
             <select
                 value={condition.var}
                 onChange={(e) => onChange({ ...condition, var: e.target.value })}
-                className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm font-bold text-slate-700 min-w-[200px]"
+                className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm font-bold text-slate-700 min-w-[240px]"
             >
-                {Object.entries(VARIABLE_LABELS).map(([val, label]) => (
-                    <option key={val} value={val}>{label}</option>
-                ))}
+                {VARIABLE_GROUPS.map(group => {
+                    const entries = Object.entries(VARIABLE_LABELS).filter(([key]) =>
+                        group.prefix.some(p => key.startsWith(p))
+                    );
+                    if (entries.length === 0) return null;
+                    return (
+                        <optgroup key={group.label} label={group.label}>
+                            {entries.map(([val, label]) => (
+                                <option key={val} value={val}>{label}</option>
+                            ))}
+                        </optgroup>
+                    );
+                })}
             </select>
 
             {/* Operator Selection */}
@@ -219,16 +355,42 @@ const ConditionBuilder: React.FC<ConditionBuilderProps> = ({ condition, onChange
 
 export default function EligibilityConfigPanel() {
     const [thresholds, setThresholds] = useState<any>(null);
-    const [rulesSejour, setRulesSejour] = useState<ProcedureRule[]>([]);
-    const [rulesNat, setRulesNat] = useState<ProcedureRule[]>([]);
-    const [category, setCategory] = useState<'thresholds' | 'rules' | 'audit'>('thresholds');
-    const [subCategory, setSubCategory] = useState<'sejour' | 'naturalisation'>('sejour');
+    const [rulesMap, setRulesMap] = useState<Record<string, ProcedureRule[]>>({});
+    const [category, setCategory] = useState<'thresholds' | 'rules' | 'audit' | 'diagnostic'>('thresholds');
+    const [subCategory, setSubCategory] = useState<string>('sejour');
     const [showNotification, setShowNotification] = useState(false);
     const [notificationMessage, setNotificationMessage] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
     const [editMode, setEditMode] = useState<'visual' | 'json'>('visual');
     const [auditLog, setAuditLog] = useState<any[]>([]);
     const [auditLoading, setAuditLoading] = useState(false);
+    const [healthData, setHealthData] = useState<any>(null);
+    const [diagnosticData, setDiagnosticData] = useState<any>(null);
+    const [diagnosticLoading, setDiagnosticLoading] = useState(false);
+
+    const API_BASE = typeof window !== 'undefined' ? (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000') : 'http://localhost:5000';
+
+    // Helper: extract .value from versioned threshold or return raw number
+    const tv = (val: any): number => {
+        if (val && typeof val === 'object' && 'value' in val) return val.value;
+        return val ?? 0;
+    };
+
+    const loadHealthData = useCallback(async () => {
+        try {
+            const res = await fetch(`${API_BASE}/eligibility/thresholds/health`);
+            if (res.ok) setHealthData(await res.json());
+        } catch (err) { console.warn('[ELIGIBILITY] Health check failed', err); }
+    }, [API_BASE]);
+
+    const loadDiagnostic = useCallback(async () => {
+        setDiagnosticLoading(true);
+        try {
+            const res = await fetch(`${API_BASE}/eligibility/consistency-check`);
+            if (res.ok) setDiagnosticData(await res.json());
+        } catch (err) { console.warn('[ELIGIBILITY] Consistency check failed', err); }
+        setDiagnosticLoading(false);
+    }, [API_BASE]);
 
     const loadAuditLog = useCallback(async () => {
         setAuditLoading(true);
@@ -239,10 +401,13 @@ export default function EligibilityConfigPanel() {
 
     useEffect(() => {
         setThresholds(EligibilityStore.getThresholds());
-        setRulesSejour(EligibilityStore.getRules('sejour'));
-        setRulesNat(EligibilityStore.getRules('naturalisation'));
+        const cats = ['sejour', 'naturalisation', 'family', 'asile'];
+        const map: Record<string, ProcedureRule[]> = {};
+        cats.forEach(c => { map[c] = EligibilityStore.getRules(c as any); });
+        setRulesMap(map);
         loadAuditLog();
-    }, [loadAuditLog]);
+        loadHealthData();
+    }, [loadAuditLog, loadHealthData]);
 
     const showNotificationMsg = (message: string) => {
         setNotificationMessage(message);
@@ -250,9 +415,19 @@ export default function EligibilityConfigPanel() {
         setTimeout(() => setShowNotification(false), 3000);
     };
 
-    const handleSaveThresholds = () => {
+    const handleSaveThresholds = async () => {
         EligibilityStore.updateThresholds(thresholds);
+        // Persist to backend with audit trail
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+        try {
+            await fetch(`${API_URL}/eligibility/thresholds`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ thresholds, changedBy: 'admin' }),
+            });
+        } catch (err) { console.warn('[ELIGIBILITY] Backend threshold save failed', err); }
         showNotificationMsg('✅ Seuils sauvegardés');
+        loadAuditLog();
     };
 
     const handleResetThresholds = () => {
@@ -262,40 +437,40 @@ export default function EligibilityConfigPanel() {
         showNotificationMsg('🔄 Seuils réinitialisés');
     };
 
-    const handleSaveRules = () => {
-        if (subCategory === 'sejour') {
-            EligibilityStore.updateRules('sejour', rulesSejour);
-        } else {
-            EligibilityStore.updateRules('naturalisation', rulesNat);
+    const handleSaveRules = async () => {
+        const rules = rulesMap[subCategory] || [];
+        for (const rule of rules) {
+            await EligibilityStore.saveRuleToBackend(subCategory, rule.id, rule.conditions, 'admin');
         }
-        showNotificationMsg('✅ Règles sauvegardées');
+        EligibilityStore.updateRules(subCategory as any, rules);
+        showNotificationMsg(`✅ ${rules.length} règles sauvegardées (${subCategory})`);
+        loadAuditLog();
     };
 
     const updateNestedThreshold = (path: string[], value: any) => {
+        // For versioned thresholds, update the .value property instead of replacing the whole object
         const newThresholds = { ...thresholds };
         let current = newThresholds;
         for (let i = 0; i < path.length - 1; i++) {
             current = current[path[i]];
         }
-        current[path[path.length - 1]] = value;
+        const lastKey = path[path.length - 1];
+        const existing = current[lastKey];
+        // If versioned (object with .value), update .value only
+        if (existing && typeof existing === 'object' && 'value' in existing) {
+            current[lastKey] = { ...existing, value };
+        } else {
+            current[lastKey] = value;
+        }
         setThresholds(newThresholds);
     };
 
     const updateRuleConditions = (ruleId: string, newConditions: RuleCondition) => {
-        if (subCategory === 'sejour') {
-            const newRules = [...rulesSejour];
-            const i = newRules.findIndex(r => r.id === ruleId);
-            if (i !== -1) {
-                newRules[i].conditions = newConditions;
-                setRulesSejour(newRules);
-            }
-        } else {
-            const newRules = [...rulesNat];
-            const i = newRules.findIndex(r => r.id === ruleId);
-            if (i !== -1) {
-                newRules[i].conditions = newConditions;
-                setRulesNat(newRules);
-            }
+        const rules = [...(rulesMap[subCategory] || [])];
+        const i = rules.findIndex(r => r.id === ruleId);
+        if (i !== -1) {
+            rules[i] = { ...rules[i], conditions: newConditions };
+            setRulesMap(prev => ({ ...prev, [subCategory]: rules }));
         }
     };
 
@@ -315,64 +490,138 @@ export default function EligibilityConfigPanel() {
                         className={`px-4 py-2 rounded-lg font-bold text-sm transition-all ${category === 'thresholds' ? 'bg-indigo-600 text-white' : 'text-slate-600 hover:text-slate-900'
                             }`}
                     >
-                        💰 Seuils (SMIC, Durées)
+                        💰 Seuils
                     </button>
                     <button
                         onClick={() => setCategory('rules')}
                         className={`px-4 py-2 rounded-lg font-bold text-sm transition-all ${category === 'rules' ? 'bg-indigo-600 text-white' : 'text-slate-600 hover:text-slate-900'
                             }`}
                     >
-                        🧠 Logique (Règles métier)
+                        🧠 Règles
                     </button>
                     <button
                         onClick={() => { setCategory('audit'); loadAuditLog(); }}
                         className={`px-4 py-2 rounded-lg font-bold text-sm transition-all flex items-center gap-1.5 ${category === 'audit' ? 'bg-indigo-600 text-white' : 'text-slate-600 hover:text-slate-900'
                             }`}
                     >
-                        <History size={16} /> Historique ({auditLog.length})
+                        <History size={16} /> Audit
+                    </button>
+                    <button
+                        onClick={() => { setCategory('diagnostic'); loadDiagnostic(); }}
+                        className={`px-4 py-2 rounded-lg font-bold text-sm transition-all ${category === 'diagnostic' ? 'bg-indigo-600 text-white' : 'text-slate-600 hover:text-slate-900'
+                            }`}
+                    >
+                        🩺 Diagnostic
                     </button>
                 </div>
             </div>
 
-            {category === 'thresholds' ? (
+            {category === 'thresholds' && (
                 <div className="space-y-6 max-w-4xl">
                     {/* SALAIRES ET FINANCES */}
+                    {/* Health Banner */}
+                    {healthData && healthData.status === 'WARNING' && (
+                        <div className="bg-amber-50 border-2 border-amber-300 rounded-2xl p-5 flex items-start gap-3">
+                            <AlertTriangle className="text-amber-600 flex-shrink-0 mt-0.5" size={20} />
+                            <div>
+                                <p className="font-black text-amber-800 text-sm">{healthData.recommendation}</p>
+                                {healthData.alerts?.filter((a: any) => a.isStale).map((a: any, i: number) => (
+                                    <p key={i} className="text-xs text-amber-600 mt-1">⚠️ {a.label}: {a.currentValue}€ (valide depuis {a.validFrom})</p>
+                                ))}
+                                {healthData.meta?.reviewOverdue && (
+                                    <p className="text-xs text-amber-600 mt-1">📅 Revue à planifier (prévue le {healthData.meta.nextReviewDue})</p>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
                     <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-sm space-y-6">
                         <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
                             <DollarSign className="text-indigo-600" size={24} />
-                            <h2 className="text-xl font-black text-slate-900">Seuils Financiers (nets mensuels/annuels)</h2>
+                            <h2 className="text-xl font-black text-slate-900">Seuils Financiers</h2>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            <div className="space-y-4">
-                                <h3 className="font-bold text-slate-400 uppercase tracking-widest text-xs font-mono">Références de Base</h3>
-                                <div>
-                                    <label className="block text-sm font-bold text-slate-700 mb-1">SMIC Mensuel Net (Réf)</label>
-                                    <input
-                                        type="number"
-                                        value={thresholds.financial_thresholds.salary_monthly_gross.smic}
-                                        onChange={(e) => updateNestedThreshold(['financial_thresholds', 'salary_monthly_gross', 'smic'], parseFloat(e.target.value))}
-                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold focus:ring-2 focus:ring-indigo-500"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="space-y-4">
-                                <h3 className="font-bold text-slate-400 uppercase tracking-widest text-xs font-mono">Passeport Talent (Annuel)</h3>
+                        {/* Salaires annuels bruts */}
+                        <div className="space-y-4">
+                            <h3 className="font-bold text-slate-400 uppercase tracking-widest text-xs font-mono">Salaires Annuels Bruts</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                 {[
-                                    { label: 'Salarié Qualifié', key: 'passeport_talent_salarie_qualifie' },
-                                    { label: 'Carte Bleue UE', key: 'passeport_talent_carte_bleue_eu' }
-                                ].map(item => (
-                                    <div key={item.key}>
-                                        <label className="block text-sm font-bold text-slate-700 mb-1">{item.label}</label>
-                                        <input
-                                            type="number"
-                                            value={thresholds.financial_thresholds.salary_annual_gross[item.key]}
-                                            onChange={(e) => updateNestedThreshold(['financial_thresholds', 'salary_annual_gross', item.key], parseFloat(e.target.value))}
-                                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold focus:ring-2 focus:ring-indigo-500"
-                                        />
-                                    </div>
-                                ))}
+                                    { label: 'PT — Salarié Qualifié', key: 'passeport_talent_salarie_qualifie' },
+                                    { label: 'PT — Carte Bleue UE', key: 'passeport_talent_carte_bleue_eu' },
+                                    { label: 'PT — Mission', key: 'passeport_talent_mission' },
+                                    { label: 'PT — Mandataire Social', key: 'passeport_talent_mandataire_social' },
+                                    { label: 'Visiteur — Ressources annuelles', key: 'visiteur_ressources_annuelles' },
+                                ].map(item => {
+                                    const entry = thresholds.financial_thresholds.salary_annual_gross[item.key];
+                                    const ref = entry?.source_ref || '';
+                                    return (
+                                        <div key={item.key} className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+                                            <label className="block text-sm font-bold text-slate-700 mb-1">{item.label}</label>
+                                            {ref && <span className="text-[10px] text-indigo-500 font-mono">{ref}</span>}
+                                            <input
+                                                type="number"
+                                                value={tv(entry)}
+                                                onChange={(e) => updateNestedThreshold(['financial_thresholds', 'salary_annual_gross', item.key], parseFloat(e.target.value))}
+                                                className="w-full mt-1 px-4 py-3 bg-white border border-slate-200 rounded-xl font-bold focus:ring-2 focus:ring-indigo-500"
+                                            />
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        {/* Salaires mensuels bruts */}
+                        <div className="space-y-4">
+                            <h3 className="font-bold text-slate-400 uppercase tracking-widest text-xs font-mono">Salaires Mensuels Bruts</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {[
+                                    { label: 'SMIC Mensuel Brut', key: 'smic' },
+                                    { label: 'Entrepreneur — Viabilité', key: 'entrepreneur_viabilite' },
+                                    { label: 'Algérien Étudiant', key: 'algerien_etudiant_ressources' },
+                                    { label: 'ICT Détaché', key: 'ict_detache_ressources' },
+                                    { label: 'Regroupement Familial', key: 'regroupement_familial_resources' },
+                                ].map(item => {
+                                    const entry = thresholds.financial_thresholds.salary_monthly_gross[item.key];
+                                    const ref = entry?.source_ref || '';
+                                    return (
+                                        <div key={item.key} className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+                                            <label className="block text-sm font-bold text-slate-700 mb-1">{item.label}</label>
+                                            {ref && <span className="text-[10px] text-indigo-500 font-mono">{ref}</span>}
+                                            <input
+                                                type="number"
+                                                value={tv(entry)}
+                                                onChange={(e) => updateNestedThreshold(['financial_thresholds', 'salary_monthly_gross', item.key], parseFloat(e.target.value))}
+                                                className="w-full mt-1 px-4 py-3 bg-white border border-slate-200 rounded-xl font-bold focus:ring-2 focus:ring-indigo-500"
+                                            />
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        {/* Investissements */}
+                        <div className="space-y-4">
+                            <h3 className="font-bold text-slate-400 uppercase tracking-widest text-xs font-mono">Investissements</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {[
+                                    { label: 'Création Entreprise — Fonds', key: 'creation_entreprise_fonds' },
+                                    { label: 'Investisseur Économique — Fonds', key: 'investisseur_eco_fonds' },
+                                ].map(item => {
+                                    const entry = thresholds.financial_thresholds.investments[item.key];
+                                    const ref = entry?.source_ref || '';
+                                    return (
+                                        <div key={item.key} className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+                                            <label className="block text-sm font-bold text-slate-700 mb-1">{item.label}</label>
+                                            {ref && <span className="text-[10px] text-indigo-500 font-mono">{ref}</span>}
+                                            <input
+                                                type="number"
+                                                value={tv(entry)}
+                                                onChange={(e) => updateNestedThreshold(['financial_thresholds', 'investments', item.key], parseFloat(e.target.value))}
+                                                className="w-full mt-1 px-4 py-3 bg-white border border-slate-200 rounded-xl font-bold focus:ring-2 focus:ring-indigo-500"
+                                            />
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </div>
                     </div>
@@ -381,16 +630,19 @@ export default function EligibilityConfigPanel() {
                     <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-sm space-y-6">
                         <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
                             <Clock className="text-indigo-600" size={24} />
-                            <h2 className="text-xl font-black text-slate-900">Durées de résidence (Années)</h2>
+                            <h2 className="text-xl font-black text-slate-900">Durées de résidence & mariage (années)</h2>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                             <div className="space-y-4">
-                                <h3 className="font-bold text-slate-400 uppercase tracking-widest text-xs font-mono">Immigration</h3>
+                                <h3 className="font-bold text-slate-400 uppercase tracking-widest text-xs font-mono">Résidence en France</h3>
                                 {[
                                     { label: 'Naturalisation Standard', key: 'naturalisation_standard' },
                                     { label: 'Naturalisation (Études Sup)', key: 'naturalisation_etudes_sup' },
-                                    { label: 'Carte Résident Longue Durée', key: 'resident_longue_duree_ue' }
+                                    { label: 'Carte Résident Longue Durée UE', key: 'resident_longue_duree_ue' },
+                                    { label: 'Regroupement Familial', key: 'regroupement_familial_resident' },
+                                    { label: 'Ascendant de Français', key: 'ascendant_de_francais' },
+                                    { label: 'Enfant Né en France (continu)', key: 'enfant_ne_en_france_continuous' },
                                 ].map(item => (
                                     <div key={item.key}>
                                         <label className="block text-sm font-bold text-slate-700 mb-1">{item.label}</label>
@@ -407,8 +659,9 @@ export default function EligibilityConfigPanel() {
                             <div className="space-y-4">
                                 <h3 className="font-bold text-slate-400 uppercase tracking-widest text-xs font-mono">Mariage</h3>
                                 {[
-                                    { label: 'Pour Nationalité', key: 'pour_nationalite_mariage' },
-                                    { label: 'Pour Carte Résident', key: 'pour_carte_resident_conjoint_francais' }
+                                    { label: 'Pour Nationalité (mariage)', key: 'pour_nationalite_mariage' },
+                                    { label: 'Pour Carte Résident (conjoint FR)', key: 'pour_carte_resident_conjoint_francais' },
+                                    { label: 'Pour Carte Résident (conjoint TN)', key: 'pour_carte_resident_conjoint_francais_tunisien' },
                                 ].map(item => (
                                     <div key={item.key}>
                                         <label className="block text-sm font-bold text-slate-700 mb-1">{item.label}</label>
@@ -439,7 +692,9 @@ export default function EligibilityConfigPanel() {
                         </button>
                     </div>
                 </div>
-            ) : (
+            )}
+
+            {category === 'rules' && (
                 <div className="flex flex-col h-full overflow-hidden">
                     <div className="flex items-center gap-4 mb-4">
                         <select
@@ -449,6 +704,8 @@ export default function EligibilityConfigPanel() {
                         >
                             <option value="sejour">🛂 Titres de Séjour</option>
                             <option value="naturalisation">🇫🇷 Naturalisation</option>
+                            <option value="family">👨‍👩‍👧 Regroupement Familial</option>
+                            <option value="asile">🛡️ Asile</option>
                         </select>
 
                         <div className="relative flex-1">
@@ -481,12 +738,12 @@ export default function EligibilityConfigPanel() {
                             onClick={handleSaveRules}
                             className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold flex items-center gap-2 shadow-lg transition-all active:scale-95"
                         >
-                            <Save size={18} /> Sauvegarder {subCategory === 'sejour' ? rulesSejour.length : rulesNat.length} règles
+                            <Save size={18} /> Sauvegarder {(rulesMap[subCategory] || []).length} règles
                         </button>
                     </div>
 
                     <div className="flex-1 overflow-auto bg-slate-200/50 rounded-3xl border border-slate-200 shadow-inner p-4 space-y-4">
-                        {(subCategory === 'sejour' ? rulesSejour : rulesNat)
+                        {(rulesMap[subCategory] || [])
                             .filter(r => r.name.toLowerCase().includes(searchQuery.toLowerCase()) || r.id.includes(searchQuery))
                             .map((rule) => (
                                 <div key={rule.id} className="p-6 bg-white rounded-3xl border border-slate-200 shadow-sm group hover:border-indigo-300 transition-colors">
@@ -507,16 +764,11 @@ export default function EligibilityConfigPanel() {
                                                 value={rule.priority}
                                                 onChange={(e) => {
                                                     const val = parseInt(e.target.value);
-                                                    if (subCategory === 'sejour') {
-                                                        const i = rulesSejour.findIndex(r => r.id === rule.id);
-                                                        const newRules = [...rulesSejour];
-                                                        newRules[i].priority = val;
-                                                        setRulesSejour(newRules);
-                                                    } else {
-                                                        const i = rulesNat.findIndex(r => r.id === rule.id);
-                                                        const newRules = [...rulesNat];
-                                                        newRules[i].priority = val;
-                                                        setRulesNat(newRules);
+                                                    const rules = [...(rulesMap[subCategory] || [])];
+                                                    const i = rules.findIndex((r: ProcedureRule) => r.id === rule.id);
+                                                    if (i !== -1) {
+                                                        rules[i] = { ...rules[i], priority: val };
+                                                        setRulesMap(prev => ({ ...prev, [subCategory]: rules }));
                                                     }
                                                 }}
                                                 className="w-16 px-2 py-2 bg-slate-50 border border-slate-200 rounded-xl text-center font-black text-slate-700 focus:ring-2 focus:ring-indigo-500"
@@ -616,6 +868,122 @@ export default function EligibilityConfigPanel() {
                                     );
                                 })}
                             </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {/* Diagnostic Tab */}
+            {category === 'diagnostic' && (
+                <div className="space-y-6 max-w-5xl">
+                    <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-sm">
+                        <div className="flex items-center gap-3 border-b border-slate-100 pb-4 mb-6">
+                            <Brain className="text-indigo-600" size={24} />
+                            <h2 className="text-xl font-black text-slate-900">🩺 Diagnostic de Cohérence</h2>
+                            <button onClick={loadDiagnostic} className="ml-auto px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-black hover:bg-indigo-700 transition-colors">
+                                Relancer le diagnostic
+                            </button>
+                        </div>
+
+                        {diagnosticLoading ? (
+                            <div className="text-center py-12">
+                                <div className="animate-spin w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full mx-auto mb-3"></div>
+                                <p className="text-sm font-bold text-slate-400">Analyse en cours...</p>
+                            </div>
+                        ) : !diagnosticData ? (
+                            <div className="text-center py-12">
+                                <Brain className="mx-auto text-slate-300 mb-3" size={40} />
+                                <p className="text-sm font-bold text-slate-400">Cliquez sur &quot;Relancer le diagnostic&quot; pour analyser</p>
+                            </div>
+                        ) : (
+                            <>
+                                {/* Summary Cards */}
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                                    <div className="bg-slate-50 rounded-2xl p-4 text-center border border-slate-100">
+                                        <div className="text-2xl font-black text-slate-900">{diagnosticData.summary?.totalProfiles || 0}</div>
+                                        <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Profils testés</div>
+                                    </div>
+                                    <div className="bg-slate-50 rounded-2xl p-4 text-center border border-slate-100">
+                                        <div className="text-2xl font-black text-slate-900">{diagnosticData.summary?.totalRules || 0}</div>
+                                        <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Règles totales</div>
+                                    </div>
+                                    <div className={`rounded-2xl p-4 text-center border ${diagnosticData.summary?.orphanRulesCount > 0 ? 'bg-amber-50 border-amber-200' : 'bg-emerald-50 border-emerald-200'}`}>
+                                        <div className={`text-2xl font-black ${diagnosticData.summary?.orphanRulesCount > 0 ? 'text-amber-700' : 'text-emerald-700'}`}>{diagnosticData.summary?.orphanRulesCount || 0}</div>
+                                        <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Orphelines</div>
+                                    </div>
+                                    <div className={`rounded-2xl p-4 text-center border ${diagnosticData.summary?.profilesWithIssues > 0 ? 'bg-red-50 border-red-200' : 'bg-emerald-50 border-emerald-200'}`}>
+                                        <div className={`text-2xl font-black ${diagnosticData.summary?.profilesWithIssues > 0 ? 'text-red-700' : 'text-emerald-700'}`}>{diagnosticData.summary?.profilesWithIssues || 0}</div>
+                                        <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Profils ⚠️</div>
+                                    </div>
+                                </div>
+
+                                {/* Profile Results */}
+                                <h3 className="font-black text-slate-900 text-sm uppercase tracking-widest mb-3">Résultats par profil</h3>
+                                <div className="space-y-2 mb-6">
+                                    {diagnosticData.profileResults?.map((p: any) => (
+                                        <div key={p.profileId} className={`p-4 rounded-xl border flex items-center gap-3 ${p.status === '✅' ? 'bg-emerald-50 border-emerald-200' : 'bg-amber-50 border-amber-200'}`}>
+                                            <span className="text-lg">{p.status}</span>
+                                            <div className="flex-1 min-w-0">
+                                                <span className="font-black text-sm text-slate-900">{p.profileName}</span>
+                                                <span className="text-xs text-slate-500 ml-2">{p.totalMatches} match{p.totalMatches !== 1 ? 'es' : ''}</span>
+                                                {p.missingExpected?.length > 0 && (
+                                                    <span className="text-xs text-red-600 ml-2">❌ Manquant: {p.missingExpected.join(', ')}</span>
+                                                )}
+                                                {p.unexpectedCategories?.length > 0 && (
+                                                    <span className="text-xs text-amber-600 ml-2">⚠️ Inattendu: {p.unexpectedCategories.join(', ')}</span>
+                                                )}
+                                            </div>
+                                            <div className="flex gap-1">
+                                                {p.actualCategories?.map((c: string) => (
+                                                    <span key={c} className="text-[10px] font-black uppercase px-2 py-0.5 rounded-lg bg-indigo-100 text-indigo-700">{c}</span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {/* Orphan Rules */}
+                                {diagnosticData.orphanRules?.length > 0 && (
+                                    <>
+                                        <h3 className="font-black text-slate-900 text-sm uppercase tracking-widest mb-3">Règles orphelines ({diagnosticData.orphanRules.length})</h3>
+                                        <div className="bg-amber-50 rounded-xl border border-amber-200 p-4 max-h-48 overflow-auto">
+                                            <div className="grid grid-cols-2 md:grid-cols-3 gap-1">
+                                                {diagnosticData.orphanRules.map((r: string) => (
+                                                    <span key={r} className="text-xs font-mono text-amber-700">⭕ {r}</span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
+
+                                {/* Threshold Health */}
+                                {healthData && (
+                                    <div className="mt-6">
+                                        <h3 className="font-black text-slate-900 text-sm uppercase tracking-widest mb-3">Santé des seuils</h3>
+                                        <div className={`rounded-xl border p-4 ${healthData.status === 'OK' ? 'bg-emerald-50 border-emerald-200' : 'bg-amber-50 border-amber-200'}`}>
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <span className={`text-sm font-black ${healthData.status === 'OK' ? 'text-emerald-700' : 'text-amber-700'}`}>
+                                                    {healthData.status === 'OK' ? '✅ Tous les seuils sont à jour' : '⚠️ Attention requise'}
+                                                </span>
+                                                {healthData.meta?.lastReviewed && (
+                                                    <span className="text-xs text-slate-500 ml-auto">Dernière revue : {healthData.meta.lastReviewed}</span>
+                                                )}
+                                            </div>
+                                            <div className="space-y-1">
+                                                {healthData.alerts?.map((a: any, i: number) => (
+                                                    <div key={i} className="flex items-center gap-2 text-xs">
+                                                        <span>{a.isStale ? '⚠️' : '✅'}</span>
+                                                        <span className="font-bold text-slate-700">{a.label}</span>
+                                                        <span className="text-slate-500">{a.currentValue}€</span>
+                                                        {a.validFrom && <span className="text-slate-400">depuis {a.validFrom}</span>}
+                                                        {a.sourceRef && <span className="text-indigo-500">({a.sourceRef})</span>}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </>
                         )}
                     </div>
                 </div>

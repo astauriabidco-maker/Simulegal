@@ -28,7 +28,7 @@ let SettingsService = class SettingsService {
                     company: JSON.stringify({
                         name: "Simulegal SAS",
                         address: "123 Avenue de la Justice",
-                        zipCode: "75001",
+                        zipCode: "75000",
                         city: "Paris",
                         siret: "123 456 789 00012",
                         tvaNumber: "FR 12 123456789",

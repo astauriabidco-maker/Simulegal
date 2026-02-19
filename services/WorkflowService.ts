@@ -105,7 +105,7 @@ export const WorkflowService = {
             return ['NEW', 'SCHEDULING', 'BOOKED', 'DONE'];
         }
 
-        // 3. RDV Préfecture - Workflow court avec recherche de créneaux
+        // 3. RDV Préfecture - Workflow de recherche active de créneaux
         if (serviceId === 'rdv_prefecture') {
             return ['NEW', 'COLLECTING', 'REVIEW', 'HUNTING', 'BOOKED', 'CLOSED'];
         }

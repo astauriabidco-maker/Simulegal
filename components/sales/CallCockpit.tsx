@@ -41,7 +41,7 @@ export default function CallCockpit({ prospect, onClose, onSaveNote }: CallCockp
             try {
                 // 1. Récupérer le token depuis le backend
                 // Note: On utilise fetch direct ici car SalesStore n'a pas encore cette méthode
-                const tokenResponse = await fetch('http://localhost:3001/voice/token', {
+                const tokenResponse = await fetch('http://localhost:5000/voice/token', {
                     headers: {
                         'Authorization': `Bearer ${AuthStore.getToken()}`
                     }

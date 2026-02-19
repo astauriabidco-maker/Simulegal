@@ -33,7 +33,15 @@
         "duration_years": 10,
         "gives_work_right": true,
         "leads_to_naturalisation": true,
-        "request_type": "FIRST_OR_RENEWAL"
+        "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "TITRE_VOYAGE_REFUGIE",
+            "RESIDENCE_PROOF",
+            "PHOTOS",
+            "FISCAL_STAMP_225",
+            "DECISION_OFPRA",
+            "CIVIL_STATUS_CERTIFICATE"
+        ]
     },
     {
         "id": "cs_pluriannuelle_apatride",
@@ -69,7 +77,15 @@
         "duration_years": 4,
         "gives_work_right": true,
         "leads_to_naturalisation": true,
-        "request_type": "FIRST_OR_RENEWAL"
+        "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "TITRE_VOYAGE_APATRIDE",
+            "RESIDENCE_PROOF",
+            "PHOTOS",
+            "FISCAL_STAMP_225",
+            "DECISION_OFPRA",
+            "CIVIL_STATUS_CERTIFICATE"
+        ]
     },
     {
         "id": "carte_resident_apatride_apres_4ans",
@@ -110,7 +126,17 @@
         "duration_years": 10,
         "gives_work_right": true,
         "leads_to_naturalisation": true,
-        "request_type": "FIRST_OR_RENEWAL"
+        "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "TITRE_VOYAGE_APATRIDE",
+            "TITRE_SEJOUR_ACTUEL",
+            "RESIDENCE_PROOF",
+            "PHOTOS",
+            "FISCAL_STAMP_225",
+            "DECISION_OFPRA",
+            "TAX_NOTICE_3Y",
+            "CIVIL_STATUS_CERTIFICATE"
+        ]
     },
     {
         "id": "carte_resident_longue_duree_ue",
@@ -326,7 +352,19 @@
         "duration_years": 10,
         "gives_work_right": true,
         "leads_to_naturalisation": true,
-        "request_type": "UPGRADE"
+        "request_type": "UPGRADE",
+        "documents": [
+            "PASSPORT_ALL_PAGES",
+            "TITRE_SEJOUR_ACTUEL",
+            "RESIDENCE_PROOF",
+            "PHOTOS",
+            "FISCAL_STAMP_225",
+            "MARRIAGE_CERTIFICATE",
+            "BIRTH_CERTIFICATE",
+            "TAX_NOTICE_3Y",
+            "COMMUNITY_PROOF",
+            "FRENCH_B1"
+        ]
     },
     {
         "id": "passeport_talent_carte_bleue_eu",
@@ -381,7 +419,18 @@
         "duration_years": 4,
         "gives_work_right": true,
         "leads_to_naturalisation": true,
-        "request_type": "FIRST_OR_RENEWAL"
+        "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "PASSPORT_ALL_PAGES",
+            "RESIDENCE_PROOF",
+            "PHOTOS",
+            "FISCAL_STAMP_225",
+            "DIPLOMAS",
+            "WORK_CONTRACT",
+            "PAYSLIPS",
+            "EMPLOYER_ATTESTATION",
+            "FRENCH_A2"
+        ]
     },
     {
         "id": "passeport_talent_investisseur",
@@ -422,7 +471,18 @@
         "duration_years": 4,
         "gives_work_right": true,
         "leads_to_naturalisation": true,
-        "request_type": "FIRST_OR_RENEWAL"
+        "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "PASSPORT_ALL_PAGES",
+            "RESIDENCE_PROOF",
+            "PHOTOS",
+            "FISCAL_STAMP_225",
+            "INVESTMENT_PROOF",
+            "BUSINESS_PLAN",
+            "BANK_STATEMENTS",
+            "KBIS",
+            "FRENCH_A2"
+        ]
     },
     {
         "id": "passeport_talent_salarie_qualifie",
@@ -507,7 +567,18 @@
         "duration_years": 4,
         "gives_work_right": true,
         "leads_to_naturalisation": true,
-        "request_type": "FIRST_OR_RENEWAL"
+        "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "PASSPORT_ALL_PAGES",
+            "RESIDENCE_PROOF",
+            "PHOTOS",
+            "FISCAL_STAMP_225",
+            "WORK_CONTRACT",
+            "JEI_ATTESTATION",
+            "DIPLOMAS",
+            "PAYSLIPS",
+            "FRENCH_A2"
+        ]
     },
     {
         "id": "passeport_talent_mandataire",
@@ -553,7 +624,18 @@
         "duration_years": 4,
         "gives_work_right": true,
         "leads_to_naturalisation": true,
-        "request_type": "FIRST_OR_RENEWAL"
+        "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "PASSPORT_ALL_PAGES",
+            "RESIDENCE_PROOF",
+            "PHOTOS",
+            "FISCAL_STAMP_225",
+            "KBIS",
+            "PV_NOMINATION",
+            "PAYSLIPS",
+            "GROUP_ATTESTATION",
+            "FRENCH_A2"
+        ]
     },
     {
         "id": "passeport_talent_creation",
@@ -602,7 +684,18 @@
         "duration_years": 4,
         "gives_work_right": true,
         "leads_to_naturalisation": true,
-        "request_type": "FIRST_OR_RENEWAL"
+        "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "PASSPORT_ALL_PAGES",
+            "RESIDENCE_PROOF",
+            "PHOTOS",
+            "FISCAL_STAMP_225",
+            "DIPLOMAS",
+            "BUSINESS_PLAN",
+            "INVESTMENT_PROOF",
+            "KBIS",
+            "FRENCH_A2"
+        ]
     },
     {
         "id": "passeport_talent_famille",
@@ -633,7 +726,17 @@
         "duration_years": 4,
         "gives_work_right": true,
         "leads_to_naturalisation": false,
-        "request_type": "FIRST_OR_RENEWAL"
+        "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "PASSPORT_ALL_PAGES",
+            "RESIDENCE_PROOF",
+            "PHOTOS",
+            "FISCAL_STAMP_225",
+            "MARRIAGE_CERTIFICATE",
+            "BIRTH_CERTIFICATE",
+            "SPOUSE_TITRE_SEJOUR",
+            "COMMUNITY_PROOF"
+        ]
     },
     {
         "id": "vpf_conjoint_francais",
@@ -735,7 +838,17 @@
         "duration_years": 1,
         "gives_work_right": true,
         "leads_to_naturalisation": true,
-        "request_type": "FIRST_OR_RENEWAL"
+        "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "PASSPORT_ALL_PAGES",
+            "RESIDENCE_PROOF",
+            "PHOTOS",
+            "FISCAL_STAMP_225",
+            "BIRTH_CERTIFICATE",
+            "CHILD_BIRTH_CERTIFICATE_FR",
+            "CHILD_NATIONALITY_PROOF",
+            "PARENTAL_CONTRIBUTION_PROOF"
+        ]
     },
     {
         "id": "vpf_pacs_francais",
@@ -781,7 +894,17 @@
         "duration_years": 1,
         "gives_work_right": true,
         "leads_to_naturalisation": true,
-        "request_type": "FIRST_OR_RENEWAL"
+        "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "PASSPORT_ALL_PAGES",
+            "RESIDENCE_PROOF",
+            "PHOTOS",
+            "FISCAL_STAMP_225",
+            "PACS_CERTIFICATE",
+            "PARTNER_ID",
+            "COMMUNITY_PROOF",
+            "BIRTH_CERTIFICATE"
+        ]
     },
     {
         "id": "vpf_jeune_entre_mineur",
@@ -835,7 +958,17 @@
         "duration_years": 1,
         "gives_work_right": true,
         "leads_to_naturalisation": true,
-        "request_type": "FIRST_OR_RENEWAL"
+        "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "PASSPORT_ALL_PAGES",
+            "RESIDENCE_PROOF",
+            "PHOTOS",
+            "FISCAL_STAMP_225",
+            "BIRTH_CERTIFICATE",
+            "SCHOOL_CERTIFICATES",
+            "ENTRY_PROOF",
+            "FAMILY_LINK_PROOF"
+        ]
     },
     {
         "id": "vpf_humanitaire_violence",
@@ -861,7 +994,17 @@
         "duration_years": 1,
         "gives_work_right": true,
         "leads_to_naturalisation": false,
-        "request_type": "FIRST_OR_RENEWAL"
+        "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "PASSPORT_ALL_PAGES",
+            "RESIDENCE_PROOF",
+            "PHOTOS",
+            "FISCAL_STAMP_225",
+            "PROTECTION_ORDER",
+            "POLICE_REPORT",
+            "MARRIAGE_CERTIFICATE",
+            "MEDICAL_CERTIFICATE"
+        ]
     },
     {
         "id": "aps_enfant_malade",
@@ -897,7 +1040,15 @@
         "duration_years": 1,
         "gives_work_right": false,
         "leads_to_naturalisation": false,
-        "request_type": "FIRST_OR_RENEWAL"
+        "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "PASSPORT_ALL_PAGES",
+            "RESIDENCE_PROOF",
+            "PHOTOS",
+            "CHILD_MEDICAL_REPORT",
+            "PARENTAL_LINK_PROOF",
+            "TREATING_DOCTOR_CERTIFICATE"
+        ]
     },
     {
         "id": "cs_salarie",
@@ -984,7 +1135,17 @@
         "duration_years": 1,
         "gives_work_right": true,
         "leads_to_naturalisation": true,
-        "request_type": "FIRST_OR_RENEWAL"
+        "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "PASSPORT_ALL_PAGES",
+            "RESIDENCE_PROOF",
+            "PHOTOS",
+            "FISCAL_STAMP_225",
+            "WORK_CONTRACT",
+            "WORK_AUTHORIZATION",
+            "PAYSLIPS",
+            "EMPLOYER_ATTESTATION"
+        ]
     },
     {
         "id": "cs_travailleur_temporaire",
@@ -1030,7 +1191,16 @@
         "duration_years": 1,
         "gives_work_right": true,
         "leads_to_naturalisation": false,
-        "request_type": "FIRST_OR_RENEWAL"
+        "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "PASSPORT_ALL_PAGES",
+            "RESIDENCE_PROOF",
+            "PHOTOS",
+            "FISCAL_STAMP_225",
+            "WORK_CONTRACT",
+            "WORK_AUTHORIZATION",
+            "PAYSLIPS"
+        ]
     },
     {
         "id": "cs_entrepreneur_liberale",
@@ -1076,7 +1246,18 @@
         "duration_years": 1,
         "gives_work_right": true,
         "leads_to_naturalisation": true,
-        "request_type": "FIRST_OR_RENEWAL"
+        "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "PASSPORT_ALL_PAGES",
+            "RESIDENCE_PROOF",
+            "PHOTOS",
+            "FISCAL_STAMP_225",
+            "KBIS",
+            "BUSINESS_PLAN",
+            "BANK_STATEMENTS",
+            "TAX_NOTICE",
+            "PROFESSIONAL_QUALIFICATION"
+        ]
     },
     {
         "id": "cs_etudiant",
@@ -1116,7 +1297,7 @@
                 {
                     "var": "financial.resources_monthly_average",
                     "op": "GTE",
-                    "val": 615.0
+                    "val": "@config:financial_thresholds.salary_monthly_gross.algerien_etudiant_ressources"
                 }
             ]
         },
@@ -1124,7 +1305,17 @@
         "duration_years": 1,
         "gives_work_right": false,
         "leads_to_naturalisation": false,
-        "request_type": "FIRST_OR_RENEWAL"
+        "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "PASSPORT_ALL_PAGES",
+            "RESIDENCE_PROOF",
+            "PHOTOS",
+            "FISCAL_STAMP_75",
+            "ENROLLMENT_CERTIFICATE",
+            "FINANCIAL_GUARANTEE",
+            "HEALTH_INSURANCE",
+            "DIPLOMAS"
+        ]
     },
     {
         "id": "rece_post_master",
@@ -1162,7 +1353,16 @@
         "duration_years": 1,
         "gives_work_right": true,
         "leads_to_naturalisation": false,
-        "request_type": "UPGRADE"
+        "request_type": "UPGRADE",
+        "documents": [
+            "PASSPORT_ALL_PAGES",
+            "RESIDENCE_PROOF",
+            "PHOTOS",
+            "FISCAL_STAMP_75",
+            "MASTER_DIPLOMA",
+            "TITRE_SEJOUR_ACTUEL",
+            "BUSINESS_PLAN_OR_JOB_SEARCH_PROOF"
+        ]
     },
     {
         "id": "cs_visiteur",
@@ -1198,7 +1398,16 @@
         "duration_years": 1,
         "gives_work_right": false,
         "leads_to_naturalisation": false,
-        "request_type": "FIRST_OR_RENEWAL"
+        "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "PASSPORT_ALL_PAGES",
+            "RESIDENCE_PROOF",
+            "PHOTOS",
+            "FISCAL_STAMP_225",
+            "FINANCIAL_GUARANTEE",
+            "HEALTH_INSURANCE",
+            "NON_WORK_COMMITMENT"
+        ]
     },
     {
         "id": "cs_saisonnier",
@@ -1234,7 +1443,16 @@
         "duration_years": 1,
         "gives_work_right": true,
         "leads_to_naturalisation": false,
-        "request_type": "FIRST_OR_RENEWAL"
+        "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "PASSPORT_ALL_PAGES",
+            "RESIDENCE_PROOF",
+            "PHOTOS",
+            "FISCAL_STAMP_225",
+            "WORK_CONTRACT",
+            "WORK_AUTHORIZATION",
+            "EMPLOYER_ATTESTATION"
+        ]
     },
     {
         "id": "cs_ict_detache",
@@ -1280,7 +1498,17 @@
         "duration_years": 1,
         "gives_work_right": true,
         "leads_to_naturalisation": false,
-        "request_type": "FIRST_OR_RENEWAL"
+        "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "PASSPORT_ALL_PAGES",
+            "RESIDENCE_PROOF",
+            "PHOTOS",
+            "FISCAL_STAMP_225",
+            "INTRA_COMPANY_TRANSFER_LETTER",
+            "WORK_CONTRACT",
+            "EMPLOYER_ATTESTATION",
+            "PAYSLIPS"
+        ]
     },
     {
         "id": "aes_metiers_tension",
@@ -1329,7 +1557,18 @@
         "duration_years": 1,
         "gives_work_right": true,
         "leads_to_naturalisation": true,
-        "request_type": "FIRST_OR_RENEWAL"
+        "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "PASSPORT_ALL_PAGES",
+            "RESIDENCE_PROOF",
+            "PHOTOS",
+            "FISCAL_STAMP_225",
+            "WORK_CONTRACT",
+            "PAYSLIPS",
+            "TAX_NOTICE",
+            "ADDRESS_PROOF_CONTINUOUS",
+            "EMPLOYER_ATTESTATION"
+        ]
     },
     {
         "id": "cra_algerien_resident_10ans",
@@ -1375,7 +1614,17 @@
         "duration_years": 10,
         "gives_work_right": true,
         "leads_to_naturalisation": true,
-        "request_type": "FIRST_OR_RENEWAL"
+        "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "PASSPORT_ALL_PAGES",
+            "RESIDENCE_PROOF",
+            "PHOTOS",
+            "FISCAL_STAMP_225",
+            "TITRE_SEJOUR_ACTUEL",
+            "TAX_NOTICE_3Y",
+            "BIRTH_CERTIFICATE",
+            "CIVIL_STATUS_CERTIFICATE"
+        ]
     },
     {
         "id": "cra_algerien_conjoint_francais",
@@ -1416,7 +1665,17 @@
         "duration_years": 1,
         "gives_work_right": true,
         "leads_to_naturalisation": true,
-        "request_type": "FIRST_OR_RENEWAL"
+        "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "PASSPORT_ALL_PAGES",
+            "RESIDENCE_PROOF",
+            "PHOTOS",
+            "FISCAL_STAMP_225",
+            "MARRIAGE_CERTIFICATE",
+            "SPOUSE_ID",
+            "COMMUNITY_PROOF",
+            "BIRTH_CERTIFICATE"
+        ]
     },
     {
         "id": "cra_algerien_activite_liberale",
@@ -1452,7 +1711,17 @@
         "duration_years": 1,
         "gives_work_right": true,
         "leads_to_naturalisation": true,
-        "request_type": "FIRST_OR_RENEWAL"
+        "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "PASSPORT_ALL_PAGES",
+            "RESIDENCE_PROOF",
+            "PHOTOS",
+            "FISCAL_STAMP_225",
+            "KBIS",
+            "PROFESSIONAL_QUALIFICATION",
+            "TAX_NOTICE",
+            "BIRTH_CERTIFICATE"
+        ]
     },
     {
         "id": "cs_citoyen_ue_inactif_ou_actif",
@@ -1488,7 +1757,14 @@
         "duration_years": 5,
         "gives_work_right": true,
         "leads_to_naturalisation": true,
-        "request_type": "FIRST_OR_RENEWAL"
+        "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "PASSPORT_OR_ID_EU",
+            "RESIDENCE_PROOF",
+            "PHOTOS",
+            "HEALTH_INSURANCE",
+            "FINANCIAL_GUARANTEE_OR_WORK_CONTRACT"
+        ]
     },
     {
         "id": "cs_membre_famille_ue",
@@ -1524,7 +1800,16 @@
         "duration_years": 5,
         "gives_work_right": true,
         "leads_to_naturalisation": true,
-        "request_type": "FIRST_OR_RENEWAL"
+        "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "PASSPORT_ALL_PAGES",
+            "RESIDENCE_PROOF",
+            "PHOTOS",
+            "FISCAL_STAMP_225",
+            "EU_CITIZEN_ID",
+            "FAMILY_LINK_PROOF",
+            "MARRIAGE_CERTIFICATE"
+        ]
     },
     {
         "id": "carte_resident_10ans_general",
@@ -1590,7 +1875,18 @@
         "duration_years": 10,
         "gives_work_right": true,
         "leads_to_naturalisation": true,
-        "request_type": "UPGRADE"
+        "request_type": "UPGRADE",
+        "documents": [
+            "PASSPORT_ALL_PAGES",
+            "TITRE_SEJOUR_ACTUEL",
+            "RESIDENCE_PROOF",
+            "PHOTOS",
+            "FISCAL_STAMP_225",
+            "TAX_NOTICE_3Y",
+            "BIRTH_CERTIFICATE",
+            "FRENCH_B1",
+            "HEALTH_INSURANCE"
+        ]
     },
     {
         "id": "carte_resident_retraite",
@@ -1631,7 +1927,16 @@
         "duration_years": 10,
         "gives_work_right": false,
         "leads_to_naturalisation": false,
-        "request_type": "UPGRADE"
+        "request_type": "UPGRADE",
+        "documents": [
+            "PASSPORT_ALL_PAGES",
+            "RESIDENCE_PROOF_ABROAD",
+            "PHOTOS",
+            "FISCAL_STAMP_225",
+            "PENSION_ATTESTATION",
+            "PREVIOUS_TITRE_SEJOUR",
+            "BIRTH_CERTIFICATE"
+        ]
     },
     {
         "id": "carte_resident_permanent",
@@ -1682,7 +1987,17 @@
         "duration_years": 10,
         "gives_work_right": true,
         "leads_to_naturalisation": true,
-        "request_type": "UPGRADE"
+        "request_type": "UPGRADE",
+        "documents": [
+            "PASSPORT_ALL_PAGES",
+            "TITRE_SEJOUR_ACTUEL",
+            "RESIDENCE_PROOF",
+            "PHOTOS",
+            "FISCAL_STAMP_225",
+            "TAX_NOTICE_3Y",
+            "BIRTH_CERTIFICATE",
+            "FRENCH_B1"
+        ]
     },
     {
         "id": "passeport_talent_chercheur",
@@ -1737,7 +2052,17 @@
         "duration_years": 4,
         "gives_work_right": true,
         "leads_to_naturalisation": true,
-        "request_type": "FIRST_OR_RENEWAL"
+        "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "PASSPORT_ALL_PAGES",
+            "RESIDENCE_PROOF",
+            "PHOTOS",
+            "FISCAL_STAMP_225",
+            "CONVENTION_ACCUEIL",
+            "DIPLOMAS",
+            "HOST_INSTITUTION_ATTESTATION",
+            "FRENCH_A2"
+        ]
     },
     {
         "id": "passeport_talent_artiste",
@@ -1778,7 +2103,17 @@
         "duration_years": 4,
         "gives_work_right": true,
         "leads_to_naturalisation": true,
-        "request_type": "FIRST_OR_RENEWAL"
+        "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "PASSPORT_ALL_PAGES",
+            "RESIDENCE_PROOF",
+            "PHOTOS",
+            "FISCAL_STAMP_225",
+            "WORK_CONTRACT",
+            "ARTISTIC_PORTFOLIO",
+            "REVENUE_PROOF",
+            "FRENCH_A2"
+        ]
     },
     {
         "id": "passeport_talent_sportif",
@@ -1819,7 +2154,17 @@
         "duration_years": 4,
         "gives_work_right": true,
         "leads_to_naturalisation": true,
-        "request_type": "FIRST_OR_RENEWAL"
+        "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "PASSPORT_ALL_PAGES",
+            "RESIDENCE_PROOF",
+            "PHOTOS",
+            "FISCAL_STAMP_225",
+            "WORK_CONTRACT",
+            "FEDERATION_ATTESTATION",
+            "SPORTS_CAREER_PROOF",
+            "FRENCH_A2"
+        ]
     },
     {
         "id": "vpf_liens_personnels",
@@ -1870,7 +2215,17 @@
         "duration_years": 1,
         "gives_work_right": true,
         "leads_to_naturalisation": true,
-        "request_type": "FIRST_OR_RENEWAL"
+        "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "PASSPORT_ALL_PAGES",
+            "RESIDENCE_PROOF",
+            "PHOTOS",
+            "FISCAL_STAMP_225",
+            "BIRTH_CERTIFICATE",
+            "FAMILY_LINK_PROOF",
+            "INTEGRATION_PROOF",
+            "TAX_NOTICE"
+        ]
     },
     {
         "id": "vpf_victime_traite",
@@ -1901,7 +2256,16 @@
         "duration_years": 1,
         "gives_work_right": true,
         "leads_to_naturalisation": false,
-        "request_type": "FIRST_OR_RENEWAL"
+        "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "PASSPORT_ALL_PAGES",
+            "RESIDENCE_PROOF",
+            "PHOTOS",
+            "FISCAL_STAMP_225",
+            "POLICE_REPORT",
+            "PROSECUTOR_ATTESTATION",
+            "ASSOCIATION_SUPPORT_PROOF"
+        ]
     },
     {
         "id": "vpf_rente_accident_travail",
@@ -1942,7 +2306,16 @@
         "duration_years": 1,
         "gives_work_right": true,
         "leads_to_naturalisation": true,
-        "request_type": "FIRST_OR_RENEWAL"
+        "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "PASSPORT_ALL_PAGES",
+            "RESIDENCE_PROOF",
+            "PHOTOS",
+            "FISCAL_STAMP_225",
+            "CPAM_RENTE_ATTESTATION",
+            "WORK_ACCIDENT_PROOF",
+            "BIRTH_CERTIFICATE"
+        ]
     },
     {
         "id": "vpf_etranger_malade",
@@ -1983,7 +2356,17 @@
         "duration_years": 1,
         "gives_work_right": true,
         "leads_to_naturalisation": false,
-        "request_type": "FIRST_OR_RENEWAL"
+        "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "PASSPORT_ALL_PAGES",
+            "RESIDENCE_PROOF",
+            "PHOTOS",
+            "FISCAL_STAMP_225",
+            "MEDICAL_REPORT_OFII",
+            "TREATING_DOCTOR_CERTIFICATE",
+            "HEALTH_INSURANCE",
+            "BIRTH_CERTIFICATE"
+        ]
     },
     {
         "id": "cs_salarie_mission",
@@ -2029,7 +2412,17 @@
         "duration_years": 1,
         "gives_work_right": true,
         "leads_to_naturalisation": false,
-        "request_type": "FIRST_OR_RENEWAL"
+        "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "PASSPORT_ALL_PAGES",
+            "RESIDENCE_PROOF",
+            "PHOTOS",
+            "FISCAL_STAMP_225",
+            "WORK_CONTRACT",
+            "MISSION_LETTER",
+            "PAYSLIPS",
+            "EMPLOYER_ATTESTATION"
+        ]
     },
     {
         "id": "cs_stagiaire",
@@ -2070,7 +2463,16 @@
         "duration_years": 1,
         "gives_work_right": true,
         "leads_to_naturalisation": false,
-        "request_type": "FIRST_OR_RENEWAL"
+        "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "PASSPORT_ALL_PAGES",
+            "RESIDENCE_PROOF",
+            "PHOTOS",
+            "FISCAL_STAMP_75",
+            "INTERNSHIP_AGREEMENT",
+            "HOST_COMPANY_ATTESTATION",
+            "ENROLLMENT_CERTIFICATE"
+        ]
     },
     {
         "id": "cs_jeune_au_pair",
@@ -2111,7 +2513,17 @@
         "duration_years": 1,
         "gives_work_right": false,
         "leads_to_naturalisation": false,
-        "request_type": "FIRST_OR_RENEWAL"
+        "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "PASSPORT_ALL_PAGES",
+            "RESIDENCE_PROOF",
+            "PHOTOS",
+            "FISCAL_STAMP_75",
+            "AU_PAIR_CONTRACT",
+            "HOST_FAMILY_ATTESTATION",
+            "ENROLLMENT_CERTIFICATE_FRENCH",
+            "BIRTH_CERTIFICATE"
+        ]
     },
     {
         "id": "cs_volontaire",
@@ -2152,7 +2564,16 @@
         "duration_years": 1,
         "gives_work_right": false,
         "leads_to_naturalisation": false,
-        "request_type": "FIRST_OR_RENEWAL"
+        "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "PASSPORT_ALL_PAGES",
+            "RESIDENCE_PROOF",
+            "PHOTOS",
+            "FISCAL_STAMP_75",
+            "VOLUNTEER_CONTRACT",
+            "HOST_ORGANIZATION_ATTESTATION",
+            "BIRTH_CERTIFICATE"
+        ]
     },
     {
         "id": "aps_demandeur_asile",
@@ -2183,7 +2604,14 @@
         "duration_years": 1,
         "gives_work_right": false,
         "leads_to_naturalisation": false,
-        "request_type": "FIRST_OR_RENEWAL"
+        "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "PASSPORT_ALL_PAGES",
+            "RESIDENCE_PROOF",
+            "PHOTOS",
+            "OFPRA_RECEIPT",
+            "CIVIL_STATUS_CERTIFICATE"
+        ]
     },
     {
         "id": "aps_parent_etranger_malade",
@@ -2219,7 +2647,15 @@
         "duration_years": 1,
         "gives_work_right": false,
         "leads_to_naturalisation": false,
-        "request_type": "FIRST_OR_RENEWAL"
+        "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "PASSPORT_ALL_PAGES",
+            "RESIDENCE_PROOF",
+            "PHOTOS",
+            "CHILD_MEDICAL_REPORT",
+            "PARENTAL_LINK_PROOF",
+            "BIRTH_CERTIFICATE"
+        ]
     },
     {
         "id": "aps_victime_violences_conjugales",
@@ -2250,7 +2686,15 @@
         "duration_years": 1,
         "gives_work_right": false,
         "leads_to_naturalisation": false,
-        "request_type": "FIRST_OR_RENEWAL"
+        "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "PASSPORT_ALL_PAGES",
+            "RESIDENCE_PROOF",
+            "PHOTOS",
+            "PROTECTION_ORDER",
+            "POLICE_REPORT",
+            "MEDICAL_CERTIFICATE"
+        ]
     },
     {
         "id": "aes_vie_privee_familiale",
@@ -2291,7 +2735,17 @@
         "duration_years": 1,
         "gives_work_right": true,
         "leads_to_naturalisation": true,
-        "request_type": "FIRST_OR_RENEWAL"
+        "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "PASSPORT_ALL_PAGES",
+            "RESIDENCE_PROOF",
+            "PHOTOS",
+            "FISCAL_STAMP_225",
+            "ADDRESS_PROOF_10Y",
+            "TAX_NOTICE",
+            "INTEGRATION_PROOF",
+            "FAMILY_LINK_PROOF"
+        ]
     },
     {
         "id": "aes_parent_enfant_scolarise",
@@ -2332,7 +2786,17 @@
         "duration_years": 1,
         "gives_work_right": true,
         "leads_to_naturalisation": true,
-        "request_type": "FIRST_OR_RENEWAL"
+        "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "PASSPORT_ALL_PAGES",
+            "RESIDENCE_PROOF",
+            "PHOTOS",
+            "FISCAL_STAMP_225",
+            "CHILD_SCHOOL_CERTIFICATES_3Y",
+            "BIRTH_CERTIFICATE",
+            "TAX_NOTICE",
+            "PARENTAL_CONTRIBUTION_PROOF"
+        ]
     },
     {
         "id": "aes_talent_exceptionnel",
@@ -2368,7 +2832,17 @@
         "duration_years": 1,
         "gives_work_right": true,
         "leads_to_naturalisation": true,
-        "request_type": "FIRST_OR_RENEWAL"
+        "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "PASSPORT_ALL_PAGES",
+            "RESIDENCE_PROOF",
+            "PHOTOS",
+            "FISCAL_STAMP_225",
+            "TALENT_PROOF",
+            "RECOMMENDATION_LETTERS",
+            "PRESS_PUBLICATIONS",
+            "REVENUE_PROOF"
+        ]
     },
     {
         "id": "accord_tunisien_salarie",
@@ -2417,7 +2891,17 @@
         "duration_years": 1,
         "gives_work_right": true,
         "leads_to_naturalisation": true,
-        "request_type": "FIRST_OR_RENEWAL"
+        "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "PASSPORT_ALL_PAGES",
+            "RESIDENCE_PROOF",
+            "PHOTOS",
+            "FISCAL_STAMP_225",
+            "WORK_CONTRACT",
+            "WORK_AUTHORIZATION",
+            "PAYSLIPS",
+            "BIRTH_CERTIFICATE"
+        ]
     },
     {
         "id": "accord_tunisien_conjoint_francais",
@@ -2468,7 +2952,17 @@
         "duration_years": 1,
         "gives_work_right": true,
         "leads_to_naturalisation": true,
-        "request_type": "FIRST_OR_RENEWAL"
+        "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "PASSPORT_ALL_PAGES",
+            "RESIDENCE_PROOF",
+            "PHOTOS",
+            "FISCAL_STAMP_225",
+            "MARRIAGE_CERTIFICATE",
+            "SPOUSE_ID",
+            "COMMUNITY_PROOF",
+            "BIRTH_CERTIFICATE"
+        ]
     },
     {
         "id": "accord_marocain_salarie",
@@ -2517,7 +3011,17 @@
         "duration_years": 1,
         "gives_work_right": true,
         "leads_to_naturalisation": true,
-        "request_type": "FIRST_OR_RENEWAL"
+        "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "PASSPORT_ALL_PAGES",
+            "RESIDENCE_PROOF",
+            "PHOTOS",
+            "FISCAL_STAMP_225",
+            "WORK_CONTRACT",
+            "WORK_AUTHORIZATION",
+            "PAYSLIPS",
+            "BIRTH_CERTIFICATE"
+        ]
     },
     {
         "id": "accord_marocain_conjoint_francais",
@@ -2563,7 +3067,17 @@
         "duration_years": 1,
         "gives_work_right": true,
         "leads_to_naturalisation": true,
-        "request_type": "FIRST_OR_RENEWAL"
+        "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "PASSPORT_ALL_PAGES",
+            "RESIDENCE_PROOF",
+            "PHOTOS",
+            "FISCAL_STAMP_225",
+            "MARRIAGE_CERTIFICATE",
+            "SPOUSE_ID",
+            "COMMUNITY_PROOF",
+            "BIRTH_CERTIFICATE"
+        ]
     },
     {
         "id": "csp_salarie_4ans",
@@ -2609,7 +3123,17 @@
                     "val": true
                 }
             ]
-        }
+        },
+        "documents": [
+            "PASSPORT_ALL_PAGES",
+            "TITRE_SEJOUR_ACTUEL",
+            "RESIDENCE_PROOF",
+            "PHOTOS",
+            "FISCAL_STAMP_225",
+            "WORK_CONTRACT",
+            "PAYSLIPS",
+            "TAX_NOTICE"
+        ]
     },
     {
         "id": "csp_vpf_conjoint_4ans",
@@ -2655,7 +3179,18 @@
                     "val": true
                 }
             ]
-        }
+        },
+        "documents": [
+            "PASSPORT_ALL_PAGES",
+            "TITRE_SEJOUR_ACTUEL",
+            "RESIDENCE_PROOF",
+            "PHOTOS",
+            "FISCAL_STAMP_225",
+            "MARRIAGE_CERTIFICATE",
+            "SPOUSE_ID",
+            "COMMUNITY_PROOF",
+            "FRENCH_A2"
+        ]
     },
     {
         "id": "csp_vpf_parent_4ans",
@@ -2701,7 +3236,18 @@
                     "val": true
                 }
             ]
-        }
+        },
+        "documents": [
+            "PASSPORT_ALL_PAGES",
+            "TITRE_SEJOUR_ACTUEL",
+            "RESIDENCE_PROOF",
+            "PHOTOS",
+            "FISCAL_STAMP_225",
+            "CHILD_BIRTH_CERTIFICATE_FR",
+            "CHILD_NATIONALITY_PROOF",
+            "PARENTAL_CONTRIBUTION_PROOF",
+            "FRENCH_A2"
+        ]
     },
     {
         "id": "csp_etudiant_pluriannuelle",
@@ -2742,10 +3288,20 @@
                 {
                     "var": "financial.resources_monthly_average",
                     "op": "GTE",
-                    "val": 615.0
+                    "val": "@config:financial_thresholds.salary_monthly_gross.algerien_etudiant_ressources"
                 }
             ]
-        }
+        },
+        "documents": [
+            "PASSPORT_ALL_PAGES",
+            "TITRE_SEJOUR_ACTUEL",
+            "RESIDENCE_PROOF",
+            "PHOTOS",
+            "FISCAL_STAMP_75",
+            "ENROLLMENT_CERTIFICATE",
+            "ACADEMIC_PROGRESS_PROOF",
+            "FINANCIAL_GUARANTEE"
+        ]
     },
     {
         "id": "csp_passeport_talent_renouvellement",
@@ -2781,6 +3337,17 @@
                     "val": true
                 }
             ]
-        }
+        },
+        "documents": [
+            "PASSPORT_ALL_PAGES",
+            "TITRE_SEJOUR_ACTUEL",
+            "RESIDENCE_PROOF",
+            "PHOTOS",
+            "FISCAL_STAMP_225",
+            "WORK_CONTRACT",
+            "PAYSLIPS",
+            "TAX_NOTICE",
+            "FRENCH_A2"
+        ]
     }
 ]

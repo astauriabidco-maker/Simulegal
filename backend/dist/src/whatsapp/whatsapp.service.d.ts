@@ -20,11 +20,11 @@ export declare class WhatsappService {
         id: string;
         type: string;
         createdAt: Date;
+        leadId: string | null;
         sender: string;
         direction: string;
         content: string;
         senderName: string | null;
-        leadId: string | null;
         prospectId: string | null;
     }[]>;
     sendMessage(type: 'LEAD' | 'PROSPECT', id: string, content: string): Promise<{

@@ -1,6 +1,6 @@
 import { AuthStore } from './authStore';
 
-const API_URL = 'http://localhost:3001/whatsapp';
+const API_URL = 'http://localhost:5000/whatsapp';
 
 const getHeaders = () => {
     const token = AuthStore.getToken();

@@ -10,7 +10,7 @@ import { Building2, LayoutDashboard, X, Radio, Shield } from 'lucide-react';
 
 declare global {
   interface Window {
-    openAuthAndPaymentFlow: (serviceId: string, price: number, name?: string, forceAgencyId?: string) => void;
+    openAuthAndPaymentFlow: (serviceId: string, price: number, name?: string, forceAgencyId?: string, extraData?: any) => void;
     kioskPartnerId: string | null;
   }
 }
@@ -25,7 +25,7 @@ export default function Home() {
 
   // Checkout State
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
-  const [checkoutConfig, setCheckoutConfig] = useState({ serviceId: '', serviceName: '', price: 0 });
+  const [checkoutConfig, setCheckoutConfig] = useState({ serviceId: '', serviceName: '', price: 0, extraData: null });
 
   // Capture du code partenaire depuis l'URL
   useEffect(() => {
@@ -46,7 +46,7 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    window.openAuthAndPaymentFlow = (serviceId: string, price: number, name?: string, forceAgencyId?: string) => {
+    window.openAuthAndPaymentFlow = (serviceId: string, price: number, name?: string, forceAgencyId?: string, extraData?: any) => {
       const names: Record<string, string> = {
         'titre_sejour': 'Accompagnement Titre de Séjour',
         'naturalisation': 'Dossier de Naturalisation',
@@ -58,7 +58,8 @@ export default function Home() {
       setCheckoutConfig({
         serviceId,
         serviceName: name || names[serviceId] || 'Service Premium',
-        price
+        price,
+        extraData
       });
       // On injecte le code partenaire si forcé (pour dashboard agence)
       if (forceAgencyId) {

@@ -28,6 +28,9 @@ function resolveValue(val, thresholds) {
                 return undefined;
             }
         }
+        if (current && typeof current === 'object' && 'value' in current) {
+            return current.value;
+        }
         return current;
     }
     return val;

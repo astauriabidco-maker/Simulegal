@@ -1,0 +1,1154 @@
+{
+    "PASSPORT_ALL_PAGES": {
+        "name": "Passeport (toutes pages)",
+        "description": "Copie intégrale du passeport, y compris pages vierges et tampons d'entrée/sortie.",
+        "category": "identity",
+        "validity_months": null,
+        "where_to_get": "Ambassade ou consulat du pays d'origine",
+        "cost_eur": 0,
+        "notes": "Pages vierges et cachets inclus"
+    },
+    "PASSPORT": {
+        "name": "Passeport",
+        "description": "Passeport en cours de validité.",
+        "category": "identity",
+        "validity_months": null,
+        "where_to_get": "Ambassade ou consulat",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "PASSPORT_OR_ID": {
+        "name": "Passeport ou carte d'identité",
+        "description": "Document d'identité en cours de validité.",
+        "category": "identity",
+        "validity_months": null,
+        "where_to_get": "Administration du pays d'origine",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "PASSPORT_OR_ID_EU": {
+        "name": "Passeport ou carte d'identité UE",
+        "description": "Document d'identité valide d'un État membre UE/EEE/Suisse.",
+        "category": "identity",
+        "validity_months": null,
+        "where_to_get": "Administration de l'État membre",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "PHOTOS": {
+        "name": "Photos d'identité",
+        "description": "2 photos d'identité conformes aux normes (35×45mm, fond clair).",
+        "category": "identity",
+        "validity_months": 6,
+        "where_to_get": "Photomaton agréé ou photographe professionnel",
+        "cost_eur": 5,
+        "notes": "Norme ISO/IEC 19794-5"
+    },
+    "PHOTOS_35x45": {
+        "name": "Photos d'identité (35×45mm)",
+        "description": "2 photos conformes au format officiel 35×45mm.",
+        "category": "identity",
+        "validity_months": 6,
+        "where_to_get": "Photomaton agréé",
+        "cost_eur": 5,
+        "notes": ""
+    },
+    "BIRTH_CERTIFICATE": {
+        "name": "Acte de naissance",
+        "description": "Copie intégrale ou extrait avec filiation de l'acte de naissance, traduit en français.",
+        "category": "civil_status",
+        "validity_months": 6,
+        "where_to_get": "Mairie du lieu de naissance ou service central d'état civil de Nantes",
+        "cost_eur": 0,
+        "notes": "Traduction assermentée requise si étranger"
+    },
+    "BIRTH_CERTIFICATE_FR": {
+        "name": "Acte de naissance (né en France)",
+        "description": "Copie intégrale de l'acte de naissance délivré en France.",
+        "category": "civil_status",
+        "validity_months": 3,
+        "where_to_get": "Mairie du lieu de naissance",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "PARENTS_BIRTH_CERTIFICATE": {
+        "name": "Actes de naissance des parents",
+        "description": "Actes de naissance des deux parents.",
+        "category": "civil_status",
+        "validity_months": 6,
+        "where_to_get": "Mairie ou consulat",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "CHILD_BIRTH_CERTIFICATE": {
+        "name": "Acte de naissance de l'enfant",
+        "description": "Acte de naissance de chaque enfant concerné.",
+        "category": "civil_status",
+        "validity_months": 6,
+        "where_to_get": "Mairie du lieu de naissance",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "CHILD_BIRTH_CERTIFICATE_FR": {
+        "name": "Acte de naissance de l'enfant français",
+        "description": "Acte de naissance prouvant la nationalité française de l'enfant.",
+        "category": "civil_status",
+        "validity_months": 3,
+        "where_to_get": "Mairie du lieu de naissance",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "MARRIAGE_CERTIFICATE": {
+        "name": "Acte de mariage",
+        "description": "Copie intégrale de l'acte de mariage, traduit en français.",
+        "category": "civil_status",
+        "validity_months": 6,
+        "where_to_get": "Mairie du lieu de mariage",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "PACS_CERTIFICATE": {
+        "name": "Attestation PACS",
+        "description": "Attestation d'enregistrement du PACS.",
+        "category": "civil_status",
+        "validity_months": 6,
+        "where_to_get": "Tribunal d'instance ou mairie",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "CIVIL_STATUS_CERTIFICATE": {
+        "name": "Certificat d'état civil",
+        "description": "Document certifiant la situation civile (célibataire, marié, etc.).",
+        "category": "civil_status",
+        "validity_months": 6,
+        "where_to_get": "Mairie ou consulat",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "RESIDENCE_PROOF": {
+        "name": "Justificatif de domicile",
+        "description": "Facture (électricité, gaz, téléphone) ou attestation d'hébergement de moins de 6 mois.",
+        "category": "housing",
+        "validity_months": 6,
+        "where_to_get": "Fournisseur d'énergie ou hébergeur",
+        "cost_eur": 0,
+        "notes": "Facture de moins de 6 mois"
+    },
+    "RESIDENCE_PROOF_2Y": {
+        "name": "Justificatifs de domicile (2 ans)",
+        "description": "Justificatifs de domicile couvrant les 2 dernières années.",
+        "category": "housing",
+        "validity_months": null,
+        "where_to_get": "Fournisseurs d'énergie successifs",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "RESIDENCE_PROOF_5Y": {
+        "name": "Justificatifs de domicile (5 ans)",
+        "description": "Justificatifs de domicile couvrant les 5 dernières années continues.",
+        "category": "housing",
+        "validity_months": null,
+        "where_to_get": "Fournisseurs d'énergie successifs",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "RESIDENCE_PROOF_25Y": {
+        "name": "Justificatifs de domicile (25 ans)",
+        "description": "Preuves de résidence continue sur 25 ans.",
+        "category": "housing",
+        "validity_months": null,
+        "where_to_get": "Archives personnelles, impôts",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "RESIDENCE_PROOF_SINCE_11": {
+        "name": "Justificatifs de domicile (depuis 11 ans)",
+        "description": "Preuves de résidence continue depuis l'âge de 11 ans.",
+        "category": "housing",
+        "validity_months": null,
+        "where_to_get": "Scolarité, impôts, factures",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "RESIDENCE_PROOF_SINCE_8": {
+        "name": "Justificatifs de domicile (depuis 8 ans)",
+        "description": "Preuves de résidence continue depuis l'âge de 8 ans.",
+        "category": "housing",
+        "validity_months": null,
+        "where_to_get": "Scolarité, impôts, factures",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "RESIDENCE_PROOF_ABROAD": {
+        "name": "Justificatif de domicile à l'étranger",
+        "description": "Preuve de résidence principale hors de France.",
+        "category": "housing",
+        "validity_months": 6,
+        "where_to_get": "Administration locale",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "ADDRESS_PROOF_CONTINUOUS": {
+        "name": "Preuves d'adresse continues",
+        "description": "Documents prouvant la présence continue en France.",
+        "category": "housing",
+        "validity_months": null,
+        "where_to_get": "Factures, courriers administratifs",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "ADDRESS_PROOF_10Y": {
+        "name": "Preuves d'adresse (10 ans)",
+        "description": "Documents prouvant 10 ans de présence continue.",
+        "category": "housing",
+        "validity_months": null,
+        "where_to_get": "Factures, impôts archivés",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "HOUSING_LEASE_OR_TITLE": {
+        "name": "Bail ou titre de propriété",
+        "description": "Contrat de bail ou titre de propriété du logement.",
+        "category": "housing",
+        "validity_months": null,
+        "where_to_get": "Propriétaire ou notaire",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "HOUSING_SURFACE_ATTESTATION": {
+        "name": "Attestation de surface du logement",
+        "description": "Document certifiant la superficie habitable du logement.",
+        "category": "housing",
+        "validity_months": null,
+        "where_to_get": "Diagnostiqueur ou syndic",
+        "cost_eur": 50,
+        "notes": ""
+    },
+    "TAX_HABITATION": {
+        "name": "Taxe d'habitation",
+        "description": "Avis de taxe d'habitation du logement.",
+        "category": "housing",
+        "validity_months": 12,
+        "where_to_get": "impots.gouv.fr",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "OFII_HOUSING_REPORT": {
+        "name": "Rapport OFII sur le logement",
+        "description": "Rapport de visite du logement par l'OFII pour le regroupement familial.",
+        "category": "housing",
+        "validity_months": null,
+        "where_to_get": "OFII (Office Français de l'Immigration)",
+        "cost_eur": 0,
+        "notes": "Visite programmée par l'OFII"
+    },
+    "PRESENCE_PROOF_FRANCE": {
+        "name": "Preuve de présence en France",
+        "description": "Documents prouvant la présence en France du membre de famille.",
+        "category": "housing",
+        "validity_months": null,
+        "where_to_get": "Factures, courriers, scolarité",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "TAX_NOTICE": {
+        "name": "Avis d'imposition",
+        "description": "Dernier avis d'imposition sur le revenu.",
+        "category": "financial",
+        "validity_months": 12,
+        "where_to_get": "impots.gouv.fr",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "TAX_NOTICE_3Y": {
+        "name": "Avis d'imposition (3 ans)",
+        "description": "Avis d'imposition des 3 dernières années.",
+        "category": "financial",
+        "validity_months": 12,
+        "where_to_get": "impots.gouv.fr",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "BANK_STATEMENTS": {
+        "name": "Relevés bancaires",
+        "description": "Relevés de compte des 3 derniers mois.",
+        "category": "financial",
+        "validity_months": 3,
+        "where_to_get": "Banque",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "FISCAL_STAMP_225": {
+        "name": "Timbre fiscal (225€)",
+        "description": "Timbre fiscal de 225€ pour les cartes de séjour.",
+        "category": "financial",
+        "validity_months": null,
+        "where_to_get": "timbres.impots.gouv.fr",
+        "cost_eur": 225,
+        "notes": "Paiement en ligne possible"
+    },
+    "FISCAL_STAMP_55": {
+        "name": "Timbre fiscal (55€)",
+        "description": "Timbre fiscal de 55€ pour les demandes de nationalité.",
+        "category": "financial",
+        "validity_months": null,
+        "where_to_get": "timbres.impots.gouv.fr",
+        "cost_eur": 55,
+        "notes": ""
+    },
+    "FISCAL_STAMP_75": {
+        "name": "Timbre fiscal (75€)",
+        "description": "Timbre fiscal de 75€ (étudiants, stagiaires).",
+        "category": "financial",
+        "validity_months": null,
+        "where_to_get": "timbres.impots.gouv.fr",
+        "cost_eur": 75,
+        "notes": ""
+    },
+    "REVENUE_PROOF": {
+        "name": "Justificatifs de revenus",
+        "description": "Documents attestant de la nature et du montant des revenus.",
+        "category": "financial",
+        "validity_months": 3,
+        "where_to_get": "Employeur, URSSAF, comptable",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "FINANCIAL_GUARANTEE": {
+        "name": "Garantie financière",
+        "description": "Attestation de ressources suffisantes (virement, bourse, garant).",
+        "category": "financial",
+        "validity_months": 3,
+        "where_to_get": "Banque ou garant",
+        "cost_eur": 0,
+        "notes": "Montant minimum variable"
+    },
+    "FINANCIAL_GUARANTEE_OR_WORK_CONTRACT": {
+        "name": "Garantie financière ou contrat de travail",
+        "description": "Preuve de moyens de subsistance : contrat de travail ou garantie financière.",
+        "category": "financial",
+        "validity_months": 3,
+        "where_to_get": "Employeur ou banque",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "FINANCIAL_SUPPORT_PROOF": {
+        "name": "Attestation de prise en charge financière",
+        "description": "Document prouvant la prise en charge financière de l'ascendant.",
+        "category": "financial",
+        "validity_months": 3,
+        "where_to_get": "Descendant français",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "INVESTMENT_PROOF": {
+        "name": "Justificatif d'investissement",
+        "description": "Documents prouvant l'investissement réalisé en France.",
+        "category": "financial",
+        "validity_months": null,
+        "where_to_get": "Banque, notaire, expert-comptable",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "PENSION_ATTESTATION": {
+        "name": "Attestation de pension de retraite",
+        "description": "Justificatif de pension de retraite.",
+        "category": "financial",
+        "validity_months": 3,
+        "where_to_get": "Caisse de retraite",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "WORK_CONTRACT": {
+        "name": "Contrat de travail",
+        "description": "Contrat de travail (CDI ou CDD) visé par la DREETS.",
+        "category": "work",
+        "validity_months": null,
+        "where_to_get": "Employeur",
+        "cost_eur": 0,
+        "notes": "Visa DREETS si requis"
+    },
+    "WORK_AUTHORIZATION": {
+        "name": "Autorisation de travail",
+        "description": "Autorisation de travail délivrée par la DREETS.",
+        "category": "work",
+        "validity_months": null,
+        "where_to_get": "DREETS (via l'employeur)",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "PAYSLIPS": {
+        "name": "Bulletins de salaire",
+        "description": "3 derniers bulletins de salaire.",
+        "category": "work",
+        "validity_months": 3,
+        "where_to_get": "Employeur",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "EMPLOYER_ATTESTATION": {
+        "name": "Attestation employeur",
+        "description": "Attestation de l'employeur confirmant l'emploi, le poste et la rémunération.",
+        "category": "work",
+        "validity_months": 3,
+        "where_to_get": "Employeur",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "KBIS": {
+        "name": "Extrait Kbis",
+        "description": "Extrait K-bis de moins de 3 mois (entreprise).",
+        "category": "work",
+        "validity_months": 3,
+        "where_to_get": "greffe-tc.com ou Infogreffe",
+        "cost_eur": 3,
+        "notes": ""
+    },
+    "BUSINESS_PLAN": {
+        "name": "Business plan",
+        "description": "Plan d'affaires détaillé du projet entrepreneurial.",
+        "category": "work",
+        "validity_months": null,
+        "where_to_get": "Rédaction personnelle ou expert-comptable",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "BUSINESS_PLAN_OR_JOB_SEARCH_PROOF": {
+        "name": "Business plan ou preuve de recherche d'emploi",
+        "description": "Soit un plan de création d'entreprise, soit des preuves de recherche d'emploi active.",
+        "category": "work",
+        "validity_months": null,
+        "where_to_get": "Candidatures, Pôle Emploi, projet",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "PROFESSIONAL_QUALIFICATION": {
+        "name": "Qualification professionnelle",
+        "description": "Diplôme, certificat ou attestation de qualification professionnelle.",
+        "category": "work",
+        "validity_months": null,
+        "where_to_get": "Organisme de formation ou ordre professionnel",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "PV_NOMINATION": {
+        "name": "PV de nomination",
+        "description": "Procès-verbal de nomination en tant que mandataire social.",
+        "category": "work",
+        "validity_months": null,
+        "where_to_get": "AG de la société",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "GROUP_ATTESTATION": {
+        "name": "Attestation du groupe",
+        "description": "Attestation du groupe d'entreprise confirmant la mission et l'ancienneté.",
+        "category": "work",
+        "validity_months": 3,
+        "where_to_get": "Direction du groupe",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "JEI_ATTESTATION": {
+        "name": "Attestation JEI",
+        "description": "Certificat de Jeune Entreprise Innovante (JEI) délivré par le ministère.",
+        "category": "work",
+        "validity_months": null,
+        "where_to_get": "Ministère de la Recherche",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "CONVENTION_ACCUEIL": {
+        "name": "Convention d'accueil",
+        "description": "Convention d'accueil signée entre le chercheur et l'établissement d'accueil.",
+        "category": "work",
+        "validity_months": null,
+        "where_to_get": "Établissement de recherche",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "HOST_INSTITUTION_ATTESTATION": {
+        "name": "Attestation de l'établissement d'accueil",
+        "description": "Attestation de l'établissement de recherche confirmant l'accueil.",
+        "category": "work",
+        "validity_months": null,
+        "where_to_get": "Université ou laboratoire",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "HOST_COMPANY_ATTESTATION": {
+        "name": "Attestation de l'entreprise d'accueil",
+        "description": "Attestation de l'entreprise accueillant le stagiaire.",
+        "category": "work",
+        "validity_months": null,
+        "where_to_get": "Entreprise d'accueil",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "HOST_FAMILY_ATTESTATION": {
+        "name": "Attestation de la famille d'accueil",
+        "description": "Attestation de la famille accueillant le jeune au pair.",
+        "category": "work",
+        "validity_months": null,
+        "where_to_get": "Famille d'accueil",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "HOST_ORGANIZATION_ATTESTATION": {
+        "name": "Attestation de l'organisme d'accueil",
+        "description": "Attestation de l'association ou organisme de service civique.",
+        "category": "work",
+        "validity_months": null,
+        "where_to_get": "Organisme agréé",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "INTRA_COMPANY_TRANSFER_LETTER": {
+        "name": "Lettre de transfert intra-groupe",
+        "description": "Lettre confirmant le transfert intra-entreprise (ICT).",
+        "category": "work",
+        "validity_months": null,
+        "where_to_get": "Groupe d'entreprises",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "MISSION_LETTER": {
+        "name": "Lettre de mission",
+        "description": "Lettre de mission pour les salariés en mission.",
+        "category": "work",
+        "validity_months": null,
+        "where_to_get": "Employeur",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "INTERNSHIP_AGREEMENT": {
+        "name": "Convention de stage",
+        "description": "Convention de stage tripartite (étudiant, entreprise, établissement).",
+        "category": "work",
+        "validity_months": null,
+        "where_to_get": "Établissement d'enseignement",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "AU_PAIR_CONTRACT": {
+        "name": "Contrat au pair",
+        "description": "Contrat de placement au pair visé par la DREETS.",
+        "category": "work",
+        "validity_months": null,
+        "where_to_get": "Agence de placement ou famille",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "VOLUNTEER_CONTRACT": {
+        "name": "Contrat de volontariat",
+        "description": "Contrat de service civique ou volontariat associatif.",
+        "category": "work",
+        "validity_months": null,
+        "where_to_get": "Organisme agréé",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "ARTISTIC_PORTFOLIO": {
+        "name": "Portfolio artistique",
+        "description": "Dossier présentant les œuvres et la carrière artistique.",
+        "category": "work",
+        "validity_months": null,
+        "where_to_get": "Artiste lui-même",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "FEDERATION_ATTESTATION": {
+        "name": "Attestation de fédération sportive",
+        "description": "Attestation de la fédération sportive reconnaissant le statut de haut niveau.",
+        "category": "work",
+        "validity_months": 12,
+        "where_to_get": "Fédération sportive nationale",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "SPORTS_CAREER_PROOF": {
+        "name": "Preuves de carrière sportive",
+        "description": "Palmarès, classements et contrats sportifs.",
+        "category": "work",
+        "validity_months": null,
+        "where_to_get": "Fédération, clubs",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "MILITARY_SERVICE_ATTESTATION": {
+        "name": "Attestation de service militaire",
+        "description": "Attestation de service dans l'armée française.",
+        "category": "work",
+        "validity_months": null,
+        "where_to_get": "Ministère des Armées",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "LEGION_HONNEUR_DECREE": {
+        "name": "Décret Légion d'honneur",
+        "description": "Décret de nomination dans l'ordre de la Légion d'honneur.",
+        "category": "work",
+        "validity_months": null,
+        "where_to_get": "Grande Chancellerie",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "NON_WORK_COMMITMENT": {
+        "name": "Engagement de non-travail",
+        "description": "Engagement écrit de ne pas exercer d'activité professionnelle (carte visiteur).",
+        "category": "work",
+        "validity_months": null,
+        "where_to_get": "Rédaction personnelle",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "TALENT_PROOF": {
+        "name": "Preuves de talent exceptionnel",
+        "description": "Dossier attestant d'un talent ou d'une renommée exceptionnels.",
+        "category": "work",
+        "validity_months": null,
+        "where_to_get": "Publications, prix, recommandations",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "RECOMMENDATION_LETTERS": {
+        "name": "Lettres de recommandation",
+        "description": "Lettres de soutien de personnalités ou institutions reconnues.",
+        "category": "work",
+        "validity_months": null,
+        "where_to_get": "Références professionnelles",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "PRESS_PUBLICATIONS": {
+        "name": "Publications / presse",
+        "description": "Articles, publications ou couverture médiatique attestant la renommée.",
+        "category": "work",
+        "validity_months": null,
+        "where_to_get": "Médias, éditeurs",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "WORK_ACCIDENT_PROOF": {
+        "name": "Preuve d'accident du travail",
+        "description": "Certificat médical initial et décision de la CPAM.",
+        "category": "work",
+        "validity_months": null,
+        "where_to_get": "CPAM",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "CPAM_RENTE_ATTESTATION": {
+        "name": "Attestation de rente CPAM",
+        "description": "Attestation de rente d'accident du travail (≥20%).",
+        "category": "work",
+        "validity_months": 12,
+        "where_to_get": "CPAM",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "DIPLOMAS": {
+        "name": "Diplômes",
+        "description": "Copies des diplômes obtenus, traduits en français si nécessaire.",
+        "category": "education",
+        "validity_months": null,
+        "where_to_get": "Établissements d'enseignement",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "MASTER_DIPLOMA": {
+        "name": "Diplôme de Master",
+        "description": "Diplôme de niveau Master obtenu en France.",
+        "category": "education",
+        "validity_months": null,
+        "where_to_get": "Université française",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "FRENCH_DIPLOMA_HIGHER_EDUCATION": {
+        "name": "Diplôme supérieur français",
+        "description": "Diplôme de l'enseignement supérieur français.",
+        "category": "education",
+        "validity_months": null,
+        "where_to_get": "Établissement français",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "ENROLLMENT_CERTIFICATE": {
+        "name": "Certificat d'inscription",
+        "description": "Certificat d'inscription dans un établissement d'enseignement.",
+        "category": "education",
+        "validity_months": 12,
+        "where_to_get": "Établissement d'enseignement",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "ENROLLMENT_CERTIFICATE_FRENCH": {
+        "name": "Certificat d'inscription (cours de français)",
+        "description": "Inscription à des cours de langue française.",
+        "category": "education",
+        "validity_months": 12,
+        "where_to_get": "Alliance Française, université, école de langue",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "SCHOOL_CERTIFICATES": {
+        "name": "Certificats de scolarité",
+        "description": "Certificats prouvant la scolarisation en France.",
+        "category": "education",
+        "validity_months": null,
+        "where_to_get": "Établissements scolaires",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "SCHOOL_CERTIFICATES_6_TO_16": {
+        "name": "Certificats de scolarité (6-16 ans)",
+        "description": "Preuves de scolarisation entre 6 et 16 ans en France.",
+        "category": "education",
+        "validity_months": null,
+        "where_to_get": "Établissements scolaires",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "CHILD_SCHOOL_CERTIFICATES_3Y": {
+        "name": "Certificats de scolarité de l'enfant (3 ans)",
+        "description": "Preuves de scolarisation de l'enfant pendant au moins 3 ans.",
+        "category": "education",
+        "validity_months": null,
+        "where_to_get": "Établissements scolaires",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "ACADEMIC_PROGRESS_PROOF": {
+        "name": "Justificatifs de progression académique",
+        "description": "Relevés de notes et attestations de progression dans les études.",
+        "category": "education",
+        "validity_months": 12,
+        "where_to_get": "Université",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "FORMATION_CERTIFICATE": {
+        "name": "Attestation de formation",
+        "description": "Certificat de suivi d'une formation qualifiante.",
+        "category": "education",
+        "validity_months": null,
+        "where_to_get": "Centre de formation",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "FRENCH_A2": {
+        "name": "Attestation de français (A2)",
+        "description": "Certificat de niveau A2 en français (TCF, DELF, etc.).",
+        "category": "integration",
+        "validity_months": 24,
+        "where_to_get": "Centre d'examen agréé (Alliance Française, CIEP)",
+        "cost_eur": 100,
+        "notes": "TEF, TCF, DELF acceptés"
+    },
+    "FRENCH_B1": {
+        "name": "Attestation de français (B1)",
+        "description": "Certificat de niveau B1 en français.",
+        "category": "integration",
+        "validity_months": 24,
+        "where_to_get": "Centre d'examen agréé",
+        "cost_eur": 100,
+        "notes": "Obligatoire pour carte de résident"
+    },
+    "FRENCH_B2": {
+        "name": "Attestation de français (B2)",
+        "description": "Certificat de niveau B2 en français.",
+        "category": "integration",
+        "validity_months": 24,
+        "where_to_get": "Centre d'examen agréé",
+        "cost_eur": 150,
+        "notes": "Obligatoire pour naturalisation"
+    },
+    "INTEGRATION_PROOF": {
+        "name": "Preuves d'intégration",
+        "description": "Documents attestant de l'intégration républicaine (CIR, activité associative...).",
+        "category": "integration",
+        "validity_months": null,
+        "where_to_get": "OFII, associations, employeur",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "CRIMINAL_RECORD": {
+        "name": "Extrait de casier judiciaire",
+        "description": "Bulletin n°3 du casier judiciaire français + casier du pays d'origine.",
+        "category": "integration",
+        "validity_months": 3,
+        "where_to_get": "casier-judiciaire.justice.gouv.fr",
+        "cost_eur": 0,
+        "notes": "Gratuit en ligne"
+    },
+    "SPOUSE_ID": {
+        "name": "Pièce d'identité du conjoint",
+        "description": "Carte d'identité ou passeport du conjoint français.",
+        "category": "family",
+        "validity_months": null,
+        "where_to_get": "Conjoint",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "PARTNER_ID": {
+        "name": "Pièce d'identité du partenaire",
+        "description": "Carte d'identité ou passeport du partenaire pacsé.",
+        "category": "family",
+        "validity_months": null,
+        "where_to_get": "Partenaire",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "PARENTS_ID": {
+        "name": "Pièces d'identité des parents",
+        "description": "Documents d'identité des deux parents.",
+        "category": "family",
+        "validity_months": null,
+        "where_to_get": "Parents",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "EU_CITIZEN_ID": {
+        "name": "Pièce d'identité du citoyen UE",
+        "description": "Carte d'identité ou passeport du citoyen UE de rattachement.",
+        "category": "family",
+        "validity_months": null,
+        "where_to_get": "Citoyen UE",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "COMMUNITY_PROOF": {
+        "name": "Preuves de vie commune",
+        "description": "Documents attestant de la communauté de vie (factures communes, bail, attestations...).",
+        "category": "family",
+        "validity_months": 6,
+        "where_to_get": "Domicile commun",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "PARENTAL_CONTRIBUTION_PROOF": {
+        "name": "Preuve de contribution parentale",
+        "description": "Documents prouvant la contribution à l'entretien et l'éducation de l'enfant.",
+        "category": "family",
+        "validity_months": null,
+        "where_to_get": "Virements, attestations, scolarité",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "PARENTAL_LINK_PROOF": {
+        "name": "Preuve de lien parental",
+        "description": "Documents établissant le lien de parenté.",
+        "category": "family",
+        "validity_months": null,
+        "where_to_get": "Actes d'état civil",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "FAMILY_LINK_PROOF": {
+        "name": "Preuve de liens familiaux",
+        "description": "Documents prouvant les liens personnels et familiaux en France.",
+        "category": "family",
+        "validity_months": null,
+        "where_to_get": "Actes d'état civil, attestations",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "CHILD_NATIONALITY_PROOF": {
+        "name": "Preuve de nationalité de l'enfant",
+        "description": "Certificat de nationalité française de l'enfant.",
+        "category": "family",
+        "validity_months": null,
+        "where_to_get": "Tribunal judiciaire",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "SIBLING_NATIONALITY_PROOF": {
+        "name": "Certificat de nationalité d'un frère/sœur",
+        "description": "Certificat prouvant la nationalité française du frère ou de la sœur.",
+        "category": "family",
+        "validity_months": null,
+        "where_to_get": "Tribunal judiciaire",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "DESCENDANT_NATIONALITY_PROOF": {
+        "name": "Preuve de nationalité du descendant",
+        "description": "Certificat de nationalité française du descendant.",
+        "category": "family",
+        "validity_months": null,
+        "where_to_get": "Tribunal judiciaire",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "SPOUSE_TITRE_SEJOUR": {
+        "name": "Titre de séjour du conjoint",
+        "description": "Copie du titre de séjour du conjoint (Passeport Talent).",
+        "category": "family",
+        "validity_months": null,
+        "where_to_get": "Conjoint",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "TITRE_SEJOUR": {
+        "name": "Titre de séjour en cours",
+        "description": "Copie du titre de séjour en cours de validité.",
+        "category": "admin",
+        "validity_months": null,
+        "where_to_get": "Préfecture",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "TITRE_SEJOUR_ACTUEL": {
+        "name": "Titre de séjour actuel (recto/verso)",
+        "description": "Copie recto/verso du titre de séjour actuel.",
+        "category": "admin",
+        "validity_months": null,
+        "where_to_get": "Préfecture",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "PREVIOUS_TITRE_SEJOUR": {
+        "name": "Ancien titre de séjour",
+        "description": "Copie de l'ancien titre de séjour (renouvellement).",
+        "category": "admin",
+        "validity_months": null,
+        "where_to_get": "Archives personnelles",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "TITRE_VOYAGE_REFUGIE": {
+        "name": "Titre de voyage réfugié",
+        "description": "Titre de voyage pour réfugié délivré par la préfecture.",
+        "category": "admin",
+        "validity_months": null,
+        "where_to_get": "Préfecture",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "TITRE_VOYAGE_APATRIDE": {
+        "name": "Titre de voyage apatride",
+        "description": "Titre de voyage pour apatride délivré par la préfecture.",
+        "category": "admin",
+        "validity_months": null,
+        "where_to_get": "Préfecture",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "ENTRY_PROOF": {
+        "name": "Preuve d'entrée en France",
+        "description": "Document attestant la date et les conditions d'entrée en France.",
+        "category": "admin",
+        "validity_months": null,
+        "where_to_get": "Passeport (cachets), attestation",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "HEALTH_INSURANCE": {
+        "name": "Attestation d'assurance maladie",
+        "description": "Attestation de couverture maladie (Sécurité sociale, mutuelle ou assurance privée).",
+        "category": "health",
+        "validity_months": 12,
+        "where_to_get": "CPAM, mutuelle, assureur",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "MEDICAL_CERTIFICATE": {
+        "name": "Certificat médical",
+        "description": "Certificat médical attestant de la situation.",
+        "category": "health",
+        "validity_months": 3,
+        "where_to_get": "Médecin agréé",
+        "cost_eur": 25,
+        "notes": ""
+    },
+    "MEDICAL_REPORT_OFII": {
+        "name": "Rapport médical OFII",
+        "description": "Rapport médical établi par le médecin de l'OFII.",
+        "category": "health",
+        "validity_months": null,
+        "where_to_get": "OFII (médecin de zone)",
+        "cost_eur": 0,
+        "notes": "Confidentiel — transmis au collège médical"
+    },
+    "TREATING_DOCTOR_CERTIFICATE": {
+        "name": "Certificat du médecin traitant",
+        "description": "Certificat du médecin traitant décrivant l'état de santé et les soins nécessaires.",
+        "category": "health",
+        "validity_months": 3,
+        "where_to_get": "Médecin traitant",
+        "cost_eur": 25,
+        "notes": ""
+    },
+    "CHILD_MEDICAL_REPORT": {
+        "name": "Rapport médical de l'enfant",
+        "description": "Rapport médical attestant de la maladie ou du handicap de l'enfant.",
+        "category": "health",
+        "validity_months": 3,
+        "where_to_get": "Pédiatre ou spécialiste",
+        "cost_eur": 25,
+        "notes": ""
+    },
+    "PROTECTION_ORDER": {
+        "name": "Ordonnance de protection",
+        "description": "Ordonnance de protection délivrée par le juge aux affaires familiales.",
+        "category": "vulnerability",
+        "validity_months": 6,
+        "where_to_get": "Tribunal judiciaire",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "POLICE_REPORT": {
+        "name": "Récépissé de plainte",
+        "description": "Copie du dépôt de plainte ou récépissé de main courante.",
+        "category": "vulnerability",
+        "validity_months": null,
+        "where_to_get": "Commissariat ou gendarmerie",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "PROSECUTOR_ATTESTATION": {
+        "name": "Attestation du procureur",
+        "description": "Attestation du procureur confirmant la coopération avec la justice.",
+        "category": "vulnerability",
+        "validity_months": null,
+        "where_to_get": "Parquet du tribunal judiciaire",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "ASSOCIATION_SUPPORT_PROOF": {
+        "name": "Attestation d'association d'aide",
+        "description": "Attestation d'une association agréée accompagnant la victime.",
+        "category": "vulnerability",
+        "validity_months": null,
+        "where_to_get": "Association agréée (CNIDFF, etc.)",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "DECISION_OFPRA": {
+        "name": "Décision OFPRA",
+        "description": "Notification de la décision de l'OFPRA (accord ou refus).",
+        "category": "asylum",
+        "validity_months": null,
+        "where_to_get": "OFPRA (envoi postal)",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "OFPRA_RECEIPT": {
+        "name": "Récépissé OFPRA",
+        "description": "Récépissé de dépôt de demande d'asile.",
+        "category": "asylum",
+        "validity_months": null,
+        "where_to_get": "OFPRA via la préfecture",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "OFPRA_REFUSAL_DECISION": {
+        "name": "Décision de refus OFPRA",
+        "description": "Notification du rejet de la demande par l'OFPRA.",
+        "category": "asylum",
+        "validity_months": null,
+        "where_to_get": "OFPRA",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "PREVIOUS_OFPRA_DECISION": {
+        "name": "Décision OFPRA précédente",
+        "description": "Copie de la décision OFPRA de la demande initiale.",
+        "category": "asylum",
+        "validity_months": null,
+        "where_to_get": "Archives personnelles",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "RECOURS_CNDA_FORM": {
+        "name": "Formulaire de recours CNDA",
+        "description": "Formulaire officiel de recours devant la Cour Nationale du Droit d'Asile.",
+        "category": "asylum",
+        "validity_months": null,
+        "where_to_get": "cnda.fr",
+        "cost_eur": 0,
+        "notes": "Délai : 1 mois après notification OFPRA"
+    },
+    "PERSECUTION_NARRATIVE": {
+        "name": "Récit de persécution",
+        "description": "Récit détaillé des persécutions subies ou craintes (obligatoire pour la demande d'asile).",
+        "category": "asylum",
+        "validity_months": null,
+        "where_to_get": "Rédaction personnelle avec aide juridique",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "NEW_EVIDENCE": {
+        "name": "Éléments nouveaux",
+        "description": "Nouvelles preuves postérieures à la décision de refus (pour le réexamen).",
+        "category": "asylum",
+        "validity_months": null,
+        "where_to_get": "Selon le type de preuve",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "SUPPORTING_EVIDENCE": {
+        "name": "Preuves à l'appui",
+        "description": "Tout document corroborant le récit de persécution.",
+        "category": "asylum",
+        "validity_months": null,
+        "where_to_get": "Selon le type de preuve",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "STATELESSNESS_PROOF": {
+        "name": "Preuve d'apatridie",
+        "description": "Documents établissant l'absence de nationalité.",
+        "category": "asylum",
+        "validity_months": null,
+        "where_to_get": "Consulats, HCR",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "EURODAC_RESULT": {
+        "name": "Résultat Eurodac",
+        "description": "Résultat de la comparaison des empreintes dans la base Eurodac.",
+        "category": "asylum",
+        "validity_months": null,
+        "where_to_get": "Préfecture (consultation automatique)",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "AGE_ASSESSMENT": {
+        "name": "Évaluation de la minorité",
+        "description": "Rapport d'évaluation de l'âge du mineur (osseux, entretien social).",
+        "category": "asylum",
+        "validity_months": null,
+        "where_to_get": "Conseil départemental",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "PROOF_FORMER_NATIONALITY": {
+        "name": "Preuve d'ancienne nationalité française",
+        "description": "Documents prouvant l'ancienne possession de la nationalité française.",
+        "category": "nationality",
+        "validity_months": null,
+        "where_to_get": "Archives, tribunal judiciaire",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "POSSESSION_ETAT_PROOF_10Y": {
+        "name": "Preuves de possession d'état (10 ans)",
+        "description": "Documents prouvant le comportement public de Français pendant 10 ans.",
+        "category": "nationality",
+        "validity_months": null,
+        "where_to_get": "Archives personnelles, mairie",
+        "cost_eur": 0,
+        "notes": ""
+    },
+    "ASE_PRISE_EN_CHARGE": {
+        "name": "Attestation ASE de prise en charge",
+        "description": "Attestation de l'Aide Sociale à l'Enfance confirmant la prise en charge du mineur.",
+        "category": "social",
+        "validity_months": null,
+        "where_to_get": "Conseil départemental (ASE)",
+        "cost_eur": 0,
+        "notes": ""
+    }
+}

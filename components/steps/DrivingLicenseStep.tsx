@@ -16,7 +16,7 @@ interface DrivingLicenseStepProps {
     onNext: () => void;
 }
 
-type DrivingSubStep = 1 | 2 | 3;
+type DrivingSubStep = 1 | 2 | 3 | 4;
 
 export default function DrivingLicenseStep({ userProfile, updateProfile, onNext }: DrivingLicenseStepProps) {
     const [subStep, setSubStep] = useState<DrivingSubStep>(1);
@@ -33,20 +33,43 @@ export default function DrivingLicenseStep({ userProfile, updateProfile, onNext 
     const nextSubStep = () => setSubStep((s) => (s + 1) as DrivingSubStep);
     const prevSubStep = () => setSubStep((s) => (s - 1) as DrivingSubStep);
 
+    const parseDate = (d: string) => {
+        const [m, y] = d.split('/');
+        return new Date(parseInt(y), parseInt(m) - 1);
+    };
+
     const isSubStepValid = () => {
         const { driving } = userProfile;
         if (subStep === 1) return !!driving.status;
         if (subStep === 2) return !!driving.license_country;
         if (subStep === 3) {
             if (driving.status === 'STUDENT') return true;
-            return !!driving.residence_start_date && /^\d{2}\/\d{4}$/.test(driving.residence_start_date);
+            return !!driving.residence_start_date && /^\d{2}\/\d{4}$/.test(driving.residence_start_date || '');
+        }
+        if (subStep === 4) {
+            return !!driving.license_issue_date && /^\d{2}\/\d{4}$/.test(driving.license_issue_date || '');
         }
         return true;
     };
 
+    const isPostResidenceIssue = () => {
+        const { residence_start_date, license_issue_date } = userProfile.driving;
+        if (!residence_start_date || !license_issue_date) return false;
+        // Si étudiant, la date de résidence n'est pas pertinente de la même façon, mais affichons quand même l'alerte si post-arrivée
+        // Cependant, le formulaire demande la date de résidence uniquement si NON étudiant.
+        // Si étudiant, residence_start_date peut être vide.
+        if (userProfile.driving.status === 'STUDENT') return false;
+
+        try {
+            return parseDate(license_issue_date) > parseDate(residence_start_date);
+        } catch (e) {
+            return false;
+        }
+    };
+
     const renderProgressDots = () => (
         <div className="flex gap-2 mb-8 justify-center">
-            {[1, 2, 3].map((i) => (
+            {[1, 2, 3, 4].map((i) => (
                 <div
                     key={i}
                     className={cn(
@@ -159,7 +182,7 @@ export default function DrivingLicenseStep({ userProfile, updateProfile, onNext 
                             </div>
                         ) : (
                             <div className="space-y-4">
-                                <label className="block text-sm font-black text-slate-400 uppercase tracking-widest ml-1">Mois / Année</label>
+                                <label className="block text-sm font-black text-slate-400 uppercase tracking-widest ml-1">Mois / Année d'arrivée (Titre de séjour)</label>
                                 <input
                                     type="text"
                                     placeholder="MM/YYYY"
@@ -170,11 +193,55 @@ export default function DrivingLicenseStep({ userProfile, updateProfile, onNext 
                                 <div className="p-6 bg-amber-50 rounded-2xl border border-amber-100 flex gap-4">
                                     <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
                                     <p className="text-sm text-amber-800 font-medium leading-relaxed">
-                                        Date de votre PREMIER titre de séjour (ou validation VLS-TS). Si vous étiez étudiant avant, mettez la date de votre changement de statut.
+                                        Date de votre PREMIER titre de séjour (ou validation VLS-TS). Si vous étiez étudiant avant, mettez la date de votre changement de statut vers salarié/vie privée.
                                     </p>
                                 </div>
                             </div>
                         )}
+                    </div>
+                </div>
+            )}
+
+            {subStep === 4 && (
+                <div className="space-y-8 animate-in fade-in zoom-in-95 duration-300">
+                    <div className="space-y-3 text-center">
+                        <div className="w-16 h-16 bg-rose-50 text-rose-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                            <Car className="w-8 h-8" />
+                        </div>
+                        <h2 className="text-3xl font-black text-slate-900 tracking-tight">Date d'obtention du permis</h2>
+                        <p className="text-slate-500 font-medium max-w-md mx-auto">Cette date détermine si votre permis est échangeable.</p>
+                    </div>
+
+                    <div className="max-w-lg mx-auto w-full space-y-6">
+                        <div className="space-y-4">
+                            <label className="block text-sm font-black text-slate-400 uppercase tracking-widest ml-1">Mois / Année d'obtention</label>
+                            <input
+                                type="text"
+                                placeholder="MM/YYYY"
+                                value={userProfile.driving.license_issue_date || ''}
+                                onChange={(e) => handleUpdate({ license_issue_date: e.target.value })}
+                                className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-2xl text-xl font-bold text-slate-900 focus:border-rose-600 focus:ring-4 focus:ring-rose-50 outline-none transition-all placeholder:text-slate-300"
+                            />
+
+                            <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100 flex gap-4">
+                                <AlertCircle className="w-5 h-5 text-slate-400 shrink-0 mt-0.5" />
+                                <p className="text-sm text-slate-500 font-medium leading-relaxed">
+                                    Le permis doit avoir été obtenu <strong>avant</strong> votre résidence normale en France.
+                                </p>
+                            </div>
+
+                            {isPostResidenceIssue() && (
+                                <div className="p-6 bg-rose-50 rounded-2xl border border-rose-100 flex gap-4 animate-in fade-in slide-in-from-top-2">
+                                    <AlertCircle className="w-6 h-6 text-rose-600 shrink-0 mt-0.5" />
+                                    <div className="space-y-1">
+                                        <p className="text-sm font-bold text-rose-800">Attention : Échange probablement impossible</p>
+                                        <p className="text-sm text-rose-800 font-medium leading-relaxed">
+                                            Votre permis a été obtenu <strong>après</strong> votre date d'installation en France. Sauf exception très rare, il ne sera pas échangeable et vous devrez repasser le permis français.
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
             )}
@@ -193,7 +260,7 @@ export default function DrivingLicenseStep({ userProfile, updateProfile, onNext 
                 )}
 
                 <button
-                    onClick={subStep === 3 ? onNext : nextSubStep}
+                    onClick={subStep === 4 ? onNext : nextSubStep}
                     disabled={!isSubStepValid()}
                     className={cn(
                         "flex items-center gap-4 px-12 py-5 rounded-2xl font-black text-lg transition-all shadow-xl",
@@ -202,7 +269,7 @@ export default function DrivingLicenseStep({ userProfile, updateProfile, onNext 
                             : "bg-slate-100 text-slate-300 cursor-not-allowed shadow-none"
                     )}
                 >
-                    {subStep === 3 ? "VOIR MON ÉLIGIBILITÉ" : "Continuer"}
+                    {subStep === 4 ? "VOIR MON ÉLIGIBILITÉ" : "Continuer"}
                     <ArrowRight className="w-5 h-5" />
                 </button>
             </div>

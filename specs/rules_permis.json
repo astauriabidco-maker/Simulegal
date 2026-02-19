@@ -1,0 +1,154 @@
+[
+    {
+        "id": "echange_permis_standard",
+        "name": "Échange de Permis - Cas Standard",
+        "category": "permis_conduire",
+        "priority": 10,
+        "source_ref": "Code de la route R222-1",
+        "description": "Échange possible pour un permis valide issu d un pays avec accord de réciprocité, demandé dans l année suivant l acquisition de la résidence normale.",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "driving.license_country",
+                    "op": "IN",
+                    "val": [
+                        "MAGHREB",
+                        "ACCORD",
+                        "USA_CANADA",
+                        "UK",
+                        "JAPAN",
+                        "SOUTH_KOREA",
+                        "AUSTRALIA",
+                        "NEW_ZEALAND",
+                        "SWITZERLAND"
+                    ]
+                },
+                {
+                    "var": "driving.status",
+                    "op": "NEQ",
+                    "val": "STUDENT"
+                },
+                {
+                    "var": "driving.residence_duration_months",
+                    "op": "LTE",
+                    "val": 12
+                }
+            ]
+        },
+        "urgency": "HIGH",
+        "warning": "Vous devez déposer votre demande avant l expiration du délai d un an suivant votre arrivée.",
+        "documents": [
+            {
+                "id": "PASSPORT",
+                "optional": false
+            },
+            {
+                "id": "FOREIGN_LICENSE",
+                "optional": false
+            },
+            {
+                "id": "LICENSE_TRANSLATION",
+                "optional": false
+            },
+            {
+                "id": "RESIDENCE_PROOF",
+                "optional": false
+            },
+            {
+                "id": "PHOTOS_35x45",
+                "optional": false
+            },
+            {
+                "id": "CERTIFICAT_DROIT_CONDUIRE",
+                "optional": false
+            }
+        ]
+    },
+    {
+        "id": "echange_permis_etudiant",
+        "name": "Conduite sous statut Étudiant",
+        "category": "permis_conduire",
+        "priority": 5,
+        "source_ref": "Code de la route R222-2",
+        "description": "Les étudiants étrangers peuvent conduire avec leur permis étranger pendant toute la durée de leurs études sans obligation d échange.",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "driving.status",
+                    "op": "EQ",
+                    "val": "STUDENT"
+                },
+                {
+                    "var": "driving.license_country",
+                    "op": "IN",
+                    "val": [
+                        "MAGHREB",
+                        "ACCORD",
+                        "USA_CANADA",
+                        "UK",
+                        "JAPAN",
+                        "SOUTH_KOREA",
+                        "AUSTRALIA",
+                        "NEW_ZEALAND",
+                        "SWITZERLAND"
+                    ]
+                }
+            ]
+        },
+        "urgency": "LOW",
+        "warning": "Vous n avez pas besoin d échanger votre permis tant que vous êtes étudiant. L échange deviendra obligatoire si vous changez de statut (ex: salarié).",
+        "documents": []
+    },
+    {
+        "id": "echange_permis_refugie",
+        "name": "Échange de Permis - Réfugié / BPI",
+        "category": "permis_conduire",
+        "priority": 20,
+        "source_ref": "Arrêté du 12 janvier 2012 - Art 4",
+        "description": "Les réfugiés et bénéficiaires de la protection subsidiaire n ont pas besoin de fournir d attestation de droits à conduire du pays d origine.",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "identity.nationality_group",
+                    "op": "IN",
+                    "val": [
+                        "REFUGEE",
+                        "STATELESS"
+                    ]
+                },
+                {
+                    "var": "driving.residence_duration_months",
+                    "op": "LTE",
+                    "val": 12
+                }
+            ]
+        },
+        "urgency": "HIGH",
+        "documents": [
+            {
+                "id": "PASSPORT",
+                "optional": false
+            },
+            {
+                "id": "FOREIGN_LICENSE",
+                "optional": false
+            },
+            {
+                "id": "LICENSE_TRANSLATION",
+                "optional": false
+            },
+            {
+                "id": "RESIDENCE_PROOF",
+                "optional": false
+            },
+            {
+                "id": "PHOTOS_35x45",
+                "optional": false
+            },
+            {
+                "id": "PROTECTION_ORDER",
+                "optional": false
+            }
+        ]
+    }
+]

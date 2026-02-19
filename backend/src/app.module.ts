@@ -25,6 +25,8 @@ import { InvoicesModule } from './invoices/invoices.module';
 import { PaymentsModule } from './payments/payments.module';
 import { WhatsappModule } from './whatsapp/whatsapp.module';
 import { VeilleModule } from './veille/veille.module';
+import { AppointmentsSlotsModule } from './appointments-slots/appointments-slots.module';
+import { EmailModule } from './email/email.module';
 
 @Module({
   imports: [
@@ -50,7 +52,9 @@ import { VeilleModule } from './veille/veille.module';
     PaymentsModule,
     AbsencesModule,
     WhatsappModule,
-    VeilleModule
+    VeilleModule,
+    AppointmentsSlotsModule,
+    EmailModule
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -13,7 +13,7 @@ export const usePaymentStore = create<PaymentState>((set) => ({
     createCheckoutSession: async (leadId: string) => {
         set({ loading: true, error: null });
         try {
-            const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+            const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
             // Get current host to build return URLs
             const host = window.location.origin;

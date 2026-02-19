@@ -218,8 +218,8 @@ export default function SimulatorWrapper({ serviceId, forceAgencyId, onComplete 
     const isDrivingExchange = selectedServiceId === 'permis_conduire';
     const isRdvPrefecture = selectedServiceId === 'rdv_prefecture';
     const isLegalConsultation = selectedServiceId === 'rdv_juriste';
-    const isFrenchCourse = selectedServiceId === 'french_course';
-    const isCivicExam = selectedServiceId === 'examen_civique';
+    const isFrenchCourse = selectedServiceId === 'langue_a2b1';
+    const isCivicExam = selectedServiceId === 'form_civique';
     const isCallback = selectedServiceId === 'rappel_echeances';
 
     // Standard: Identity(1), History(2), Activity(3), Family(4), Results(5)
@@ -329,17 +329,9 @@ export default function SimulatorWrapper({ serviceId, forceAgencyId, onComplete 
 
         // Family isolated mode
         if (isFamilyReunification) {
+            // Updated Flow: Step 1 is "Who to bring", so we don't block immediately on titre sejour
             if (currentStep === 1) {
-                const fam = data.family;
-                // ─── Intelligent blocking: these stop the flow at step 1 ───
-                if (fam.rf_has_valid_titre_sejour === undefined) return false;
-                if (fam.rf_has_valid_titre_sejour === false) return false; // BLOCKED
-                if (fam.is_polygamous === undefined) return false;
-                if (fam.is_polygamous === true) return false; // BLOCKED
-                if (!fam.rf_marital_status) return false;
-                if (fam.rf_marital_status === 'CIVIL_PARTNER' || fam.rf_marital_status === 'CONCUBIN') return false; // BLOCKED
-                // Pre-checks passed — all data collected inside FamilyReunificationStep sub-steps
-                return true;
+                return true; // Let the component handle its internal navigation
             }
             return true;
         }
@@ -388,16 +380,9 @@ export default function SimulatorWrapper({ serviceId, forceAgencyId, onComplete 
 
         if (isCallback) {
             if (currentStep === 1) {
-                const { callback_subject, callback_urgency, location_zip } = data.callback;
-                return !!callback_subject && !!callback_urgency && !!location_zip && /^\d{5}$/.test(location_zip);
-            }
-            return true;
-        }
-
-        if (isFrenchCourse) {
-            if (currentStep === 1) {
-                const { goal, current_level, location_zip } = data.french;
-                return !!goal && !!current_level && !!location_zip && /^\d{5}$/.test(location_zip);
+                const { callback_subject, location_zip } = data.callback;
+                // Removed urgency check as it's no longer asked
+                return !!callback_subject && !!location_zip && /^\d{5}$/.test(location_zip);
             }
             return true;
         }
@@ -503,7 +488,7 @@ export default function SimulatorWrapper({ serviceId, forceAgencyId, onComplete 
                     const isRemote = type === 'remote';
 
                     return (
-                        <div className="p-12 bg-white rounded-3xl animate-in fade-in slide-in-from-bottom-4 duration-700">
+                        <div className="p-12 bg-white rounded-[3rem] animate-in fade-in slide-in-from-bottom-4 duration-700">
                             <div className="text-center mb-10">
                                 <div className={`mx-auto w-20 h-20 flex items-center justify-center rounded-3xl mb-6 shadow-xl ${isRemote ? 'bg-blue-600 text-white' : 'bg-indigo-600 text-white'}`}>
                                     <Scale size={40} />

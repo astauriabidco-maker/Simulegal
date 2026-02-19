@@ -62,7 +62,7 @@
                                 {
                                     "var": "work.salary_monthly_gross",
                                     "op": "GTE",
-                                    "val": 1398
+                                    "val": "@config:financial_thresholds.salary_monthly_gross.regroupement_familial_resources"
                                 },
                                 {
                                     "var": "family.income_source",
@@ -159,7 +159,7 @@
                                 {
                                     "var": "work.salary_monthly_gross",
                                     "op": "GTE",
-                                    "val": 1398
+                                    "val": "@config:financial_thresholds.salary_monthly_gross.regroupement_familial_resources"
                                 },
                                 {
                                     "var": "family.income_source",
@@ -220,6 +220,536 @@
             ]
         },
         "tier": "PREMIUM",
-        "note": "Surface minimale : 16m² couple + 9m²/personne supplémentaire. L'OFII effectue une visite sur place."
+        "note": "Surface minimale : 16m² couple + 9m²/personne supplémentaire. L'OFII effectue une visite sur place.",
+        "documents": [
+            "HOUSING_LEASE_OR_TITLE",
+            "HOUSING_SURFACE_ATTESTATION",
+            "TAX_HABITATION",
+            "OFII_HOUSING_REPORT"
+        ]
+    },
+    {
+        "id": "rf_enfants_seuls",
+        "name": "Regroupement Familial Partiel – Enfants seuls",
+        "description": "Permet de faire venir les enfants mineurs sans le conjoint, sous conditions de ressources et logement.",
+        "priority": 90,
+        "source_ref": "CESEDA L434-4",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "identity.age",
+                    "op": "GTE",
+                    "val": 18
+                },
+                {
+                    "var": "family.is_polygamous",
+                    "op": "EQ",
+                    "val": false
+                },
+                {
+                    "var": "family.rf_has_valid_titre_sejour",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "family.rf_who_to_bring",
+                    "op": "EQ",
+                    "val": "CHILDREN_ONLY"
+                },
+                {
+                    "var": "family.presence_duration",
+                    "op": "EQ",
+                    "val": "MORE_18"
+                },
+                {
+                    "var": "work.salary_monthly_gross",
+                    "op": "GTE",
+                    "val": "@config:financial_thresholds.salary_monthly_gross.regroupement_familial_resources"
+                }
+            ]
+        },
+        "tier": "STANDARD",
+        "duration_years": 1,
+        "gives_work_right": false,
+        "leads_to_naturalisation": false,
+        "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "PASSPORT_ALL_PAGES",
+            "RESIDENCE_PROOF",
+            "TAX_NOTICE",
+            "BIRTH_CERTIFICATE",
+            "BANK_STATEMENTS",
+            "TITRE_SEJOUR",
+            "CHILD_BIRTH_CERTIFICATE"
+        ]
+    },
+    {
+        "id": "rf_conjoint_seul",
+        "name": "Regroupement Familial Partiel – Conjoint seul",
+        "description": "Permet de faire venir le conjoint uniquement, sans les enfants.",
+        "priority": 90,
+        "source_ref": "CESEDA L434-4",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "identity.age",
+                    "op": "GTE",
+                    "val": 18
+                },
+                {
+                    "var": "family.is_polygamous",
+                    "op": "EQ",
+                    "val": false
+                },
+                {
+                    "var": "family.rf_has_valid_titre_sejour",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "family.rf_marital_status",
+                    "op": "EQ",
+                    "val": "MARRIED"
+                },
+                {
+                    "var": "family.rf_who_to_bring",
+                    "op": "EQ",
+                    "val": "SPOUSE_ONLY"
+                },
+                {
+                    "var": "family.presence_duration",
+                    "op": "EQ",
+                    "val": "MORE_18"
+                },
+                {
+                    "var": "work.salary_monthly_gross",
+                    "op": "GTE",
+                    "val": "@config:financial_thresholds.salary_monthly_gross.regroupement_familial_resources"
+                }
+            ]
+        },
+        "tier": "STANDARD",
+        "duration_years": 1,
+        "gives_work_right": true,
+        "leads_to_naturalisation": false,
+        "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "PASSPORT_ALL_PAGES",
+            "RESIDENCE_PROOF",
+            "TAX_NOTICE",
+            "MARRIAGE_CERTIFICATE",
+            "BANK_STATEMENTS",
+            "TITRE_SEJOUR"
+        ]
+    },
+    {
+        "id": "rf_sur_place",
+        "name": "Regroupement Familial Sur Place",
+        "description": "Regroupement familial pour un membre de famille déjà présent en France (dispense partielle OFII).",
+        "priority": 85,
+        "source_ref": "CESEDA L434-2",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "identity.age",
+                    "op": "GTE",
+                    "val": 18
+                },
+                {
+                    "var": "family.is_polygamous",
+                    "op": "EQ",
+                    "val": false
+                },
+                {
+                    "var": "family.rf_has_valid_titre_sejour",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "family.rf_marital_status",
+                    "op": "EQ",
+                    "val": "MARRIED"
+                },
+                {
+                    "var": "family.child_residence_france",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "work.salary_monthly_gross",
+                    "op": "GTE",
+                    "val": "@config:financial_thresholds.salary_monthly_gross.regroupement_familial_resources"
+                }
+            ]
+        },
+        "tier": "STANDARD",
+        "duration_years": 1,
+        "gives_work_right": true,
+        "leads_to_naturalisation": false,
+        "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "PASSPORT_ALL_PAGES",
+            "RESIDENCE_PROOF",
+            "TAX_NOTICE",
+            "MARRIAGE_CERTIFICATE",
+            "BIRTH_CERTIFICATE",
+            "BANK_STATEMENTS",
+            "TITRE_SEJOUR",
+            "PRESENCE_PROOF_FRANCE"
+        ]
+    },
+    {
+        "id": "rf_ascendant_charge_francais",
+        "name": "VPF – Ascendant à charge d'un Français",
+        "description": "Titre de séjour pour un parent ou grand-parent à la charge d'un ressortissant français.",
+        "priority": 80,
+        "source_ref": "CESEDA L423-7",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "identity.age",
+                    "op": "GTE",
+                    "val": 18
+                },
+                {
+                    "var": "family.is_ascendant_of_french",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "financial.resources_stable_sufficient",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "civic.clean_criminal_record",
+                    "op": "EQ",
+                    "val": true
+                }
+            ]
+        },
+        "tier": "STANDARD",
+        "duration_years": 1,
+        "gives_work_right": false,
+        "leads_to_naturalisation": true,
+        "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "PASSPORT_ALL_PAGES",
+            "RESIDENCE_PROOF",
+            "PHOTOS",
+            "FISCAL_STAMP_225",
+            "BIRTH_CERTIFICATE",
+            "DESCENDANT_NATIONALITY_PROOF",
+            "FINANCIAL_SUPPORT_PROOF"
+        ]
+    },
+    {
+        "id": "rf_tunisien_conjoint",
+        "name": "Regroupement Familial – Accord Tunisien (Conjoint)",
+        "description": "Conditions spécifiques pour les ressortissants tunisiens (accord franco-tunisien du 17/03/1988).",
+        "priority": 88,
+        "source_ref": "Accord franco-tunisien 17/03/1988 art. 7",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "identity.age",
+                    "op": "GTE",
+                    "val": 18
+                },
+                {
+                    "var": "family.sponsor_nationality",
+                    "op": "EQ",
+                    "val": "TUNISIAN"
+                },
+                {
+                    "var": "family.rf_has_valid_titre_sejour",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "family.rf_marital_status",
+                    "op": "EQ",
+                    "val": "MARRIED"
+                },
+                {
+                    "var": "family.is_polygamous",
+                    "op": "EQ",
+                    "val": false
+                },
+                {
+                    "var": "family.presence_duration",
+                    "op": "EQ",
+                    "val": "MORE_18"
+                },
+                {
+                    "var": "work.salary_monthly_gross",
+                    "op": "GTE",
+                    "val": "@config:financial_thresholds.salary_monthly_gross.regroupement_familial_resources"
+                }
+            ]
+        },
+        "tier": "STANDARD",
+        "duration_years": 1,
+        "gives_work_right": true,
+        "leads_to_naturalisation": false,
+        "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "PASSPORT_ALL_PAGES",
+            "RESIDENCE_PROOF",
+            "TAX_NOTICE",
+            "MARRIAGE_CERTIFICATE",
+            "BIRTH_CERTIFICATE",
+            "BANK_STATEMENTS",
+            "TITRE_SEJOUR",
+            "COMMUNITY_PROOF"
+        ]
+    },
+    {
+        "id": "rf_marocain_conjoint",
+        "name": "Regroupement Familial – Accord Marocain (Conjoint)",
+        "description": "Conditions spécifiques pour les ressortissants marocains (accord franco-marocain du 09/10/1987).",
+        "priority": 88,
+        "source_ref": "Accord franco-marocain 09/10/1987 art. 6",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "identity.age",
+                    "op": "GTE",
+                    "val": 18
+                },
+                {
+                    "var": "family.sponsor_nationality",
+                    "op": "EQ",
+                    "val": "MOROCCAN"
+                },
+                {
+                    "var": "family.rf_has_valid_titre_sejour",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "family.rf_marital_status",
+                    "op": "EQ",
+                    "val": "MARRIED"
+                },
+                {
+                    "var": "family.is_polygamous",
+                    "op": "EQ",
+                    "val": false
+                },
+                {
+                    "var": "family.presence_duration",
+                    "op": "EQ",
+                    "val": "MORE_18"
+                },
+                {
+                    "var": "work.salary_monthly_gross",
+                    "op": "GTE",
+                    "val": "@config:financial_thresholds.salary_monthly_gross.regroupement_familial_resources"
+                }
+            ]
+        },
+        "tier": "STANDARD",
+        "duration_years": 1,
+        "gives_work_right": true,
+        "leads_to_naturalisation": false,
+        "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "PASSPORT_ALL_PAGES",
+            "RESIDENCE_PROOF",
+            "TAX_NOTICE",
+            "MARRIAGE_CERTIFICATE",
+            "BIRTH_CERTIFICATE",
+            "BANK_STATEMENTS",
+            "TITRE_SEJOUR",
+            "COMMUNITY_PROOF"
+        ]
+    },
+    {
+        "id": "rf_famille_refugie",
+        "name": "Réunification Familiale – Famille de Réfugié",
+        "description": "Le bénéficiaire de la protection internationale a droit à la réunification familiale sans conditions de ressources ni de logement.",
+        "priority": 95,
+        "source_ref": "CESEDA L434-7",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "identity.age",
+                    "op": "GTE",
+                    "val": 18
+                },
+                {
+                    "var": "identity.nationality_group",
+                    "op": "EQ",
+                    "val": "REFUGEE"
+                },
+                {
+                    "var": "family.rf_marital_status",
+                    "op": "IN",
+                    "val": [
+                        "MARRIED",
+                        "CIVIL_PARTNER"
+                    ]
+                },
+                {
+                    "var": "civic.clean_criminal_record",
+                    "op": "EQ",
+                    "val": true
+                }
+            ]
+        },
+        "tier": "PREMIUM",
+        "duration_years": 1,
+        "gives_work_right": true,
+        "leads_to_naturalisation": false,
+        "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "TITRE_VOYAGE_REFUGIE",
+            "DECISION_OFPRA",
+            "MARRIAGE_CERTIFICATE",
+            "BIRTH_CERTIFICATE",
+            "RESIDENCE_PROOF",
+            "PHOTOS"
+        ]
+    },
+    {
+        "id": "rf_famille_apatride",
+        "name": "Réunification Familiale – Famille d'Apatride",
+        "description": "L'apatride bénéficie de la réunification familiale sans conditions de ressources ni de logement.",
+        "priority": 93,
+        "source_ref": "CESEDA L434-7",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "identity.age",
+                    "op": "GTE",
+                    "val": 18
+                },
+                {
+                    "var": "identity.nationality_group",
+                    "op": "EQ",
+                    "val": "STATELESS"
+                },
+                {
+                    "var": "family.rf_marital_status",
+                    "op": "IN",
+                    "val": [
+                        "MARRIED",
+                        "CIVIL_PARTNER"
+                    ]
+                },
+                {
+                    "var": "civic.clean_criminal_record",
+                    "op": "EQ",
+                    "val": true
+                }
+            ]
+        },
+        "tier": "PREMIUM",
+        "duration_years": 1,
+        "gives_work_right": true,
+        "leads_to_naturalisation": false,
+        "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "TITRE_VOYAGE_APATRIDE",
+            "DECISION_OFPRA",
+            "MARRIAGE_CERTIFICATE",
+            "BIRTH_CERTIFICATE",
+            "RESIDENCE_PROOF",
+            "PHOTOS"
+        ]
+    },
+    {
+        "id": "rf_mna_prise_charge",
+        "name": "Prise en charge d'un Mineur Non Accompagné (MNA)",
+        "description": "Titre de séjour pour un mineur isolé étranger pris en charge par l'ASE avant 16 ans.",
+        "priority": 85,
+        "source_ref": "CESEDA L423-22",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "identity.age",
+                    "op": "GTE",
+                    "val": 16
+                },
+                {
+                    "var": "identity.age",
+                    "op": "LT",
+                    "val": 21
+                },
+                {
+                    "var": "timeline.age_at_entry",
+                    "op": "LT",
+                    "val": 16
+                },
+                {
+                    "var": "education.schooling_in_france_age_6_to_16",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "civic.clean_criminal_record",
+                    "op": "EQ",
+                    "val": true
+                }
+            ]
+        },
+        "tier": "STANDARD",
+        "duration_years": 1,
+        "gives_work_right": true,
+        "leads_to_naturalisation": true,
+        "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "PASSPORT_ALL_PAGES",
+            "RESIDENCE_PROOF",
+            "PHOTOS",
+            "ASE_PRISE_EN_CHARGE",
+            "SCHOOL_CERTIFICATES",
+            "BIRTH_CERTIFICATE"
+        ]
+    },
+    {
+        "id": "rf_enfant_confie_ase",
+        "name": "Titre de séjour – Enfant confié à l'ASE (16-18 ans)",
+        "description": "Délivrance d'un titre de séjour à un mineur confié à l'Aide Sociale à l'Enfance et engagé dans une formation.",
+        "priority": 80,
+        "source_ref": "CESEDA L423-23",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "identity.age",
+                    "op": "GTE",
+                    "val": 16
+                },
+                {
+                    "var": "identity.age",
+                    "op": "LTE",
+                    "val": 18
+                },
+                {
+                    "var": "timeline.age_at_entry",
+                    "op": "LTE",
+                    "val": 16
+                },
+                {
+                    "var": "civic.clean_criminal_record",
+                    "op": "EQ",
+                    "val": true
+                }
+            ]
+        },
+        "tier": "STANDARD",
+        "duration_years": 1,
+        "gives_work_right": true,
+        "leads_to_naturalisation": false,
+        "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "PASSPORT_ALL_PAGES",
+            "RESIDENCE_PROOF",
+            "PHOTOS",
+            "ASE_PRISE_EN_CHARGE",
+            "FORMATION_CERTIFICATE",
+            "BIRTH_CERTIFICATE"
+        ]
     }
 ]

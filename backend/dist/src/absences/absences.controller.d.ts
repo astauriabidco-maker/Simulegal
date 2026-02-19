@@ -6,10 +6,10 @@ export declare class AbsencesController {
         id: string;
         createdAt: Date;
         updatedAt: Date;
+        start: Date;
         end: Date;
         userId: string;
         reason: string | null;
-        start: Date;
     }[]>;
     create(data: {
         userId: string;
@@ -20,18 +20,18 @@ export declare class AbsencesController {
         id: string;
         createdAt: Date;
         updatedAt: Date;
+        start: Date;
         end: Date;
         userId: string;
         reason: string | null;
-        start: Date;
     }>;
     remove(id: string): Promise<{
         id: string;
         createdAt: Date;
         updatedAt: Date;
+        start: Date;
         end: Date;
         userId: string;
         reason: string | null;
-        start: Date;
     }>;
 }

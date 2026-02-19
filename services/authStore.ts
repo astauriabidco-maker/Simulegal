@@ -18,7 +18,7 @@ export interface AdminUser {
 
 const SESSION_KEY = 'admin_session';
 const TOKEN_KEY = 'admin_token';
-const API_URL = 'http://localhost:3001';
+const API_URL = 'http://localhost:5000';
 
 export const AuthStore = {
     /**

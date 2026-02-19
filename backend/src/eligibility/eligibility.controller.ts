@@ -50,4 +50,31 @@ export class EligibilityController {
     ) {
         return this.service.getRuleHistory(category, ruleId);
     }
+
+    // ── Document Catalog & Checklist ─────────────────────────────
+
+    @Get('documents/catalog')
+    getDocumentCatalog() {
+        return this.service.getDocumentCatalog();
+    }
+
+    @Post('checklist/:category')
+    generateChecklist(
+        @Param('category') category: string,
+        @Body() userProfile: any,
+    ) {
+        return this.service.generateChecklist(userProfile, category);
+    }
+
+    // ── Consistency & Health ─────────────────────────────────────
+
+    @Get('consistency-check')
+    runConsistencyCheck() {
+        return this.service.runConsistencyCheck();
+    }
+
+    @Get('thresholds/health')
+    checkThresholdsHealth() {
+        return this.service.checkThresholdsStaleness();
+    }
 }

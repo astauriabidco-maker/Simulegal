@@ -733,6 +733,15 @@ export const SERVICE_TEMPLATES: Record<string, string[]> = {
     ],
 
     // ========================================
+    // RENDEZ-VOUS PRÉFECTURE
+    // ========================================
+    'rdv_prefecture': [
+        'PASSPORT',
+        'TITRE_SEJOUR_ACTUEL',
+        'RESIDENCE_PROOF'
+    ],
+
+    // ========================================
     // ADMISSION EXCEPTIONNELLE (AES)
     // ========================================
     'aes_metiers_tension': [

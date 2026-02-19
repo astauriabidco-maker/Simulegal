@@ -36,4 +36,51 @@ export declare class EligibilityService {
         newValue: string | null;
         changeDetails: string | null;
     }[]>;
+    getDocumentCatalog(): any;
+    generateChecklist(userProfile: any, category: string): Promise<any>;
+    runConsistencyCheck(): Promise<{
+        error: string;
+        summary?: undefined;
+        orphanRules?: undefined;
+        highOverlap?: undefined;
+        profileResults?: undefined;
+    } | {
+        summary: {
+            totalProfiles: any;
+            totalRules: number;
+            orphanRulesCount: number;
+            highOverlapCount: number;
+            profilesWithIssues: number;
+        };
+        orphanRules: string[];
+        highOverlap: {
+            rule: string;
+            matchedByProfiles: number;
+        }[];
+        profileResults: any[];
+        error?: undefined;
+    }>;
+    checkThresholdsStaleness(): {
+        status: string;
+        message: string;
+        fileLastModified?: undefined;
+        daysSinceFileUpdate?: undefined;
+        meta?: undefined;
+        staleWarning?: undefined;
+        alerts?: undefined;
+        recommendation?: undefined;
+    } | {
+        status: string;
+        fileLastModified: string;
+        daysSinceFileUpdate: number;
+        meta: {
+            lastReviewed: any;
+            nextReviewDue: any;
+            reviewOverdue: boolean;
+        };
+        staleWarning: string | null;
+        alerts: any[];
+        recommendation: string;
+        message?: undefined;
+    };
 }

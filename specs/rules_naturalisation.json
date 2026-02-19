@@ -38,7 +38,15 @@
         "duration_years": 0,
         "gives_work_right": true,
         "leads_to_naturalisation": true,
-        "request_type": "FIRST_OR_RENEWAL"
+        "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "BIRTH_CERTIFICATE_FR",
+            "PARENTS_BIRTH_CERTIFICATE",
+            "RESIDENCE_PROOF_SINCE_11",
+            "SCHOOL_CERTIFICATES",
+            "PASSPORT_OR_ID",
+            "CRIMINAL_RECORD"
+        ]
     },
     {
         "id": "nat_droit_du_sol_anticipe_13_16",
@@ -84,7 +92,15 @@
         "duration_years": 0,
         "gives_work_right": true,
         "leads_to_naturalisation": true,
-        "request_type": "FIRST_OR_RENEWAL"
+        "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "BIRTH_CERTIFICATE_FR",
+            "PARENTS_BIRTH_CERTIFICATE",
+            "RESIDENCE_PROOF_SINCE_8",
+            "SCHOOL_CERTIFICATES",
+            "PASSPORT_OR_ID",
+            "PARENTS_ID"
+        ]
     },
     {
         "id": "nat_declaration_mariage",
@@ -162,7 +178,18 @@
         "duration_years": 0,
         "gives_work_right": true,
         "leads_to_naturalisation": true,
-        "request_type": "FIRST_OR_RENEWAL"
+        "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "PASSPORT_ALL_PAGES",
+            "BIRTH_CERTIFICATE",
+            "MARRIAGE_CERTIFICATE",
+            "SPOUSE_ID",
+            "COMMUNITY_PROOF",
+            "RESIDENCE_PROOF",
+            "FRENCH_B1",
+            "CRIMINAL_RECORD",
+            "FISCAL_STAMP_55"
+        ]
     },
     {
         "id": "nat_declaration_fratrie",
@@ -208,7 +235,15 @@
         "duration_years": 0,
         "gives_work_right": true,
         "leads_to_naturalisation": true,
-        "request_type": "FIRST_OR_RENEWAL"
+        "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "PASSPORT_ALL_PAGES",
+            "BIRTH_CERTIFICATE",
+            "SIBLING_NATIONALITY_PROOF",
+            "SCHOOL_CERTIFICATES_6_TO_16",
+            "RESIDENCE_PROOF",
+            "CRIMINAL_RECORD"
+        ]
     },
     {
         "id": "nat_declaration_ascendant",
@@ -249,7 +284,14 @@
         "duration_years": 0,
         "gives_work_right": true,
         "leads_to_naturalisation": true,
-        "request_type": "FIRST_OR_RENEWAL"
+        "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "PASSPORT_ALL_PAGES",
+            "BIRTH_CERTIFICATE",
+            "DESCENDANT_NATIONALITY_PROOF",
+            "RESIDENCE_PROOF_25Y",
+            "CRIMINAL_RECORD"
+        ]
     },
     {
         "id": "nat_decret_etudes_sup",
@@ -300,7 +342,18 @@
         "duration_years": 0,
         "gives_work_right": true,
         "leads_to_naturalisation": true,
-        "request_type": "FIRST_OR_RENEWAL"
+        "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "PASSPORT_ALL_PAGES",
+            "BIRTH_CERTIFICATE",
+            "FRENCH_DIPLOMA_HIGHER_EDUCATION",
+            "RESIDENCE_PROOF_2Y",
+            "TAX_NOTICE",
+            "FRENCH_B2",
+            "CRIMINAL_RECORD",
+            "PHOTOS_35x45",
+            "FISCAL_STAMP_55"
+        ]
     },
     {
         "id": "nat_decret_refugie",
@@ -349,7 +402,16 @@
         "duration_years": 0,
         "gives_work_right": true,
         "leads_to_naturalisation": true,
-        "request_type": "FIRST_OR_RENEWAL"
+        "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "TITRE_VOYAGE_REFUGIE",
+            "DECISION_OFPRA",
+            "RESIDENCE_PROOF",
+            "FRENCH_B1",
+            "CRIMINAL_RECORD",
+            "PHOTOS_35x45",
+            "FISCAL_STAMP_55"
+        ]
     },
     {
         "id": "nat_decret_standard",
@@ -451,7 +513,17 @@
         "duration_years": 0,
         "gives_work_right": true,
         "leads_to_naturalisation": true,
-        "request_type": "FIRST_OR_RENEWAL"
+        "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "PASSPORT_ALL_PAGES",
+            "BIRTH_CERTIFICATE",
+            "PROOF_FORMER_NATIONALITY",
+            "RESIDENCE_PROOF_5Y",
+            "FRENCH_B2",
+            "CRIMINAL_RECORD",
+            "PHOTOS_35x45",
+            "FISCAL_STAMP_55"
+        ]
     },
     {
         "id": "nat_decret_service_militaire",
@@ -492,7 +564,16 @@
         "duration_years": 0,
         "gives_work_right": true,
         "leads_to_naturalisation": true,
-        "request_type": "FIRST_OR_RENEWAL"
+        "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "PASSPORT_ALL_PAGES",
+            "BIRTH_CERTIFICATE",
+            "MILITARY_SERVICE_ATTESTATION",
+            "FRENCH_B1",
+            "CRIMINAL_RECORD",
+            "PHOTOS_35x45",
+            "FISCAL_STAMP_55"
+        ]
     },
     {
         "id": "nat_decret_legion_honneur",
@@ -528,7 +609,15 @@
         "duration_years": 0,
         "gives_work_right": true,
         "leads_to_naturalisation": true,
-        "request_type": "FIRST_OR_RENEWAL"
+        "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "PASSPORT_ALL_PAGES",
+            "BIRTH_CERTIFICATE",
+            "LEGION_HONNEUR_DECREE",
+            "CRIMINAL_RECORD",
+            "PHOTOS_35x45",
+            "FISCAL_STAMP_55"
+        ]
     },
     {
         "id": "nat_declaration_possession_etat",
@@ -564,6 +653,14 @@
         "duration_years": 0,
         "gives_work_right": true,
         "leads_to_naturalisation": true,
-        "request_type": "FIRST_OR_RENEWAL"
+        "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "PASSPORT_ALL_PAGES",
+            "BIRTH_CERTIFICATE",
+            "POSSESSION_ETAT_PROOF_10Y",
+            "CRIMINAL_RECORD",
+            "PHOTOS_35x45",
+            "RESIDENCE_PROOF"
+        ]
     }
 ]

@@ -39,15 +39,21 @@ let VeilleService = VeilleService_1 = class VeilleService {
                 severity: data.severity || 'medium',
                 sourceUrl: data.sourceUrl || null,
                 authorName: data.authorName || null,
+                linkedRuleIds: JSON.stringify(data.linkedRuleIds || []),
             },
         });
         this.logger.log(`✅ Note créée: "${note.title}" (${note.id})`);
         return note;
     }
     async update(id, data) {
+        const { linkedRuleIds, ...rest } = data;
+        const updateData = { ...rest };
+        if (linkedRuleIds !== undefined) {
+            updateData.linkedRuleIds = JSON.stringify(linkedRuleIds);
+        }
         const note = await this.prisma.legalUpdate.update({
             where: { id },
-            data,
+            data: updateData,
         });
         this.logger.log(`✅ Note mise à jour: "${note.title}" (${note.id})`);
         return note;

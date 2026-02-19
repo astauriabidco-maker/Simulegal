@@ -6,7 +6,7 @@ export const NotificationService = {
      * Simule l'envoi WhatsApp Business API via le Backend
      */
     sendWhatsApp: async (phone: string, template: string, params: any) => {
-        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
         try {
             await fetch(`${API_URL}/notifications/send-whatsapp`, {

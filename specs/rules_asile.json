@@ -1,0 +1,276 @@
+[
+    {
+        "id": "asile_demande_initiale",
+        "name": "Demande d'Asile Initiale (OFPRA)",
+        "description": "Dépôt d'une demande de protection internationale auprès de l'OFPRA. Attribution d'une ADA et d'un hébergement CADA.",
+        "priority": 100,
+        "source_ref": "CESEDA L521-1 à L521-3",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "asylum.is_asylum_seeker",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "civic.no_expulsion_order",
+                    "op": "EQ",
+                    "val": true
+                }
+            ]
+        },
+        "tier": "STANDARD",
+        "duration_years": 0,
+        "gives_work_right": false,
+        "leads_to_naturalisation": false,
+        "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "PASSPORT_ALL_PAGES",
+            "PHOTOS",
+            "CIVIL_STATUS_CERTIFICATE",
+            "PERSECUTION_NARRATIVE",
+            "SUPPORTING_EVIDENCE"
+        ]
+    },
+    {
+        "id": "asile_protection_subsidiaire",
+        "name": "Protection Subsidiaire (PS)",
+        "description": "Accordée à toute personne ne remplissant pas les conditions du statut de réfugié mais exposée à des menaces graves.",
+        "priority": 95,
+        "source_ref": "CESEDA L512-1",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "asylum.is_asylum_seeker",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "identity.nationality_group",
+                    "op": "NEQ",
+                    "val": "EU"
+                },
+                {
+                    "var": "civic.no_expulsion_order",
+                    "op": "EQ",
+                    "val": true
+                }
+            ]
+        },
+        "tier": "PREMIUM",
+        "duration_years": 4,
+        "gives_work_right": true,
+        "leads_to_naturalisation": true,
+        "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "PASSPORT_ALL_PAGES",
+            "DECISION_OFPRA",
+            "RESIDENCE_PROOF",
+            "PHOTOS",
+            "CIVIL_STATUS_CERTIFICATE"
+        ]
+    },
+    {
+        "id": "asile_apatridie",
+        "name": "Reconnaissance d'Apatridie (OFPRA)",
+        "description": "Demande de reconnaissance du statut d'apatride auprès de l'OFPRA.",
+        "priority": 90,
+        "source_ref": "CESEDA L512-2, Convention de New York 1954",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "identity.nationality_group",
+                    "op": "EQ",
+                    "val": "STATELESS"
+                },
+                {
+                    "var": "civic.no_expulsion_order",
+                    "op": "EQ",
+                    "val": true
+                }
+            ]
+        },
+        "tier": "PREMIUM",
+        "duration_years": 4,
+        "gives_work_right": true,
+        "leads_to_naturalisation": true,
+        "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "TITRE_VOYAGE_APATRIDE",
+            "RESIDENCE_PROOF",
+            "PHOTOS",
+            "STATELESSNESS_PROOF",
+            "CIVIL_STATUS_CERTIFICATE"
+        ]
+    },
+    {
+        "id": "asile_reexamen",
+        "name": "Réexamen de Demande d'Asile",
+        "description": "Nouvelle demande fondée sur des éléments nouveaux postérieurs à la décision de refus définitive.",
+        "priority": 70,
+        "source_ref": "CESEDA L531-32",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "asylum.is_asylum_seeker",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "asylum.asylum_application_pending",
+                    "op": "EQ",
+                    "val": false
+                }
+            ]
+        },
+        "tier": "FALLBACK",
+        "duration_years": 0,
+        "gives_work_right": false,
+        "leads_to_naturalisation": false,
+        "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "PASSPORT_ALL_PAGES",
+            "PHOTOS",
+            "PREVIOUS_OFPRA_DECISION",
+            "NEW_EVIDENCE",
+            "CIVIL_STATUS_CERTIFICATE"
+        ]
+    },
+    {
+        "id": "asile_recours_cnda",
+        "name": "Recours CNDA (Cour Nationale du Droit d'Asile)",
+        "description": "Recours juridictionnel devant la CNDA contre une décision de refus de l'OFPRA. Délai : 1 mois.",
+        "priority": 85,
+        "source_ref": "CESEDA L532-1",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "asylum.is_asylum_seeker",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "asylum.asylum_application_pending",
+                    "op": "EQ",
+                    "val": true
+                }
+            ]
+        },
+        "tier": "STANDARD",
+        "duration_years": 0,
+        "gives_work_right": false,
+        "leads_to_naturalisation": false,
+        "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "OFPRA_REFUSAL_DECISION",
+            "RECOURS_CNDA_FORM",
+            "SUPPORTING_EVIDENCE",
+            "PASSPORT_ALL_PAGES",
+            "PHOTOS"
+        ]
+    },
+    {
+        "id": "asile_procedure_acceleree",
+        "name": "Procédure Accélérée (Pays d'Origine Sûr)",
+        "description": "Demande examinée en procédure accélérée pour les ressortissants d'un pays figurant sur la liste des pays sûrs.",
+        "priority": 60,
+        "source_ref": "CESEDA L531-24 à L531-27",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "asylum.is_asylum_seeker",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "identity.nationality_group",
+                    "op": "IN",
+                    "val": [
+                        "SAFE_COUNTRY"
+                    ]
+                },
+                {
+                    "var": "civic.no_expulsion_order",
+                    "op": "EQ",
+                    "val": true
+                }
+            ]
+        },
+        "tier": "FALLBACK",
+        "duration_years": 0,
+        "gives_work_right": false,
+        "leads_to_naturalisation": false,
+        "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "PASSPORT_ALL_PAGES",
+            "PHOTOS",
+            "CIVIL_STATUS_CERTIFICATE",
+            "PERSECUTION_NARRATIVE"
+        ]
+    },
+    {
+        "id": "asile_dublin_iii",
+        "name": "Procédure Dublin III (Transfert)",
+        "description": "Détermination de l'État membre responsable de l'examen de la demande si empreintes déjà relevées dans un autre pays UE.",
+        "priority": 50,
+        "source_ref": "Règlement UE 604/2013 (Dublin III)",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "asylum.is_asylum_seeker",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "admin.entry_mode",
+                    "op": "EQ",
+                    "val": "DUBLIN"
+                }
+            ]
+        },
+        "tier": "FALLBACK",
+        "duration_years": 0,
+        "gives_work_right": false,
+        "leads_to_naturalisation": false,
+        "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "PASSPORT_ALL_PAGES",
+            "PHOTOS",
+            "EURODAC_RESULT",
+            "CIVIL_STATUS_CERTIFICATE"
+        ]
+    },
+    {
+        "id": "asile_mna_protection",
+        "name": "Demande d'Asile – Mineur Non Accompagné",
+        "description": "Demande d'asile pour un mineur isolé étranger. L'administrateur ad hoc peut déposer la demande.",
+        "priority": 92,
+        "source_ref": "CESEDA L521-4, L531-22",
+        "conditions": {
+            "AND": [
+                {
+                    "var": "asylum.is_asylum_seeker",
+                    "op": "EQ",
+                    "val": true
+                },
+                {
+                    "var": "identity.age",
+                    "op": "LT",
+                    "val": 18
+                }
+            ]
+        },
+        "tier": "PREMIUM",
+        "duration_years": 0,
+        "gives_work_right": false,
+        "leads_to_naturalisation": false,
+        "request_type": "FIRST_OR_RENEWAL",
+        "documents": [
+            "PASSPORT_ALL_PAGES",
+            "PHOTOS",
+            "AGE_ASSESSMENT",
+            "ASE_PRISE_EN_CHARGE",
+            "PERSECUTION_NARRATIVE"
+        ]
+    }
+]

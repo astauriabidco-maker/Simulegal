@@ -77,8 +77,8 @@ export interface Lead {
 
 import { AuthStore } from './authStore';
 
-const API_URL = 'http://localhost:3001/leads';
-const AUTH_URL = 'http://localhost:3001/auth';
+const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3005') + '/leads';
+const AUTH_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3005') + '/auth';
 
 const getHeaders = () => {
     const token = AuthStore.getToken();

@@ -48,6 +48,10 @@ function resolveValue(val: any, thresholds: any): any {
                 return undefined;
             }
         }
+        // Support versioned thresholds: { value: 1766.92, valid_from: "..." }
+        if (current && typeof current === 'object' && 'value' in current) {
+            return current.value;
+        }
         return current;
     }
     return val;

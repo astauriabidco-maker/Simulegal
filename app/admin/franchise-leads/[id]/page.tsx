@@ -295,7 +295,7 @@ export default function FranchiseLeadDetailPage() {
                         {['VALIDATED', 'CONTRACT_SENT', 'SIGNED'].includes(lead.status) && (
                             <button
                                 onClick={async () => {
-                                    window.open(`http://localhost:3001/franchise-leads/${lead.id}/contract`, '_blank');
+                                    window.open(`http://localhost:5000/franchise-leads/${lead.id}/contract`, '_blank');
                                     // Refresh to update status to CONTRACT_SENT if needed
                                     setTimeout(() => loadLead(lead.id), 2000);
                                 }}

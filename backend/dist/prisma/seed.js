@@ -50,7 +50,7 @@ async function main() {
             name: 'SimuLegal HQ (Paris)',
             type: 'PHYSICAL',
             status: 'ACTIVE',
-            zipCodes: '75001, 75002, 75003, 75004, 75005, 75006, 75007, 75008, 75009, 75010',
+            zipCodes: '75000, 75002, 75003, 75004, 75005, 75006, 75007, 75008, 75009, 75010',
             commissionRate: 0,
             contactEmail: 'contact@hq.simulegal.fr',
             kioskUrl: 'https://app.simulegal.fr/?ref=HQ-001'

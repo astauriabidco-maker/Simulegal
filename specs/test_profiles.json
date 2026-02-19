@@ -1,0 +1,2772 @@
+[
+    {
+        "id": "profil_jeune_etudiant_non_eu",
+        "name": "Étudiant étranger (hors UE) de 20 ans",
+        "description": "Étudiant marocain inscrit en Master, avec ressources suffisantes",
+        "profile": {
+            "identity": {
+                "age": 20,
+                "nationality_group": "NON_EU",
+                "born_in_france": false
+            },
+            "timeline": {
+                "years_continuous_residence": 1,
+                "age_at_entry": 19
+            },
+            "education": {
+                "schooling_in_france_age_6_to_16": false,
+                "is_enrolled_higher_ed": true,
+                "diploma_level": "NONE"
+            },
+            "work": {
+                "has_work_contract": false,
+                "salary_monthly_gross": 0,
+                "annual_gross_salary": 0
+            },
+            "family": {
+                "has_french_child": false,
+                "spouse_nationality": "NONE",
+                "community_of_life": false,
+                "is_polygamous": false
+            },
+            "integration": {
+                "french_level": "B1"
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            },
+            "financial": {
+                "resources_stable_sufficient": true,
+                "resources_monthly_average": 700
+            },
+            "asylum": {
+                "is_asylum_seeker": false
+            },
+            "admin": {
+                "current_visa_type": "STUDENT"
+            }
+        },
+        "expected_categories": [
+            "sejour"
+        ]
+    },
+    {
+        "id": "profil_conjoint_francais",
+        "name": "Conjoint de Français (30 ans, B1, 4 ans de mariage)",
+        "description": "Étranger marié à un Français depuis 4 ans avec communauté de vie",
+        "profile": {
+            "identity": {
+                "age": 30,
+                "nationality_group": "NON_EU",
+                "born_in_france": false
+            },
+            "timeline": {
+                "years_continuous_residence": 4,
+                "resides_in_france": true
+            },
+            "family": {
+                "spouse_nationality": "FRENCH",
+                "community_of_life": true,
+                "marriage_duration_years": 4,
+                "has_french_child": true,
+                "is_polygamous": false,
+                "spouse_kept_nationality": true
+            },
+            "integration": {
+                "french_level": "B2",
+                "civic_exam_passed": true
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            },
+            "financial": {
+                "resources_stable_sufficient": true
+            },
+            "work": {
+                "has_work_contract": true,
+                "salary_monthly_gross": 2000
+            },
+            "asylum": {
+                "is_asylum_seeker": false
+            },
+            "admin": {
+                "entered_legally": true
+            }
+        },
+        "expected_categories": [
+            "sejour",
+            "naturalisation"
+        ]
+    },
+    {
+        "id": "profil_refugie_35",
+        "name": "Réfugié reconnu de 35 ans",
+        "description": "Bénéficiaire du statut de réfugié, casier vierge",
+        "profile": {
+            "identity": {
+                "age": 35,
+                "nationality_group": "REFUGEE",
+                "born_in_france": false
+            },
+            "timeline": {
+                "years_continuous_residence": 3
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            },
+            "family": {
+                "rf_marital_status": "MARRIED",
+                "is_polygamous": false,
+                "spouse_nationality": "NON_EU"
+            },
+            "integration": {
+                "french_level": "A2"
+            },
+            "financial": {
+                "resources_stable_sufficient": true
+            },
+            "asylum": {
+                "is_asylum_seeker": false
+            },
+            "work": {
+                "salary_monthly_gross": 1500
+            }
+        },
+        "expected_categories": [
+            "sejour",
+            "family"
+        ]
+    },
+    {
+        "id": "profil_demandeur_asile",
+        "name": "Demandeur d'asile primo-arrivant",
+        "description": "Demandeur d'asile arrivé récemment, pas encore enregistré OFPRA",
+        "profile": {
+            "identity": {
+                "age": 28,
+                "nationality_group": "NON_EU",
+                "born_in_france": false
+            },
+            "asylum": {
+                "is_asylum_seeker": true,
+                "asylum_application_pending": false
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            },
+            "family": {
+                "is_polygamous": false
+            },
+            "work": {
+                "salary_monthly_gross": 0
+            },
+            "admin": {
+                "entry_mode": "REGULAR"
+            }
+        },
+        "expected_categories": [
+            "asile"
+        ]
+    },
+    {
+        "id": "profil_mna_16",
+        "name": "Mineur non accompagné (16 ans)",
+        "description": "MNA arrivé en France à 14 ans, pris en charge par l'ASE, scolarisé",
+        "profile": {
+            "identity": {
+                "age": 16,
+                "nationality_group": "NON_EU",
+                "born_in_france": false
+            },
+            "timeline": {
+                "age_at_entry": 14,
+                "years_continuous_residence": 2
+            },
+            "education": {
+                "schooling_in_france_age_6_to_16": true
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            },
+            "asylum": {
+                "is_asylum_seeker": true
+            },
+            "family": {
+                "is_polygamous": false
+            },
+            "work": {
+                "salary_monthly_gross": 0
+            }
+        },
+        "expected_categories": [
+            "asile",
+            "family"
+        ]
+    },
+    {
+        "id": "profil_passeport_talent_salarie",
+        "name": "Salarié qualifié (45k€/an, Master)",
+        "description": "Ingénieur indien avec contrat CDI et salaire au-dessus du seuil Passeport Talent",
+        "profile": {
+            "identity": {
+                "age": 32,
+                "nationality_group": "NON_EU",
+                "born_in_france": false
+            },
+            "work": {
+                "has_work_contract": true,
+                "contract_type": "CDI",
+                "salary_monthly_gross": 3750,
+                "annual_gross_salary": 45000,
+                "contract_duration_months": 36
+            },
+            "education": {
+                "diploma_level": "MASTER"
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            },
+            "family": {
+                "is_polygamous": false
+            },
+            "integration": {
+                "french_level": "A2"
+            },
+            "financial": {
+                "resources_stable_sufficient": true
+            },
+            "asylum": {
+                "is_asylum_seeker": false
+            }
+        },
+        "expected_categories": [
+            "sejour"
+        ]
+    },
+    {
+        "id": "profil_eu_citizen_family",
+        "name": "Membre de famille citoyen UE",
+        "description": "Conjoint non-UE d'un citoyen UE résidant en France",
+        "profile": {
+            "identity": {
+                "age": 28,
+                "nationality_group": "NON_EU"
+            },
+            "family": {
+                "spouse_nationality": "EU",
+                "community_of_life": true,
+                "is_polygamous": false,
+                "eu_citizen_lives_in_france": true
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            },
+            "work": {
+                "salary_monthly_gross": 1800
+            },
+            "asylum": {
+                "is_asylum_seeker": false
+            }
+        },
+        "expected_categories": [
+            "sejour"
+        ]
+    },
+    {
+        "id": "profil_algerien_regroupement",
+        "name": "Algérien – Regroupement familial",
+        "description": "Ressortissant algérien avec titre de séjour valide, 2 ans de résidence",
+        "profile": {
+            "identity": {
+                "age": 40,
+                "nationality_group": "ALGERIAN"
+            },
+            "family": {
+                "rf_has_valid_titre_sejour": true,
+                "rf_marital_status": "MARRIED",
+                "is_polygamous": false,
+                "presence_duration": "MORE_18",
+                "sponsor_nationality": "ALGERIAN",
+                "rf_family_members_count": 2,
+                "has_handicap_allowance": true,
+                "housing_status": "OWNED_RENTED",
+                "income_source": "SALARIED"
+            },
+            "work": {
+                "salary_monthly_gross": 2000
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            },
+            "timeline": {
+                "years_continuous_residence": 2
+            },
+            "asylum": {
+                "is_asylum_seeker": false
+            }
+        },
+        "expected_categories": [
+            "family"
+        ]
+    },
+    {
+        "id": "profil_naturalisation_10y",
+        "name": "Résident longue durée – Naturalisation standard",
+        "description": "Étranger résidant en France depuis 10 ans, B1, intégré",
+        "profile": {
+            "identity": {
+                "age": 38,
+                "nationality_group": "NON_EU",
+                "born_in_france": false
+            },
+            "timeline": {
+                "years_continuous_residence": 10
+            },
+            "integration": {
+                "french_level": "B2",
+                "integration_assessment_score": "GOOD",
+                "adheres_to_republican_values": true,
+                "civic_exam_passed": true
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true,
+                "civic_knowledge_assessment": "PASS"
+            },
+            "work": {
+                "has_work_contract": true,
+                "salary_monthly_gross": 2500
+            },
+            "family": {
+                "is_polygamous": false
+            },
+            "financial": {
+                "resources_stable_sufficient": true
+            },
+            "asylum": {
+                "is_asylum_seeker": false
+            },
+            "admin": {
+                "has_valid_visa_or_permit": true,
+                "health_insurance": true
+            }
+        },
+        "expected_categories": [
+            "naturalisation",
+            "sejour"
+        ]
+    },
+    {
+        "id": "profil_ne_en_france_18_25",
+        "name": "Né en France (18-25 ans, résidence continue)",
+        "description": "Jeune né en France de parents étrangers, résidant depuis toujours",
+        "profile": {
+            "identity": {
+                "age": 19,
+                "nationality_group": "NON_EU",
+                "born_in_france": true
+            },
+            "timeline": {
+                "years_continuous_residence": 19,
+                "years_residence_since_age_11": 8,
+                "years_residence_since_age_8": 11
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            },
+            "education": {
+                "schooling_in_france_age_6_to_16": true
+            },
+            "work": {
+                "salary_monthly_gross": 0
+            },
+            "family": {
+                "is_polygamous": false
+            },
+            "asylum": {
+                "is_asylum_seeker": false
+            }
+        },
+        "expected_categories": [
+            "naturalisation"
+        ]
+    },
+    {
+        "id": "profil_dublin_transfer",
+        "name": "Demandeur d'asile Dublin III",
+        "description": "Demandeur d'asile avec empreintes déjà relevées dans un autre pays UE",
+        "profile": {
+            "identity": {
+                "age": 25,
+                "nationality_group": "NON_EU"
+            },
+            "asylum": {
+                "is_asylum_seeker": true,
+                "asylum_application_pending": false
+            },
+            "admin": {
+                "entry_mode": "DUBLIN"
+            },
+            "civic": {
+                "no_expulsion_order": true
+            },
+            "family": {
+                "is_polygamous": false
+            },
+            "work": {
+                "salary_monthly_gross": 0
+            }
+        },
+        "expected_categories": [
+            "asile"
+        ]
+    },
+    {
+        "id": "profil_aucune_eligibilite",
+        "name": "Profil non éligible (OQTF en cours)",
+        "description": "Personne sous OQTF, casier non vierge — aucune règle ne devrait matcher",
+        "profile": {
+            "identity": {
+                "age": 30,
+                "nationality_group": "NON_EU"
+            },
+            "civic": {
+                "clean_criminal_record": false,
+                "no_expulsion_order": false
+            },
+            "family": {
+                "is_polygamous": true
+            },
+            "work": {
+                "salary_monthly_gross": 0
+            },
+            "asylum": {
+                "is_asylum_seeker": false
+            }
+        },
+        "expected_categories": []
+    },
+    {
+        "id": "profil_au_pair",
+        "name": "Jeune au pair (22 ans)",
+        "description": "Jeune étrangère au pair dans une famille française",
+        "profile": {
+            "identity": {
+                "age": 22,
+                "nationality_group": "NON_EU",
+                "born_in_france": false
+            },
+            "work": {
+                "salary_monthly_gross": 0,
+                "is_au_pair": true
+            },
+            "family": {
+                "is_polygamous": false
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            },
+            "asylum": {
+                "is_asylum_seeker": false
+            },
+            "integration": {
+                "french_level": "A2"
+            }
+        },
+        "expected_categories": [
+            "sejour"
+        ]
+    },
+    {
+        "id": "profil_passeport_talent_carte_bleue",
+        "name": "Carte Bleue UE (55k€/an, Master, CDI)",
+        "description": "Ingénieur étranger avec salaire > seuil Carte Bleue UE",
+        "profile": {
+            "identity": {
+                "age": 35,
+                "nationality_group": "NON_EU"
+            },
+            "work": {
+                "has_work_contract": true,
+                "contract_type": "CDI",
+                "annual_gross_salary": 55000,
+                "salary_monthly_gross": 4583,
+                "contract_duration_months": 36,
+                "years_experience_comparable": 5
+            },
+            "education": {
+                "diploma_level": "MASTER",
+                "years_higher_education": 5
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            },
+            "family": {
+                "is_polygamous": false
+            },
+            "asylum": {
+                "is_asylum_seeker": false
+            },
+            "integration": {
+                "civic_exam_passed": true,
+                "french_level": "B1"
+            }
+        },
+        "expected_categories": [
+            "sejour"
+        ]
+    },
+    {
+        "id": "profil_investisseur",
+        "name": "Investisseur économique (300k€)",
+        "description": "Entrepreneur étranger investissant >300k€ en France",
+        "profile": {
+            "identity": {
+                "age": 45,
+                "nationality_group": "NON_EU"
+            },
+            "work": {
+                "salary_monthly_gross": 5000,
+                "annual_gross_salary": 60000
+            },
+            "financial": {
+                "resources_stable_sufficient": true
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            },
+            "family": {
+                "is_polygamous": false
+            },
+            "asylum": {
+                "is_asylum_seeker": false
+            },
+            "investment": {
+                "amount": 350000,
+                "creates_jobs": true
+            },
+            "integration": {
+                "civic_exam_passed": true,
+                "french_level": "B1"
+            }
+        },
+        "expected_categories": [
+            "sejour"
+        ]
+    },
+    {
+        "id": "profil_createur_entreprise",
+        "name": "Créateur d'entreprise (30k€ de fonds)",
+        "description": "Entrepreneur étranger créant une entreprise en France",
+        "profile": {
+            "identity": {
+                "age": 30,
+                "nationality_group": "NON_EU"
+            },
+            "work": {
+                "salary_monthly_gross": 2000,
+                "is_entrepreneur": true
+            },
+            "financial": {
+                "resources_stable_sufficient": true
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            },
+            "family": {
+                "is_polygamous": false
+            },
+            "asylum": {
+                "is_asylum_seeker": false
+            },
+            "investment": {
+                "amount": 35000
+            },
+            "education": {
+                "diploma_level": "MASTER"
+            },
+            "project": {
+                "is_real_and_serious": true
+            },
+            "integration": {
+                "civic_exam_passed": true,
+                "french_level": "B1"
+            }
+        },
+        "expected_categories": [
+            "sejour"
+        ]
+    },
+    {
+        "id": "profil_chercheur",
+        "name": "Chercheur / Scientifique",
+        "description": "Chercheur étranger accueilli dans un labo français",
+        "profile": {
+            "identity": {
+                "age": 33,
+                "nationality_group": "NON_EU"
+            },
+            "work": {
+                "salary_monthly_gross": 3000,
+                "has_hosting_agreement": true,
+                "is_researcher": true
+            },
+            "education": {
+                "diploma_level": "PHD"
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            },
+            "family": {
+                "is_polygamous": false
+            },
+            "asylum": {
+                "is_asylum_seeker": false
+            }
+        },
+        "expected_categories": [
+            "sejour"
+        ]
+    },
+    {
+        "id": "profil_sportif_haut_niveau",
+        "name": "Sportif de haut niveau",
+        "description": "Athlète étrangère recrutée par un club français",
+        "profile": {
+            "identity": {
+                "age": 24,
+                "nationality_group": "NON_EU"
+            },
+            "work": {
+                "has_federation_attestation": true,
+                "salary_monthly_gross": 4000,
+                "is_sportif_haut_niveau": true
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            },
+            "family": {
+                "is_polygamous": false
+            },
+            "asylum": {
+                "is_asylum_seeker": false
+            }
+        },
+        "expected_categories": [
+            "sejour"
+        ]
+    },
+    {
+        "id": "profil_artiste",
+        "name": "Artiste interprète / Auteur",
+        "description": "Artiste étranger avec portfolio et contrat",
+        "profile": {
+            "identity": {
+                "age": 28,
+                "nationality_group": "NON_EU"
+            },
+            "work": {
+                "has_artistic_portfolio": true,
+                "salary_monthly_gross": 1500,
+                "is_artist": true
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            },
+            "family": {
+                "is_polygamous": false
+            },
+            "asylum": {
+                "is_asylum_seeker": false
+            }
+        },
+        "expected_categories": [
+            "sejour"
+        ]
+    },
+    {
+        "id": "profil_mandataire_social",
+        "name": "Mandataire social (dirigeant d'entreprise)",
+        "description": "Directeur étranger nommé dirigeant d'une société française",
+        "profile": {
+            "identity": {
+                "age": 50,
+                "nationality_group": "NON_EU"
+            },
+            "work": {
+                "annual_gross_salary": 70000,
+                "salary_monthly_gross": 5833,
+                "company_role": "MANDATAIRE",
+                "group_seniority_months": 36
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            },
+            "family": {
+                "is_polygamous": false
+            },
+            "asylum": {
+                "is_asylum_seeker": false
+            },
+            "integration": {
+                "civic_exam_passed": true,
+                "french_level": "B1"
+            }
+        },
+        "expected_categories": [
+            "sejour"
+        ]
+    },
+    {
+        "id": "profil_stagiaire",
+        "name": "Stagiaire en entreprise française",
+        "description": "Étudiant étranger en stage conventionné en France",
+        "profile": {
+            "identity": {
+                "age": 23,
+                "nationality_group": "NON_EU"
+            },
+            "education": {
+                "is_enrolled_higher_ed": true,
+                "diploma_level": "NONE"
+            },
+            "work": {
+                "salary_monthly_gross": 600,
+                "is_intern": true
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            },
+            "family": {
+                "is_polygamous": false
+            },
+            "asylum": {
+                "is_asylum_seeker": false
+            }
+        },
+        "expected_categories": [
+            "sejour"
+        ]
+    },
+    {
+        "id": "profil_ict_detache",
+        "name": "Salarié détaché ICT (transfert intra-entreprise)",
+        "description": "Manager transféré dans la filiale française d'un groupe international",
+        "profile": {
+            "identity": {
+                "age": 38,
+                "nationality_group": "NON_EU"
+            },
+            "work": {
+                "is_ict_transfer": true,
+                "salary_monthly_gross": 4500,
+                "annual_gross_salary": 54000,
+                "is_manager_or_expert": true,
+                "group_seniority_months": 24
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            },
+            "family": {
+                "is_polygamous": false
+            },
+            "asylum": {
+                "is_asylum_seeker": false
+            },
+            "integration": {
+                "civic_exam_passed": true,
+                "french_level": "A2"
+            }
+        },
+        "expected_categories": [
+            "sejour"
+        ]
+    },
+    {
+        "id": "profil_vpf_parent_enfant_fr",
+        "name": "VPF – Parent d'enfant français",
+        "description": "Parent étranger d'un enfant français mineur, contribuant à son éducation",
+        "profile": {
+            "identity": {
+                "age": 32,
+                "nationality_group": "NON_EU"
+            },
+            "family": {
+                "has_french_child": true,
+                "is_polygamous": false,
+                "contributes_to_education": true,
+                "child_residence_france": true
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            },
+            "work": {
+                "salary_monthly_gross": 1800
+            },
+            "asylum": {
+                "is_asylum_seeker": false
+            },
+            "admin": {
+                "entered_legally": true
+            }
+        },
+        "expected_categories": [
+            "sejour"
+        ]
+    },
+    {
+        "id": "profil_victime_traite",
+        "name": "Victime de traite des êtres humains",
+        "description": "Personne étrangère victime de traite coopérant avec la justice",
+        "profile": {
+            "identity": {
+                "age": 26,
+                "nationality_group": "NON_EU"
+            },
+            "vulnerability": {
+                "cooperates_with_justice": true,
+                "is_victim_trafficking": true,
+                "has_protection_order_violence": true
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            },
+            "family": {
+                "is_polygamous": false
+            },
+            "work": {
+                "salary_monthly_gross": 0
+            },
+            "asylum": {
+                "is_asylum_seeker": false
+            }
+        },
+        "expected_categories": [
+            "sejour"
+        ]
+    },
+    {
+        "id": "profil_victime_violences_conjugales",
+        "name": "Victime de violences conjugales",
+        "description": "Personne étrangère victime de violences de la part de son conjoint",
+        "profile": {
+            "identity": {
+                "age": 29,
+                "nationality_group": "NON_EU"
+            },
+            "vulnerability": {
+                "is_victim_domestic_violence": true,
+                "has_protection_order_violence": true
+            },
+            "family": {
+                "spouse_nationality": "FRENCH",
+                "is_polygamous": false
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            },
+            "work": {
+                "salary_monthly_gross": 0
+            },
+            "asylum": {
+                "is_asylum_seeker": false
+            }
+        },
+        "expected_categories": [
+            "sejour"
+        ]
+    },
+    {
+        "id": "profil_etranger_malade",
+        "name": "Étranger malade (soins indisponibles au pays)",
+        "description": "Patient étranger dont les soins ne sont pas disponibles dans son pays d'origine",
+        "profile": {
+            "identity": {
+                "age": 40,
+                "nationality_group": "NON_EU"
+            },
+            "health": {
+                "personal_needs_treatment": true,
+                "treatment_unavailable_in_origin": true
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            },
+            "family": {
+                "is_polygamous": false
+            },
+            "work": {
+                "salary_monthly_gross": 0
+            },
+            "asylum": {
+                "is_asylum_seeker": false
+            }
+        },
+        "expected_categories": [
+            "sejour"
+        ]
+    },
+    {
+        "id": "profil_volontaire_service_civique",
+        "name": "Volontaire en service civique",
+        "description": "Jeune étranger en mission de service civique en France",
+        "profile": {
+            "identity": {
+                "age": 21,
+                "nationality_group": "NON_EU"
+            },
+            "work": {
+                "salary_monthly_gross": 0,
+                "is_volunteer": true
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            },
+            "family": {
+                "is_polygamous": false
+            },
+            "asylum": {
+                "is_asylum_seeker": false
+            }
+        },
+        "expected_categories": [
+            "sejour"
+        ]
+    },
+    {
+        "id": "profil_resident_longue_duree_ue",
+        "name": "Carte de Résident Longue Durée UE (5 ans + ressources)",
+        "description": "Étranger résidant 5 ans en France avec revenus stables",
+        "profile": {
+            "identity": {
+                "age": 35,
+                "nationality_group": "NON_EU"
+            },
+            "timeline": {
+                "years_continuous_residence": 6
+            },
+            "work": {
+                "has_work_contract": true,
+                "salary_monthly_gross": 2000
+            },
+            "financial": {
+                "resources_stable_sufficient": true
+            },
+            "integration": {
+                "french_level": "B1",
+                "civic_exam_passed": true
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            },
+            "family": {
+                "is_polygamous": false
+            },
+            "asylum": {
+                "is_asylum_seeker": false
+            },
+            "health": {},
+            "admin": {
+                "health_insurance": true
+            }
+        },
+        "expected_categories": [
+            "sejour"
+        ]
+    },
+    {
+        "id": "profil_nat_mariage_court",
+        "name": "Naturalisation — Mariage < 4 ans (rejet attendu)",
+        "description": "Conjoint de Français marié depuis 2 ans seulement",
+        "profile": {
+            "identity": {
+                "age": 28,
+                "nationality_group": "NON_EU"
+            },
+            "family": {
+                "spouse_nationality": "FRENCH",
+                "community_of_life": true,
+                "marriage_duration_years": 2,
+                "is_polygamous": false
+            },
+            "integration": {
+                "french_level": "B1"
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            },
+            "work": {
+                "salary_monthly_gross": 1500
+            },
+            "asylum": {
+                "is_asylum_seeker": false
+            }
+        },
+        "expected_categories": []
+    },
+    {
+        "id": "profil_nat_enfant_ne_france_13_16",
+        "name": "Acquisition anticipée 13-16 ans (né en France)",
+        "description": "Enfant né en France de parents étrangers, 14 ans, résidence depuis 8 ans",
+        "profile": {
+            "identity": {
+                "age": 14,
+                "nationality_group": "NON_EU",
+                "born_in_france": true
+            },
+            "timeline": {
+                "years_continuous_residence": 14,
+                "years_residence_since_age_8": 6
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            },
+            "family": {
+                "is_polygamous": false
+            },
+            "work": {
+                "salary_monthly_gross": 0
+            },
+            "asylum": {
+                "is_asylum_seeker": false
+            }
+        },
+        "expected_categories": [
+            "naturalisation"
+        ]
+    },
+    {
+        "id": "profil_nat_legion_honneur",
+        "name": "Naturalisation — Légion d'honneur",
+        "description": "Étranger décoré de la Légion d'honneur",
+        "profile": {
+            "identity": {
+                "age": 60,
+                "nationality_group": "NON_EU"
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            },
+            "integration": {
+                "french_level": "B1"
+            },
+            "family": {
+                "is_polygamous": false
+            },
+            "work": {
+                "salary_monthly_gross": 3000,
+                "has_legion_honneur": true
+            },
+            "asylum": {
+                "is_asylum_seeker": false
+            }
+        },
+        "expected_categories": [
+            "naturalisation"
+        ]
+    },
+    {
+        "id": "profil_renouvellement_resident",
+        "name": "Renouvellement carte de résident (conjoint français, 3 ans)",
+        "description": "Étranger ayant déjà sa carte de résident conjoint français",
+        "profile": {
+            "identity": {
+                "age": 35,
+                "nationality_group": "NON_EU"
+            },
+            "family": {
+                "spouse_nationality": "FRENCH",
+                "community_of_life": true,
+                "marriage_duration_years": 5,
+                "is_polygamous": false
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            },
+            "timeline": {
+                "years_continuous_residence": 5,
+                "resides_in_france": true
+            },
+            "work": {
+                "salary_monthly_gross": 2200
+            },
+            "integration": {
+                "french_level": "B2",
+                "civic_exam_passed": true
+            },
+            "asylum": {
+                "is_asylum_seeker": false
+            }
+        },
+        "expected_categories": [
+            "sejour",
+            "naturalisation"
+        ]
+    },
+    {
+        "id": "profil_asile_pays_sur",
+        "name": "Demandeur d'asile — Pays d'origine sûr",
+        "description": "Ressortissant d'un pays sûr, procédure accélérée",
+        "profile": {
+            "identity": {
+                "age": 30,
+                "nationality_group": "SAFE_COUNTRY"
+            },
+            "asylum": {
+                "is_asylum_seeker": true,
+                "asylum_application_pending": false
+            },
+            "civic": {
+                "no_expulsion_order": true
+            },
+            "family": {
+                "is_polygamous": false
+            },
+            "work": {
+                "salary_monthly_gross": 0
+            }
+        },
+        "expected_categories": [
+            "asile"
+        ]
+    },
+    {
+        "id": "profil_apatride",
+        "name": "Apatride – Reconnaissance OFPRA",
+        "description": "Personne sans nationalité, demandant la reconnaissance d'apatridie",
+        "profile": {
+            "identity": {
+                "age": 30,
+                "nationality_group": "STATELESS"
+            },
+            "asylum": {
+                "is_asylum_seeker": true,
+                "is_stateless_applicant": true
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            },
+            "family": {
+                "is_polygamous": false
+            },
+            "work": {
+                "salary_monthly_gross": 0
+            }
+        },
+        "expected_categories": [
+            "asile",
+            "sejour"
+        ]
+    },
+    {
+        "id": "profil_recours_cnda",
+        "name": "Demandeur d'asile – Recours CNDA",
+        "description": "Demandeur dont la demande OFPRA a été rejetée, en recours devant la CNDA",
+        "profile": {
+            "identity": {
+                "age": 32,
+                "nationality_group": "NON_EU"
+            },
+            "asylum": {
+                "is_asylum_seeker": true,
+                "asylum_application_pending": true,
+                "ofpra_decision": "REJECTED",
+                "cnda_appeal_pending": true
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            },
+            "family": {
+                "is_polygamous": false
+            },
+            "work": {
+                "salary_monthly_gross": 0
+            }
+        },
+        "expected_categories": [
+            "asile",
+            "sejour"
+        ]
+    },
+    {
+        "id": "profil_rf_logement",
+        "name": "RF – Condition de surface logement",
+        "description": "Demandeur de regroupement familial, vérification surface du logement",
+        "profile": {
+            "identity": {
+                "age": 35,
+                "nationality_group": "NON_EU"
+            },
+            "family": {
+                "rf_has_valid_titre_sejour": true,
+                "rf_family_members_count": 3,
+                "rf_housing_surface": 40,
+                "rf_who_to_bring": "SPOUSE_AND_CHILDREN",
+                "is_polygamous": false,
+                "housing_status": "OWNED_RENTED"
+            },
+            "work": {
+                "salary_monthly_gross": 2000
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            }
+        },
+        "expected_categories": [
+            "family"
+        ]
+    },
+    {
+        "id": "profil_rf_ascendant_francais",
+        "name": "Ascendant à charge d'un Français",
+        "description": "Parent étranger dépendant financièrement de son enfant français",
+        "profile": {
+            "identity": {
+                "age": 70,
+                "nationality_group": "NON_EU"
+            },
+            "family": {
+                "is_ascendant_of_french": true,
+                "child_residence_france": true,
+                "is_polygamous": false
+            },
+            "financial": {
+                "resources_stable_sufficient": true
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            },
+            "work": {
+                "salary_monthly_gross": 0
+            }
+        },
+        "expected_categories": [
+            "family"
+        ]
+    },
+    {
+        "id": "profil_rf_conjoint_seul",
+        "name": "RF Partiel – Conjoint seul",
+        "description": "Regroupement familial partiel pour le conjoint uniquement",
+        "profile": {
+            "identity": {
+                "age": 40,
+                "nationality_group": "NON_EU"
+            },
+            "family": {
+                "rf_has_valid_titre_sejour": true,
+                "rf_marital_status": "MARRIED",
+                "rf_who_to_bring": "SPOUSE_ONLY",
+                "is_polygamous": false,
+                "rf_family_members_count": 1,
+                "presence_duration": "MORE_18"
+            },
+            "work": {
+                "salary_monthly_gross": 2000
+            },
+            "timeline": {
+                "years_continuous_residence": 2
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            }
+        },
+        "expected_categories": [
+            "family"
+        ]
+    },
+    {
+        "id": "profil_rf_enfants_seuls",
+        "name": "RF Partiel – Enfants seuls",
+        "description": "Regroupement familial partiel pour les enfants uniquement",
+        "profile": {
+            "identity": {
+                "age": 38,
+                "nationality_group": "NON_EU"
+            },
+            "family": {
+                "rf_has_valid_titre_sejour": true,
+                "rf_who_to_bring": "CHILDREN_ONLY",
+                "is_polygamous": false,
+                "rf_family_members_count": 2,
+                "presence_duration": "MORE_18"
+            },
+            "work": {
+                "salary_monthly_gross": 2000
+            },
+            "timeline": {
+                "years_continuous_residence": 2
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            }
+        },
+        "expected_categories": [
+            "family"
+        ]
+    },
+    {
+        "id": "profil_rf_apatride_famille",
+        "name": "Réunification familiale – Apatride",
+        "description": "Famille d'un bénéficiaire du statut d'apatride",
+        "profile": {
+            "identity": {
+                "age": 35,
+                "nationality_group": "STATELESS"
+            },
+            "family": {
+                "rf_marital_status": "MARRIED",
+                "is_polygamous": false,
+                "rf_family_members_count": 2
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            },
+            "work": {
+                "salary_monthly_gross": 1500
+            }
+        },
+        "expected_categories": [
+            "family",
+            "sejour",
+            "asile"
+        ]
+    },
+    {
+        "id": "profil_rf_marocain",
+        "name": "RF Marocain – Conjoint",
+        "description": "Conjoint marocain demandant le regroupement familial (accord bilatéral)",
+        "profile": {
+            "identity": {
+                "age": 35,
+                "nationality_group": "MOROCCAN"
+            },
+            "family": {
+                "rf_has_valid_titre_sejour": true,
+                "rf_marital_status": "MARRIED",
+                "is_polygamous": false,
+                "rf_family_members_count": 1,
+                "spouse_nationality": "MOROCCAN",
+                "sponsor_nationality": "MOROCCAN",
+                "presence_duration": "MORE_18"
+            },
+            "work": {
+                "salary_monthly_gross": 2000
+            },
+            "timeline": {
+                "years_continuous_residence": 2
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            }
+        },
+        "expected_categories": [
+            "family"
+        ]
+    },
+    {
+        "id": "profil_rf_sur_place",
+        "name": "RF Sur Place",
+        "description": "Conjoint arrivé en France puis demande de regroupement familial sur place",
+        "profile": {
+            "identity": {
+                "age": 30,
+                "nationality_group": "NON_EU"
+            },
+            "family": {
+                "rf_has_valid_titre_sejour": true,
+                "rf_marital_status": "MARRIED",
+                "is_polygamous": false,
+                "rf_family_members_count": 1,
+                "community_of_life": true,
+                "rf_who_to_bring": "SPOUSE_ONLY",
+                "child_residence_france": true
+            },
+            "timeline": {
+                "years_continuous_residence": 2
+            },
+            "work": {
+                "salary_monthly_gross": 1800
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            }
+        },
+        "expected_categories": [
+            "family"
+        ]
+    },
+    {
+        "id": "profil_rf_tunisien",
+        "name": "RF Tunisien – Conjoint",
+        "description": "Conjoint tunisien (accord bilatéral franco-tunisien)",
+        "profile": {
+            "identity": {
+                "age": 36,
+                "nationality_group": "TUNISIAN"
+            },
+            "family": {
+                "rf_has_valid_titre_sejour": true,
+                "rf_marital_status": "MARRIED",
+                "is_polygamous": false,
+                "rf_family_members_count": 1,
+                "spouse_nationality": "TUNISIAN",
+                "sponsor_nationality": "TUNISIAN",
+                "presence_duration": "MORE_18"
+            },
+            "work": {
+                "salary_monthly_gross": 2000
+            },
+            "timeline": {
+                "years_continuous_residence": 1
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            }
+        },
+        "expected_categories": [
+            "family"
+        ]
+    },
+    {
+        "id": "profil_nat_ascendant",
+        "name": "Déclaration nationalité – Ascendant de Français",
+        "description": "Parent étranger d'un enfant français, demande de nationalité par déclaration",
+        "profile": {
+            "identity": {
+                "age": 68,
+                "nationality_group": "NON_EU"
+            },
+            "family": {
+                "has_french_child": true,
+                "is_ascendant_of_french": true,
+                "contributes_to_education": true,
+                "is_polygamous": false
+            },
+            "timeline": {
+                "years_continuous_residence": 30,
+                "resides_in_france": true
+            },
+            "integration": {
+                "french_level": "B1"
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            },
+            "work": {
+                "salary_monthly_gross": 2000
+            }
+        },
+        "expected_categories": [
+            "naturalisation"
+        ]
+    },
+    {
+        "id": "profil_nat_fratrie",
+        "name": "Déclaration nationalité – Frère/Sœur de Français",
+        "description": "Étranger ayant un frère/sœur français, né en France ou résidence longue",
+        "profile": {
+            "identity": {
+                "age": 25,
+                "nationality_group": "NON_EU",
+                "born_in_france": true
+            },
+            "family": {
+                "has_french_sibling": true,
+                "is_polygamous": false
+            },
+            "timeline": {
+                "years_continuous_residence": 20,
+                "resides_in_france": true,
+                "residence_since_age_6": true
+            },
+            "education": {
+                "years_schooling_france": 5,
+                "schooling_in_france_age_6_to_16": true
+            },
+            "integration": {
+                "french_level": "B1"
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            },
+            "work": {
+                "salary_monthly_gross": 1500
+            }
+        },
+        "expected_categories": [
+            "naturalisation",
+            "sejour"
+        ]
+    },
+    {
+        "id": "profil_nat_possession_etat",
+        "name": "Déclaration – Possession d'état de Français",
+        "description": "Personne ayant vécu comme Français pendant 10 ans",
+        "profile": {
+            "identity": {
+                "age": 40,
+                "nationality_group": "NON_EU"
+            },
+            "nationality_extra": {
+                "possession_etat_francais": true
+            },
+            "timeline": {
+                "years_continuous_residence": 15,
+                "resides_in_france": true
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            },
+            "family": {
+                "is_polygamous": false
+            },
+            "work": {
+                "salary_monthly_gross": 2000
+            }
+        },
+        "expected_categories": [
+            "naturalisation"
+        ]
+    },
+    {
+        "id": "profil_nat_etudes_sup",
+        "name": "Naturalisation – Parcours études supérieures",
+        "description": "Étranger ayant fait ses études supérieures en France",
+        "profile": {
+            "identity": {
+                "age": 28,
+                "nationality_group": "NON_EU"
+            },
+            "education": {
+                "has_french_higher_education_diploma": true,
+                "diploma_level": "MASTER",
+                "years_higher_education": 5
+            },
+            "timeline": {
+                "years_continuous_residence": 3,
+                "resides_in_france": true
+            },
+            "integration": {
+                "french_level": "B2",
+                "adheres_to_republican_values": true
+            },
+            "financial": {
+                "resources_stable_sufficient": true
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            },
+            "family": {
+                "is_polygamous": false
+            },
+            "work": {
+                "salary_monthly_gross": 2500
+            }
+        },
+        "expected_categories": [
+            "naturalisation"
+        ]
+    },
+    {
+        "id": "profil_nat_refugie",
+        "name": "Naturalisation – Réfugié/Apatride",
+        "description": "Réfugié reconnu demandant la naturalisation (dispense de résidence)",
+        "profile": {
+            "identity": {
+                "age": 35,
+                "nationality_group": "REFUGEE"
+            },
+            "timeline": {
+                "years_continuous_residence": 3,
+                "resides_in_france": true
+            },
+            "integration": {
+                "french_level": "B2",
+                "adheres_to_republican_values": true
+            },
+            "financial": {
+                "resources_stable_sufficient": true
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            },
+            "family": {
+                "is_polygamous": false
+            },
+            "work": {
+                "salary_monthly_gross": 1800
+            }
+        },
+        "expected_categories": [
+            "naturalisation",
+            "sejour"
+        ]
+    },
+    {
+        "id": "profil_nat_militaire",
+        "name": "Naturalisation – Service armée française",
+        "description": "Étranger ayant servi dans l'armée française",
+        "profile": {
+            "identity": {
+                "age": 30,
+                "nationality_group": "NON_EU"
+            },
+            "work": {
+                "served_french_military": true,
+                "salary_monthly_gross": 2000
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            },
+            "family": {
+                "is_polygamous": false
+            },
+            "integration": {
+                "french_level": "B1"
+            }
+        },
+        "expected_categories": [
+            "naturalisation"
+        ]
+    },
+    {
+        "id": "profil_nat_reintegration",
+        "name": "Réintégration nationalité française",
+        "description": "Personne ayant perdu la nationalité française et demandant sa réintégration",
+        "profile": {
+            "identity": {
+                "age": 45,
+                "nationality_group": "NON_EU",
+                "lost_french_nationality": true
+            },
+            "timeline": {
+                "resides_in_france": true,
+                "years_continuous_residence": 6
+            },
+            "integration": {
+                "french_level": "B2"
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            },
+            "family": {
+                "is_polygamous": false
+            },
+            "work": {
+                "salary_monthly_gross": 2500
+            }
+        },
+        "expected_categories": [
+            "naturalisation"
+        ]
+    },
+    {
+        "id": "profil_accord_marocain_conjoint",
+        "name": "Accord Marocain – Conjoint de Français",
+        "description": "Marocain marié à un Français (accord bilatéral)",
+        "profile": {
+            "identity": {
+                "age": 30,
+                "nationality_group": "MOROCCAN"
+            },
+            "family": {
+                "spouse_nationality": "FRENCH",
+                "marriage_duration_years": 1,
+                "community_of_life": true,
+                "is_polygamous": false
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            },
+            "work": {
+                "salary_monthly_gross": 1800
+            }
+        },
+        "expected_categories": [
+            "sejour"
+        ]
+    },
+    {
+        "id": "profil_accord_marocain_salarie",
+        "name": "Accord Marocain – Salarié",
+        "description": "Travailleur marocain avec contrat en France (accord bilatéral)",
+        "profile": {
+            "identity": {
+                "age": 28,
+                "nationality_group": "MOROCCAN"
+            },
+            "work": {
+                "contract_type": "CDI",
+                "has_work_authorization": true,
+                "salary_monthly_gross": 2000
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            },
+            "family": {
+                "is_polygamous": false
+            }
+        },
+        "expected_categories": [
+            "sejour"
+        ]
+    },
+    {
+        "id": "profil_accord_tunisien_conjoint",
+        "name": "Accord Tunisien – Conjoint de Français",
+        "description": "Tunisien marié à un Français (accord bilatéral)",
+        "profile": {
+            "identity": {
+                "age": 32,
+                "nationality_group": "TUNISIAN"
+            },
+            "family": {
+                "spouse_nationality": "FRENCH",
+                "marriage_duration_years": 1,
+                "community_of_life": true,
+                "is_polygamous": false
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            },
+            "work": {
+                "salary_monthly_gross": 1800
+            }
+        },
+        "expected_categories": [
+            "sejour"
+        ]
+    },
+    {
+        "id": "profil_accord_tunisien_salarie",
+        "name": "Accord Tunisien – Salarié",
+        "description": "Travailleur tunisien avec autorisation de travail (accord bilatéral)",
+        "profile": {
+            "identity": {
+                "age": 29,
+                "nationality_group": "TUNISIAN"
+            },
+            "work": {
+                "contract_type": "CDI",
+                "has_work_authorization": true,
+                "salary_monthly_gross": 2000
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            },
+            "family": {
+                "is_polygamous": false
+            }
+        },
+        "expected_categories": [
+            "sejour"
+        ]
+    },
+    {
+        "id": "profil_aes_metiers_tension",
+        "name": "AES – Métiers en tension",
+        "description": "Sans-papier travaillant dans un métier en tension depuis 3+ ans",
+        "profile": {
+            "identity": {
+                "age": 35,
+                "nationality_group": "NON_EU"
+            },
+            "admin": {
+                "has_valid_visa_or_permit": false
+            },
+            "timeline": {
+                "years_continuous_residence": 5
+            },
+            "work": {
+                "contract_type": "CDI",
+                "has_payslips": true,
+                "salary_monthly_gross": 2000
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            },
+            "family": {
+                "is_polygamous": false
+            }
+        },
+        "expected_categories": [
+            "sejour"
+        ]
+    },
+    {
+        "id": "profil_aes_parent_scolarise",
+        "name": "AES – Parent d'enfant scolarisé (3 ans)",
+        "description": "Parent étranger sans titre dont les enfants sont scolarisés depuis 3 ans",
+        "profile": {
+            "identity": {
+                "age": 38,
+                "nationality_group": "NON_EU"
+            },
+            "admin": {
+                "current_visa_type": "NONE"
+            },
+            "regularisation": {
+                "has_children_schooled_3y": true
+            },
+            "timeline": {
+                "years_continuous_residence": 6
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            },
+            "family": {
+                "is_polygamous": false
+            },
+            "work": {
+                "salary_monthly_gross": 0
+            }
+        },
+        "expected_categories": [
+            "sejour"
+        ]
+    },
+    {
+        "id": "profil_aes_talent",
+        "name": "AES – Talent exceptionnel",
+        "description": "Étranger reconnu pour un talent ou une renommée exceptionnelle",
+        "profile": {
+            "identity": {
+                "age": 40,
+                "nationality_group": "NON_EU"
+            },
+            "regularisation": {
+                "has_exceptional_talent": true
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            },
+            "family": {
+                "is_polygamous": false
+            },
+            "work": {
+                "salary_monthly_gross": 3000
+            }
+        },
+        "expected_categories": [
+            "sejour"
+        ]
+    },
+    {
+        "id": "profil_aes_10ans",
+        "name": "AES – Vie privée et familiale (10 ans de présence)",
+        "description": "Étranger résidant en France depuis 10+ ans, sans titre",
+        "profile": {
+            "identity": {
+                "age": 40,
+                "nationality_group": "NON_EU"
+            },
+            "admin": {
+                "current_visa_type": "NONE"
+            },
+            "regularisation": {
+                "years_presence_france": 12
+            },
+            "integration": {
+                "french_level": "A2"
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            },
+            "family": {
+                "is_polygamous": false
+            },
+            "work": {
+                "salary_monthly_gross": 0
+            }
+        },
+        "expected_categories": [
+            "sejour"
+        ]
+    },
+    {
+        "id": "profil_aps_demandeur_asile",
+        "name": "APS – Demandeur d'asile en instruction",
+        "description": "Demandeur d'asile dont la demande est en cours d'examen à l'OFPRA",
+        "profile": {
+            "identity": {
+                "age": 27,
+                "nationality_group": "NON_EU"
+            },
+            "asylum": {
+                "is_asylum_seeker": true,
+                "asylum_application_pending": true
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            },
+            "family": {
+                "is_polygamous": false
+            },
+            "work": {
+                "salary_monthly_gross": 0
+            }
+        },
+        "expected_categories": [
+            "sejour",
+            "asile"
+        ]
+    },
+    {
+        "id": "profil_aps_enfant_malade",
+        "name": "APS – Parent d'enfant malade",
+        "description": "Parent dont l'enfant nécessite des soins indisponibles au pays d'origine",
+        "profile": {
+            "identity": {
+                "age": 35,
+                "nationality_group": "NON_EU"
+            },
+            "health": {
+                "child_needs_care": true,
+                "treatment_unavailable_in_origin": true
+            },
+            "family": {
+                "child_residence_france": true,
+                "is_polygamous": false
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            },
+            "work": {
+                "salary_monthly_gross": 0
+            }
+        },
+        "expected_categories": [
+            "sejour"
+        ]
+    },
+    {
+        "id": "profil_aps_parent_enfant_malade",
+        "name": "APS – Parent accompagnant enfant malade",
+        "description": "Parent étranger accompagnant un enfant nécessitant des soins",
+        "profile": {
+            "identity": {
+                "age": 33,
+                "nationality_group": "NON_EU"
+            },
+            "health": {
+                "child_needs_care": true,
+                "treatment_unavailable_in_origin": true
+            },
+            "civic": {
+                "no_expulsion_order": true,
+                "clean_criminal_record": true
+            },
+            "family": {
+                "is_polygamous": false,
+                "child_residence_france": true
+            },
+            "work": {
+                "salary_monthly_gross": 0
+            }
+        },
+        "expected_categories": [
+            "sejour"
+        ]
+    },
+    {
+        "id": "profil_apatride_carte_resident",
+        "name": "Apatride – Carte de résident (après 4 ans)",
+        "description": "Apatride résidant en France depuis 4+ ans demandant la carte de résident",
+        "profile": {
+            "identity": {
+                "age": 35,
+                "nationality_group": "STATELESS"
+            },
+            "timeline": {
+                "years_continuous_residence": 5
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            },
+            "family": {
+                "is_polygamous": false
+            },
+            "work": {
+                "salary_monthly_gross": 1500
+            }
+        },
+        "expected_categories": [
+            "sejour",
+            "asile"
+        ]
+    },
+    {
+        "id": "profil_carte_resident_permanent",
+        "name": "Carte de résident permanent",
+        "description": "Étranger titulaire d'une carte de résident souhaitant la carte permanente",
+        "profile": {
+            "identity": {
+                "age": 50,
+                "nationality_group": "NON_EU"
+            },
+            "admin": {
+                "current_visa_type": "RESIDENT_CARD"
+            },
+            "integration": {
+                "french_level": "B1",
+                "adheres_to_republican_values": true
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            },
+            "family": {
+                "is_polygamous": false
+            },
+            "work": {
+                "salary_monthly_gross": 2500
+            }
+        },
+        "expected_categories": [
+            "sejour"
+        ]
+    },
+    {
+        "id": "profil_carte_resident_rf",
+        "name": "Carte de résident (Regroupement familial)",
+        "description": "Bénéficiaire du regroupement familial après 3 ans de résidence",
+        "profile": {
+            "identity": {
+                "age": 35,
+                "nationality_group": "NON_EU"
+            },
+            "admin": {
+                "entry_mode": "FAMILY_REUNIFICATION"
+            },
+            "timeline": {
+                "years_continuous_residence": 4
+            },
+            "family": {
+                "community_of_life": true,
+                "is_polygamous": false
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            },
+            "work": {
+                "salary_monthly_gross": 1800
+            }
+        },
+        "expected_categories": [
+            "sejour"
+        ]
+    },
+    {
+        "id": "profil_carte_resident_retraite",
+        "name": "Carte de résident – Retraité",
+        "description": "Étranger retraité résidant en France",
+        "profile": {
+            "identity": {
+                "age": 65,
+                "nationality_group": "NON_EU"
+            },
+            "admin": {
+                "has_valid_visa_or_permit": true
+            },
+            "residence": {
+                "maintains_home_abroad": false
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            },
+            "family": {
+                "is_polygamous": false
+            },
+            "work": {
+                "salary_monthly_gross": 0
+            },
+            "financial": {
+                "resources_stable_sufficient": true
+            }
+        },
+        "expected_categories": [
+            "sejour"
+        ]
+    },
+    {
+        "id": "profil_cra_algerien_liberal",
+        "name": "CRA Algérien – Profession libérale",
+        "description": "Algérien exerçant une profession non salariée en France",
+        "profile": {
+            "identity": {
+                "age": 40,
+                "nationality_group": "ALGERIAN"
+            },
+            "work": {
+                "is_entrepreneur": true,
+                "business_project_viable": true,
+                "salary_monthly_gross": 2500
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            },
+            "family": {
+                "is_polygamous": false
+            }
+        },
+        "expected_categories": [
+            "sejour"
+        ]
+    },
+    {
+        "id": "profil_cra_algerien_conjoint_fr",
+        "name": "CRA Algérien – Conjoint de Français",
+        "description": "Algérien marié à un Français",
+        "profile": {
+            "identity": {
+                "age": 30,
+                "nationality_group": "ALGERIAN"
+            },
+            "family": {
+                "spouse_nationality": "FRENCH",
+                "community_of_life": true,
+                "is_polygamous": false
+            },
+            "admin": {
+                "entered_legally": true
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            },
+            "work": {
+                "salary_monthly_gross": 1800
+            }
+        },
+        "expected_categories": [
+            "sejour"
+        ]
+    },
+    {
+        "id": "profil_cra_algerien_10ans",
+        "name": "CRA Algérien – Résident 10 ans",
+        "description": "Algérien résidant en France depuis 3+ ans avec ressources stables",
+        "profile": {
+            "identity": {
+                "age": 40,
+                "nationality_group": "ALGERIAN"
+            },
+            "timeline": {
+                "years_continuous_residence": 5
+            },
+            "financial": {
+                "resources_stable_sufficient": true
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            },
+            "family": {
+                "is_polygamous": false
+            },
+            "work": {
+                "salary_monthly_gross": 2000
+            }
+        },
+        "expected_categories": [
+            "sejour"
+        ]
+    },
+    {
+        "id": "profil_citoyen_ue",
+        "name": "Citoyen UE / EEE / Suisse",
+        "description": "Citoyen de l'Union européenne résidant en France",
+        "profile": {
+            "identity": {
+                "age": 25,
+                "nationality_group": "EU"
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            },
+            "family": {
+                "is_polygamous": false
+            },
+            "work": {
+                "salary_monthly_gross": 2000
+            }
+        },
+        "expected_categories": [
+            "sejour"
+        ]
+    },
+    {
+        "id": "profil_entrepreneur_liberal",
+        "name": "Entrepreneur / Profession libérale",
+        "description": "Étranger exerçant une activité indépendante en France",
+        "profile": {
+            "identity": {
+                "age": 35,
+                "nationality_group": "NON_EU"
+            },
+            "work": {
+                "is_entrepreneur": true,
+                "business_project_viable": true,
+                "salary_monthly_gross": 2500
+            },
+            "financial": {
+                "resources_monthly_average": 2500
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            },
+            "family": {
+                "is_polygamous": false
+            }
+        },
+        "expected_categories": [
+            "sejour"
+        ]
+    },
+    {
+        "id": "profil_cs_saisonnier",
+        "name": "Travailleur saisonnier",
+        "description": "Étranger en contrat saisonnier en France",
+        "profile": {
+            "identity": {
+                "age": 25,
+                "nationality_group": "NON_EU"
+            },
+            "work": {
+                "contract_type": "SEASONAL",
+                "contract_duration_months": 6,
+                "salary_monthly_gross": 1800
+            },
+            "residence": {
+                "maintains_home_abroad": true
+            },
+            "family": {
+                "is_polygamous": false
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            }
+        },
+        "expected_categories": [
+            "sejour"
+        ]
+    },
+    {
+        "id": "profil_cs_salarie_cdi",
+        "name": "Salarié CDI – Carte de séjour",
+        "description": "Étranger avec CDI et autorisation de travail",
+        "profile": {
+            "identity": {
+                "age": 30,
+                "nationality_group": "NON_EU"
+            },
+            "work": {
+                "contract_type": "CDI",
+                "salary_monthly_gross": 2200,
+                "has_work_authorization": true
+            },
+            "integration": {
+                "french_level": "A2",
+                "civic_exam_passed": true
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            },
+            "family": {
+                "is_polygamous": false
+            }
+        },
+        "expected_categories": [
+            "sejour"
+        ]
+    },
+    {
+        "id": "profil_salarie_mission",
+        "name": "Salarié en mission (hors ICT)",
+        "description": "Salarié étranger en mission pour le compte de son employeur",
+        "profile": {
+            "identity": {
+                "age": 35,
+                "nationality_group": "NON_EU"
+            },
+            "work": {
+                "is_salarie_mission": true,
+                "salary_monthly_gross": 3000
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            },
+            "family": {
+                "is_polygamous": false
+            }
+        },
+        "expected_categories": [
+            "sejour"
+        ]
+    },
+    {
+        "id": "profil_travailleur_temp",
+        "name": "Travailleur temporaire (CDD)",
+        "description": "Étranger en CDD avec autorisation de travail",
+        "profile": {
+            "identity": {
+                "age": 28,
+                "nationality_group": "NON_EU"
+            },
+            "work": {
+                "contract_type": "CDD",
+                "salary_monthly_gross": 2000,
+                "has_work_authorization": true
+            },
+            "integration": {
+                "french_level": "A2",
+                "civic_exam_passed": true
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            },
+            "family": {
+                "is_polygamous": false
+            }
+        },
+        "expected_categories": [
+            "sejour"
+        ]
+    },
+    {
+        "id": "profil_cs_visiteur",
+        "name": "Carte de séjour – Visiteur",
+        "description": "Étranger fortuné séjournant en France sans travailler",
+        "profile": {
+            "identity": {
+                "age": 55,
+                "nationality_group": "NON_EU"
+            },
+            "work": {
+                "wants_to_work": false,
+                "salary_monthly_gross": 0
+            },
+            "financial": {
+                "resources_annual_total": 25000
+            },
+            "admin": {
+                "health_insurance": true
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            },
+            "family": {
+                "is_polygamous": false
+            }
+        },
+        "expected_categories": [
+            "sejour"
+        ]
+    },
+    {
+        "id": "profil_csp_pt_renouvellement",
+        "name": "Renouvellement Passeport Talent",
+        "description": "Titulaire d'un passeport talent en renouvellement après 1+ an",
+        "profile": {
+            "identity": {
+                "age": 35,
+                "nationality_group": "NON_EU"
+            },
+            "admin": {
+                "current_visa_type": "PASSEPORT_TALENT"
+            },
+            "timeline": {
+                "years_continuous_residence": 2
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            },
+            "family": {
+                "is_polygamous": false
+            },
+            "work": {
+                "salary_monthly_gross": 4000
+            }
+        },
+        "expected_categories": [
+            "sejour"
+        ]
+    },
+    {
+        "id": "profil_csp_salarie_4ans",
+        "name": "CSP Salarié pluriannuelle (4 ans)",
+        "description": "Salarié étranger en CDI demandant la carte pluriannuelle",
+        "profile": {
+            "identity": {
+                "age": 32,
+                "nationality_group": "NON_EU"
+            },
+            "admin": {
+                "current_visa_type": "WORKER"
+            },
+            "timeline": {
+                "years_continuous_residence": 2
+            },
+            "work": {
+                "contract_type": "CDI",
+                "salary_monthly_gross": 2200
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            },
+            "family": {
+                "is_polygamous": false
+            }
+        },
+        "expected_categories": [
+            "sejour"
+        ]
+    },
+    {
+        "id": "profil_csp_vpf_conjoint",
+        "name": "CSP VPF Conjoint de Français (4 ans)",
+        "description": "Conjoint de Français renouvellant pour une carte pluriannuelle VPF",
+        "profile": {
+            "identity": {
+                "age": 30,
+                "nationality_group": "NON_EU"
+            },
+            "admin": {
+                "current_visa_type": "VPF"
+            },
+            "family": {
+                "spouse_nationality": "FRENCH",
+                "community_of_life": true,
+                "is_polygamous": false
+            },
+            "timeline": {
+                "years_continuous_residence": 2
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            },
+            "work": {
+                "salary_monthly_gross": 1800
+            }
+        },
+        "expected_categories": [
+            "sejour"
+        ]
+    },
+    {
+        "id": "profil_csp_vpf_parent",
+        "name": "CSP VPF Parent d'enfant français (4 ans)",
+        "description": "Parent d'enfant français renouvellant pour la carte pluriannuelle",
+        "profile": {
+            "identity": {
+                "age": 35,
+                "nationality_group": "NON_EU"
+            },
+            "admin": {
+                "current_visa_type": "VPF"
+            },
+            "family": {
+                "has_french_child": true,
+                "contributes_to_education": true,
+                "is_polygamous": false
+            },
+            "timeline": {
+                "years_continuous_residence": 2
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            },
+            "work": {
+                "salary_monthly_gross": 2000
+            }
+        },
+        "expected_categories": [
+            "sejour"
+        ]
+    },
+    {
+        "id": "profil_pt_entreprise_innovante",
+        "name": "Passeport Talent – Entreprise innovante",
+        "description": "Salarié d'une entreprise innovante (R&D)",
+        "profile": {
+            "identity": {
+                "age": 30,
+                "nationality_group": "NON_EU"
+            },
+            "work": {
+                "is_innovative_company": true,
+                "job_related_to_rd": true,
+                "annual_gross_salary": 50000,
+                "salary_monthly_gross": 4166
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            },
+            "family": {
+                "is_polygamous": false
+            }
+        },
+        "expected_categories": [
+            "sejour"
+        ]
+    },
+    {
+        "id": "profil_pt_famille",
+        "name": "Passeport Talent – Famille accompagnante",
+        "description": "Conjoint d'un titulaire de passeport talent",
+        "profile": {
+            "identity": {
+                "age": 28,
+                "nationality_group": "NON_EU"
+            },
+            "family": {
+                "spouse_has_passport_talent": true,
+                "is_polygamous": false
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            },
+            "work": {
+                "salary_monthly_gross": 0
+            }
+        },
+        "expected_categories": [
+            "sejour"
+        ]
+    },
+    {
+        "id": "profil_rece_post_master",
+        "name": "Carte RECE – Recherche d'emploi post-Master",
+        "description": "Diplômé étranger cherchant un emploi ou créant une entreprise après son Master",
+        "profile": {
+            "identity": {
+                "age": 25,
+                "nationality_group": "NON_EU"
+            },
+            "admin": {
+                "current_visa_type": "STUDENT"
+            },
+            "education": {
+                "diploma_level": "MASTER"
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            },
+            "family": {
+                "is_polygamous": false
+            },
+            "work": {
+                "salary_monthly_gross": 0
+            }
+        },
+        "expected_categories": [
+            "sejour"
+        ]
+    },
+    {
+        "id": "profil_vpf_jeune_mineur",
+        "name": "VPF – Jeune entré mineur",
+        "description": "Jeune étranger arrivé en France avant 13 ans",
+        "profile": {
+            "identity": {
+                "age": 18,
+                "nationality_group": "NON_EU"
+            },
+            "timeline": {
+                "age_at_entry": 10,
+                "years_continuous_residence": 8
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            },
+            "family": {
+                "is_polygamous": false
+            },
+            "work": {
+                "salary_monthly_gross": 0
+            }
+        },
+        "expected_categories": [
+            "sejour",
+            "family"
+        ]
+    },
+    {
+        "id": "profil_vpf_pacs_francais",
+        "name": "VPF – PACS avec Français",
+        "description": "Étranger pacsé avec un Français depuis 1+ an, vie commune",
+        "profile": {
+            "identity": {
+                "age": 28,
+                "nationality_group": "NON_EU"
+            },
+            "family": {
+                "is_pacsed_with_french": true,
+                "cohabitation_duration_years": 2,
+                "community_of_life": true,
+                "is_polygamous": false
+            },
+            "admin": {
+                "entered_legally": true
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            },
+            "work": {
+                "salary_monthly_gross": 1800
+            }
+        },
+        "expected_categories": [
+            "sejour"
+        ]
+    },
+    {
+        "id": "profil_vpf_rente_accident",
+        "name": "VPF – Rente accident du travail ≥20%",
+        "description": "Étranger percevant une rente d'accident du travail ≥20%",
+        "profile": {
+            "identity": {
+                "age": 45,
+                "nationality_group": "NON_EU"
+            },
+            "work": {
+                "has_work_accident_pension": true,
+                "work_accident_rate": 25,
+                "salary_monthly_gross": 0
+            },
+            "civic": {
+                "clean_criminal_record": true,
+                "no_expulsion_order": true
+            },
+            "family": {
+                "is_polygamous": false
+            }
+        },
+        "expected_categories": [
+            "sejour"
+        ]
+    },
+    {
+        "id": "profil_permis_standard",
+        "profileName": "Standard Driving License Exchange",
+        "expected_categories": [
+            "permis"
+        ],
+        "profile": {
+            "driving": {
+                "status": "WORKER",
+                "license_country": "MAGHREB",
+                "residence_start_date": "01/2026",
+                "residence_duration_months": 2
+            },
+            "identity": {
+                "nationality_group": "NON_EU"
+            }
+        }
+    },
+    {
+        "id": "profil_permis_etudiant",
+        "profileName": "Student Driving License",
+        "expected_categories": [
+            "permis"
+        ],
+        "profile": {
+            "driving": {
+                "status": "STUDENT",
+                "license_country": "MAGHREB"
+            }
+        }
+    },
+    {
+        "id": "profil_permis_refugie",
+        "profileName": "Refugee Driving License Exchange",
+        "expected_categories": [
+            "permis"
+        ],
+        "profile": {
+            "identity": {
+                "nationality_group": "REFUGEE"
+            },
+            "driving": {
+                "residence_duration_months": 6
+            }
+        }
+    }
+]

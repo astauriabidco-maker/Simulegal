@@ -280,6 +280,14 @@ export const AVAILABLE_SERVICES: ServiceMetadata[] = [
         category: 'IMMIGRATION'
     },
 
+    // ========== RENDEZ-VOUS PRÉFECTURE ==========
+    {
+        id: 'rdv_prefecture',
+        name: '📅 Rendez-vous Préfecture',
+        description: 'Assistance à la prise de rendez-vous en préfecture',
+        category: 'OTHER'
+    },
+
     {
         id: 'default',
         name: '⚙️ Configuration par Défaut',
@@ -294,7 +302,7 @@ export const AVAILABLE_SERVICES: ServiceMetadata[] = [
 const CUSTOM_DOCS_KEY = 'custom_documents';
 const CUSTOM_SERVICES_KEY = 'custom_services';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
 export const ServiceConfigStore = {
 

@@ -6,8 +6,12 @@
 import rulesSejour from '../specs/rules_sejour.json';
 import rulesNaturalisation from '../specs/rules_naturalisation.json';
 import rulesFamily from '../specs/rules_family.json';
+import rulesAsile from '../specs/rules_asile.json';
+import rulesPermis from '../specs/rules_permis.json';
 import defaultThresholds from '../specs/config_thresholds.json';
 import { ProcedureRule } from '../types';
+
+type RuleCategory = 'sejour' | 'naturalisation' | 'family' | 'asile' | 'permis';
 
 const THRESHOLDS_KEY = 'v2_eligibility_thresholds';
 const RULES_KEY_PREFIX = 'v2_eligibility_rules_';
@@ -23,7 +27,7 @@ export const EligibilityStore = {
      */
     syncWithBackend: async () => {
         if (typeof window === 'undefined') return;
-        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
         try {
             // 1. Thresholds
@@ -33,8 +37,8 @@ export const EligibilityStore = {
                 localStorage.setItem(THRESHOLDS_KEY, JSON.stringify(thresholds));
             }
 
-            // 2. Rules — sync all 3 categories
-            const categories = ['naturalisation', 'sejour', 'family'] as const;
+            // 2. Rules — sync all categories
+            const categories: RuleCategory[] = ['naturalisation', 'sejour', 'family', 'asile', 'permis'];
             for (const category of categories) {
                 try {
                     const rRes = await fetch(`${API_URL}/eligibility/rules/${category}`);
@@ -48,7 +52,7 @@ export const EligibilityStore = {
                     console.warn(`[ELIGIBILITY] ⚠️ Failed to sync category: ${category}`, catErr);
                 }
             }
-            console.log('[ELIGIBILITY] ✅ Sync complete (thresholds + 3 categories)');
+            console.log('[ELIGIBILITY] ✅ Sync complete (thresholds + 4 categories)');
         } catch (err) {
             console.warn('[ELIGIBILITY] ⚠️ Backend sync failed, using defaults', err);
         }
@@ -96,11 +100,17 @@ export const EligibilityStore = {
     /**
      * Récupère les règles d'une catégorie (sejour, naturalisation, family)
      */
-    getRules: (category: 'sejour' | 'naturalisation' | 'family'): ProcedureRule[] => {
+    getRules: (category: RuleCategory): ProcedureRule[] => {
+        const fallbacks: Record<RuleCategory, ProcedureRule[]> = {
+            sejour: rulesSejour as ProcedureRule[],
+            naturalisation: rulesNaturalisation as ProcedureRule[],
+            family: rulesFamily as ProcedureRule[],
+            asile: rulesAsile as ProcedureRule[],
+            permis: rulesPermis as ProcedureRule[],
+        };
+
         if (typeof window === 'undefined') {
-            if (category === 'sejour') return rulesSejour as ProcedureRule[];
-            if (category === 'naturalisation') return rulesNaturalisation as ProcedureRule[];
-            return rulesFamily as ProcedureRule[];
+            return fallbacks[category] || [];
         }
 
         const saved = localStorage.getItem(RULES_KEY_PREFIX + category);
@@ -112,15 +122,13 @@ export const EligibilityStore = {
             }
         }
 
-        if (category === 'sejour') return rulesSejour as ProcedureRule[];
-        if (category === 'naturalisation') return rulesNaturalisation as ProcedureRule[];
-        return rulesFamily as ProcedureRule[];
+        return fallbacks[category] || [];
     },
 
     /**
      * Met à jour toute une catégorie de règles
      */
-    updateRules: (category: 'sejour' | 'naturalisation' | 'family', newRules: ProcedureRule[]) => {
+    updateRules: (category: RuleCategory, newRules: ProcedureRule[]) => {
         localStorage.setItem(RULES_KEY_PREFIX + category, JSON.stringify(newRules));
         console.log(`[ELIGIBILITY] ✅ Règles "${category}" mises à jour`);
     },
@@ -148,7 +156,7 @@ export const EligibilityStore = {
      * Evalue l'éligibilité via le Backend
      */
     evaluateEligibility: async (userProfile: any, category: string): Promise<ProcedureRule[]> => {
-        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
         try {
             const res = await fetch(`${API_URL}/eligibility/evaluate/${category}`, {
                 method: 'POST',
@@ -172,7 +180,7 @@ export const EligibilityStore = {
      * Sauvegarde une règle via le backend (avec audit trail)
      */
     saveRuleToBackend: async (category: string, ruleId: string, conditions: any, changedBy: string, changeDetails?: string) => {
-        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
         try {
             const res = await fetch(`${API_URL}/eligibility/rules/${category}/${ruleId}`, {
                 method: 'PUT',
@@ -193,7 +201,7 @@ export const EligibilityStore = {
      * Récupère l'audit log des modifications
      */
     fetchAuditLog: async (limit = 50): Promise<any[]> => {
-        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
         try {
             const res = await fetch(`${API_URL}/eligibility/audit-log?limit=${limit}`);
             if (res.ok) {
@@ -209,7 +217,7 @@ export const EligibilityStore = {
      * Récupère l'historique d'une règle spécifique
      */
     fetchRuleHistory: async (category: string, ruleId: string): Promise<any[]> => {
-        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
         try {
             const res = await fetch(`${API_URL}/eligibility/audit-log/${category}/${ruleId}`);
             if (res.ok) {

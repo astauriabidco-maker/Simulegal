@@ -15,8 +15,8 @@ export declare class LeadsService {
         status: import(".prisma/client").$Enums.LeadStatus;
         createdAt: Date;
         updatedAt: Date;
-        data: string;
         email: string;
+        data: string;
         phone: string;
         serviceId: string;
         serviceName: string;
@@ -38,8 +38,8 @@ export declare class LeadsService {
     }): Promise<{
         id: string;
         createdAt: Date;
-        content: string;
         leadId: string;
+        content: string;
         author: string;
     }>;
     create(data: any): Promise<any>;
@@ -54,8 +54,8 @@ export declare class LeadsService {
         status: import(".prisma/client").$Enums.LeadStatus;
         createdAt: Date;
         updatedAt: Date;
-        data: string;
         email: string;
+        data: string;
         phone: string;
         serviceId: string;
         serviceName: string;

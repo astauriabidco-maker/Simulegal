@@ -39,8 +39,8 @@ export declare class FranchiseLeadsController {
         id: string;
         type: string;
         createdAt: Date;
-        content: string;
         leadId: string;
+        content: string;
         author: string;
     }>;
     getAnalytics(): Promise<{

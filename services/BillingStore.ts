@@ -1,6 +1,6 @@
 import { AuthStore } from './authStore';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
 const getHeaders = () => {
     const token = AuthStore.getToken();

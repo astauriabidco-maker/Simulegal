@@ -2,10 +2,11 @@
 
 import React, { useState } from 'react';
 import { UserProfile } from '@/types';
-import { ArrowRight, ArrowLeft, Gavel, Monitor, MapPin } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Gavel, Monitor, MapPin, Calendar as CalendarIcon } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { LEGAL_QUESTIONS } from '@/data/modules/legal';
+import BookingCalendar from '../BookingCalendar';
 
 function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs));
@@ -17,7 +18,7 @@ interface LegalConsultationStepProps {
     onNext: () => void;
 }
 
-type LegalSubStep = 1 | 2;
+type LegalSubStep = 1 | 2 | 3;
 
 export default function LegalConsultationStep({ userProfile, updateProfile, onNext }: LegalConsultationStepProps) {
     const [subStep, setSubStep] = useState<LegalSubStep>(1);
@@ -41,13 +42,14 @@ export default function LegalConsultationStep({ userProfile, updateProfile, onNe
         const { rdv_juriste } = userProfile;
         if (subStep === 1) return !!rdv_juriste.subject;
         if (subStep === 2) return !!rdv_juriste.mode;
+        if (subStep === 3) return !!rdv_juriste.slotId; // Check slot
         return true;
     };
 
     const renderProgressDots = () => {
         return (
             <div className="flex gap-2 mb-8 justify-center">
-                {[1, 2].map((i) => (
+                {[1, 2, 3].map((i) => (
                     <div
                         key={i}
                         className={cn(
@@ -139,6 +141,29 @@ export default function LegalConsultationStep({ userProfile, updateProfile, onNe
                 </div>
             )}
 
+            {subStep === 3 && (
+                <div className="flex-1 flex flex-col animate-in fade-in zoom-in-95 duration-300">
+                    <div className="space-y-3 text-center mb-8">
+                        <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                            <CalendarIcon className="w-8 h-8" />
+                        </div>
+                        <h2 className="text-3xl font-black text-slate-900 tracking-tight">Choisissez votre créneau</h2>
+                        <p className="text-slate-500 font-medium max-w-md mx-auto">
+                            Sélectionnez une date et une heure pour votre consultation {userProfile.rdv_juriste.mode === 'remote' ? 'à distance' : 'en cabinet'}.
+                        </p>
+                    </div>
+
+                    <div className="flex-1 overflow-hidden">
+                        <BookingCalendar
+                            onSelectSlot={(slot) => {
+                                handleUpdate({ slotId: slot?.id, slotDate: slot?.start });
+                            }}
+                            selectedSlot={userProfile.rdv_juriste.slotId ? { id: userProfile.rdv_juriste.slotId } as any : null}
+                        />
+                    </div>
+                </div>
+            )}
+
             <div className="mt-auto pt-10 flex items-center justify-between border-t border-slate-100">
                 {subStep > 1 ? (
                     <button
@@ -153,7 +178,7 @@ export default function LegalConsultationStep({ userProfile, updateProfile, onNe
                 )}
 
                 <button
-                    onClick={subStep === 2 ? onNext : nextSubStep}
+                    onClick={subStep === 3 ? onNext : nextSubStep}
                     disabled={!isSubStepValid()}
                     className={cn(
                         "flex items-center gap-4 px-12 py-5 rounded-2xl font-black text-lg transition-all shadow-xl",
@@ -162,7 +187,7 @@ export default function LegalConsultationStep({ userProfile, updateProfile, onNe
                             : "bg-slate-100 text-slate-300 cursor-not-allowed shadow-none"
                     )}
                 >
-                    {subStep === 2 ? "VOIR LE TARIF / RÉSERVER" : "Continuer"}
+                    {subStep === 3 ? "VOIR LE TARIF / RÉSERVER" : "Continuer"}
                     <ArrowRight className="w-5 h-5" />
                 </button>
             </div>

@@ -16,6 +16,7 @@ interface CheckoutFlowProps {
     partnerId?: string | null; // Code partenaire pour mode Kiosk
     isKioskMode?: boolean;
     onKioskReset?: () => void;
+    extraData?: any; // Données supplémentaires spécifiques au service (ex: rdv_prefecture)
 }
 
 export default function CheckoutFlow({
@@ -26,7 +27,8 @@ export default function CheckoutFlow({
     price,
     partnerId,
     isKioskMode = false,
-    onKioskReset
+    onKioskReset,
+    extraData
 }: CheckoutFlowProps) {
     if (!isOpen) return null;
 
@@ -92,7 +94,8 @@ export default function CheckoutFlow({
                     ipAddress: "88.123.44.12",
                     consentVersion: "v1.0",
                     isSigned: true
-                }
+                },
+                ...(extraData || {}) // Inject extra data dynamically
             } as any);
 
             if (newLead) {

@@ -28,7 +28,7 @@ export interface FranchiseLead {
     }>;
 }
 
-const API_URL = 'http://localhost:3001/franchise-leads';
+const API_URL = 'http://localhost:5000/franchise-leads';
 
 import { AuthStore } from './authStore';
 

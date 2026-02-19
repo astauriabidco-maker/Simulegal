@@ -18,7 +18,7 @@ interface SystemUser {
     createdAt: string;
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
 const ROLE_CONFIG = {
     SUPER_ADMIN: { label: 'Super Admin', icon: Shield, color: 'text-red-600 bg-red-50 border-red-100' },

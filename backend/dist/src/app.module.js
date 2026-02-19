@@ -33,6 +33,8 @@ const invoices_module_1 = require("./invoices/invoices.module");
 const payments_module_1 = require("./payments/payments.module");
 const whatsapp_module_1 = require("./whatsapp/whatsapp.module");
 const veille_module_1 = require("./veille/veille.module");
+const appointments_slots_module_1 = require("./appointments-slots/appointments-slots.module");
+const email_module_1 = require("./email/email.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -61,7 +63,9 @@ exports.AppModule = AppModule = __decorate([
             payments_module_1.PaymentsModule,
             absences_module_1.AbsencesModule,
             whatsapp_module_1.WhatsappModule,
-            veille_module_1.VeilleModule
+            veille_module_1.VeilleModule,
+            appointments_slots_module_1.AppointmentsSlotsModule,
+            email_module_1.EmailModule
         ],
         controllers: [app_controller_1.AppController],
         providers: [app_service_1.AppService],

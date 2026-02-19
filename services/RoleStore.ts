@@ -49,7 +49,7 @@ const DEFAULT_ROLES: Role[] = [
     }
 ];
 
-const API_URL = 'http://localhost:3001';
+const API_URL = 'http://localhost:5000';
 
 const getHeaders = () => {
     const token = localStorage.getItem('admin_token');

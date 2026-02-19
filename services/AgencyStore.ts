@@ -21,7 +21,7 @@ export interface AgencyExt {
     region?: string;
 }
 
-const API_URL = 'http://localhost:3001/agencies';
+const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3005') + '/agencies';
 
 const getHeaders = () => {
     const token = AuthStore.getToken();
@@ -76,7 +76,8 @@ export const AgencyStore = {
     getAgencyStats: async (id: string): Promise<AgencyStats> => {
         try {
             // Pour l'instant on utilise l'API balance et on pourrait étendre l'API stats
-            const response = await fetch(`http://localhost:3001/finance/balance?agencyId=${id}`, {
+            const baseUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3005');
+            const response = await fetch(`${baseUrl}/finance/balance?agencyId=${id}`, {
                 headers: getHeaders()
             });
             const data = await response.json();
@@ -103,7 +104,8 @@ export const AgencyStore = {
 
     async getPerformanceTrends(agencyId: string): Promise<any[]> {
         try {
-            const response = await fetch(`http://localhost:3001/finance/performance-trends?agencyId=${agencyId}`, {
+            const baseUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3005');
+            const response = await fetch(`${baseUrl}/finance/performance-trends?agencyId=${agencyId}`, {
                 headers: getHeaders()
             });
             if (!response.ok) throw new Error('Erreur chargement trends');
@@ -126,10 +128,8 @@ export const AgencyStore = {
             return false;
         }
     },
-
     downloadCSV: () => {
         const token = AuthStore.getToken();
-        window.open(`${API_URL}/export/csv`, '_blank');
+        window.open(`${(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3005')}/agencies/export/csv`, '_blank');
     }
 };
-

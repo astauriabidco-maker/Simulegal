@@ -69,6 +69,7 @@ model User {
   expertises     String        @default("[]")
   absences       Absence[]
   appointments   Appointment[]
+  slots          AppointmentSlot[]
   leads          Lead[]
   agency         Agency?       @relation(fields: [agencyId], references: [id])
   roleRef        Role?         @relation(fields: [roleId], references: [id])
@@ -141,6 +142,7 @@ model Lead {
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
   data           String        @default("{}")
+  slots          AppointmentSlot[]
   appointments   Appointment[]
   creditNotes    CreditNote[]
   assignedUser   User?         @relation(fields: [assignedUserId], references: [id])
@@ -234,6 +236,19 @@ model Appointment {
   agency             Agency?           @relation(fields: [agencyId], references: [id])
   hostUser           User?             @relation(fields: [hostUserId], references: [id])
   lead               Lead              @relation(fields: [leadId], references: [id])
+}
+
+model AppointmentSlot {
+  id           String   @id @default(cuid())
+  juristId     String
+  start        DateTime
+  end          DateTime
+  status       String   @default("AVAILABLE") // AVAILABLE, LOCKED, BOOKED
+  leadId       String?
+  lockedAt     DateTime?
+  
+  jurist       User     @relation(fields: [juristId], references: [id])
+  lead         Lead?    @relation(fields: [leadId], references: [id])
 }
 
 model SystemSettings {
@@ -368,17 +383,18 @@ model Communication {
 // ─── Veille Juridique ──────────────────────────────────────────────
 
 model LegalUpdate {
-  id         String   @id @default(cuid())
-  title      String
-  summary    String
-  category   String
-  severity   String   @default("medium") // high | medium | low
-  sourceUrl  String?
-  authorName String?
-  applied    Boolean  @default(false)
-  appliedAt  DateTime?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id             String   @id @default(cuid())
+  title          String
+  summary        String
+  category       String
+  severity       String   @default("medium") // high | medium | low
+  sourceUrl      String?
+  authorName     String?
+  applied        Boolean  @default(false)
+  appliedAt      DateTime?
+  linkedRuleIds  String   @default("[]") // JSON array of rule IDs impacted by this update
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }
 
 // ─── Audit Trail des Règles ────────────────────────────────────────

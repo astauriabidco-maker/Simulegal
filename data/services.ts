@@ -51,13 +51,14 @@ export const SERVICES_CATALOG: Service[] = [
 
     // PÔLE EXPERTISE (Sans Simulation ou Partielle)
     {
-        id: 'permis_change',
+        id: 'permis_conduire',
         title: 'Changement Permis Conduire',
         description: 'Aide à l\'obtention ou à l\'échange de votre permis de conduire étranger.',
         pole: 'EXPERTISE',
-        type: 'DOCUMENT',
-        isSimulatable: false,
+        type: 'SIMULATION',
+        isSimulatable: true,
         iconName: 'Car',
+        badge: 'SIMUL',
         price: 15000 // 150€
     },
     {
@@ -66,18 +67,20 @@ export const SERVICES_CATALOG: Service[] = [
         description: 'Conseil juridique personnalisé avec un expert en droit des étrangers.',
         pole: 'EXPERTISE',
         type: 'CONSULTATION',
-        isSimulatable: false,
+        isSimulatable: true,
         iconName: 'Gavel',
+        badge: 'SIMUL',
         price: 8000 // 80€
     },
     {
-        id: 'rdv_pref',
+        id: 'rdv_prefecture',
         title: 'Rendez-vous Préfecture',
         description: 'Assistance à la prise de rendez-vous et préparation du passage en préfecture.',
         pole: 'EXPERTISE',
         type: 'CONSULTATION',
-        isSimulatable: false,
+        isSimulatable: true,
         iconName: 'Calendar',
+        badge: 'SIMUL',
         price: 5000 // 50€
     },
 
@@ -88,8 +91,9 @@ export const SERVICES_CATALOG: Service[] = [
         description: 'Cours adaptés pour vos examens et votre intégration en France.',
         pole: 'INTEGRATION',
         type: 'FORMATION',
-        isSimulatable: false,
+        isSimulatable: true,
         iconName: 'Languages',
+        badge: 'SIMUL',
         price: 25000 // 250€
     },
     {
@@ -98,18 +102,20 @@ export const SERVICES_CATALOG: Service[] = [
         description: 'Sessions de formation obligatoire sur les valeurs de la République.',
         pole: 'INTEGRATION',
         type: 'FORMATION',
-        isSimulatable: false,
+        isSimulatable: true,
         iconName: 'GraduationCap',
+        badge: 'SIMUL',
         price: 12000 // 120€
     },
     {
-        id: 'rappel',
+        id: 'rappel_echeances',
         title: 'Être Rappelé',
         description: 'Service gratuit pour être contacté par un conseiller SimuLegal.',
         pole: 'INTEGRATION',
         type: 'CALLBACK',
-        isSimulatable: false,
+        isSimulatable: true,
         iconName: 'Phone',
+        badge: 'GRATUIT',
         price: 0
     }
 ];

@@ -35,10 +35,10 @@ export declare class AppointmentsController {
         createdAt: Date;
         updatedAt: Date;
         agencyId: string | null;
-        serviceId: string | null;
+        start: Date;
         end: Date;
         leadId: string;
-        start: Date;
+        serviceId: string | null;
         leadName: string;
         leadEmail: string | null;
         hostUserId: string | null;
@@ -55,10 +55,10 @@ export declare class AppointmentsController {
         createdAt: Date;
         updatedAt: Date;
         agencyId: string | null;
-        serviceId: string | null;
+        start: Date;
         end: Date;
         leadId: string;
-        start: Date;
+        serviceId: string | null;
         leadName: string;
         leadEmail: string | null;
         hostUserId: string | null;

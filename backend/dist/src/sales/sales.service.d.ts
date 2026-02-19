@@ -26,8 +26,8 @@ export declare class SalesService {
             status: import(".prisma/client").$Enums.ProspectStatus;
             createdAt: Date;
             updatedAt: Date;
-            agencyId: string;
             email: string | null;
+            agencyId: string;
             phone: string;
             source: string;
             firstName: string;
@@ -64,8 +64,8 @@ export declare class SalesService {
         status: import(".prisma/client").$Enums.ProspectStatus;
         createdAt: Date;
         updatedAt: Date;
-        agencyId: string;
         email: string | null;
+        agencyId: string;
         phone: string;
         source: string;
         firstName: string;
@@ -81,8 +81,8 @@ export declare class SalesService {
         status: import(".prisma/client").$Enums.ProspectStatus;
         createdAt: Date;
         updatedAt: Date;
-        agencyId: string;
         email: string | null;
+        agencyId: string;
         phone: string;
         source: string;
         firstName: string;
@@ -98,8 +98,8 @@ export declare class SalesService {
         status: import(".prisma/client").$Enums.ProspectStatus;
         createdAt: Date;
         updatedAt: Date;
-        agencyId: string;
         email: string | null;
+        agencyId: string;
         phone: string;
         source: string;
         firstName: string;
