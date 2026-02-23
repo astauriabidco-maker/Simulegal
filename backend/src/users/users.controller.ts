@@ -7,6 +7,21 @@ import { AuthGuard } from '@nestjs/passport';
 export class UsersController {
     constructor(private readonly usersService: UsersService) { }
 
+    @Get('me')
+    getMyProfile(@Request() req: any) {
+        return this.usersService.findOneById(req.user.userId);
+    }
+
+    @Patch('me')
+    async updateMyProfile(@Request() req: any, @Body() data: any) {
+        // Un utilisateur ne peut modifier que name, email et password via /me
+        const safeData: any = {};
+        if (data.name) safeData.name = data.name;
+        if (data.email) safeData.email = data.email;
+        if (data.password) safeData.password = data.password;
+        if (data.expertises) safeData.expertises = data.expertises;
+        return this.usersService.update(req.user.userId, safeData);
+    }
     @Get('system')
     findSystemUsers(@Request() req: any) {
         if (req.user.role !== 'SUPER_ADMIN') {

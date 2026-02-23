@@ -1,7 +1,10 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit, Inject, forwardRef } from '@nestjs/common';
 import { SettingsService } from '../settings/settings.service';
 import Stripe from 'stripe';
 import { LeadsService } from '../leads/leads.service';
+import { EmailService } from '../email/email.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { PipelineAutomationService } from '../pipeline-automation/pipeline-automation.service';
 
 @Injectable()
 export class PaymentsService implements OnModuleInit {
@@ -10,7 +13,10 @@ export class PaymentsService implements OnModuleInit {
 
     constructor(
         private settingsService: SettingsService,
-        private leadsService: LeadsService
+        @Inject(forwardRef(() => LeadsService)) private leadsService: LeadsService,
+        private emailService: EmailService,
+        private notificationsService: NotificationsService,
+        private pipelineAutomation: PipelineAutomationService,
     ) { }
 
     async onModuleInit() {
@@ -26,8 +32,11 @@ export class PaymentsService implements OnModuleInit {
             this.logger.warn('Stripe Secret Key is missing or default. Payments will be disabled.');
         }
     }
+    isStripeConfigured(): boolean {
+        return !!this.stripe;
+    }
 
-    async createCheckoutSession(leadId: string, successUrl: string, cancelUrl: string) {
+    async createCheckoutSession(leadId: string, successUrl: string, cancelUrl: string, amount?: number, label?: string) {
         if (!this.stripe) throw new Error('Stripe is not configured');
 
         const lead = await this.leadsService.findOne(leadId);
@@ -40,10 +49,10 @@ export class PaymentsService implements OnModuleInit {
                     price_data: {
                         currency: 'eur',
                         product_data: {
-                            name: `Prestation SimuLegal - ${lead.serviceName}`,
+                            name: label || `Prestation SimuLegal - ${lead.serviceName}`,
                             description: `Dossier #${lead.id}`,
                         },
-                        unit_amount: lead.amountPaid || 10000, // Fallback if amount is missing, in cents
+                        unit_amount: amount ? amount * 100 : (lead.amountPaid || 10000), // En centimes
                     },
                     quantity: 1,
                 },
@@ -54,6 +63,7 @@ export class PaymentsService implements OnModuleInit {
             client_reference_id: lead.id,
             metadata: {
                 leadId: lead.id,
+                label: label || lead.serviceName,
             },
         });
 
@@ -90,6 +100,52 @@ export class PaymentsService implements OnModuleInit {
                     method: 'STRIPE',
                     reference: session.payment_intent as string
                 });
+
+                // Trigger pipeline automations on payment
+                const leadForAutomation = await this.leadsService.findOne(leadId);
+                if (leadForAutomation) {
+                    await this.pipelineAutomation.onPaymentReceived(leadForAutomation);
+                }
+
+                // Envoi des emails de facturation / de notification
+                try {
+                    const leadInfo = await this.leadsService.findOne(leadId);
+                    if (leadInfo) {
+                        const amountStr = session.amount_total ? session.amount_total / 100 : 0;
+                        const serviceLabel = session.metadata?.label || leadInfo.serviceName;
+
+                        if (leadInfo.email) {
+                            const clientSpaceUrlForEmail = this.leadsService.generateClientSpaceUrl(leadInfo.id);
+                            await this.emailService.sendOrderConfirmation(
+                                leadInfo.email,
+                                leadInfo.name,
+                                serviceLabel,
+                                amountStr,
+                                session.id,
+                                leadInfo.requiredDocs,
+                                clientSpaceUrlForEmail
+                            );
+                            await this.emailService.sendMandateCopy(leadInfo.email, leadInfo.name);
+                        }
+
+                        // Envoi de la checklist WhatsApp avec Boutons Interactifs + Espace Client
+                        if (leadInfo.phone && leadInfo.requiredDocs && leadInfo.requiredDocs.length > 0) {
+                            const uploadLinks = this.leadsService.generateDocumentUploadLinks(leadInfo.id, leadInfo.requiredDocs);
+                            const clientSpaceUrl = this.leadsService.generateClientSpaceUrl(leadInfo.id);
+                            const { message, buttons } = this.leadsService.buildWhatsAppChecklistMessage(serviceLabel, clientSpaceUrl, uploadLinks);
+
+                            await this.notificationsService.sendWhatsApp(
+                                leadInfo.phone,
+                                'order_checklist',
+                                { message },
+                                { leadId: leadInfo.id },
+                                buttons
+                            );
+                        }
+                    }
+                } catch (e) {
+                    this.logger.error(`Failed to send payment confirmation email or whatsapp: ${e.message}`);
+                }
             }
         }
     }

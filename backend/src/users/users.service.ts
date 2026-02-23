@@ -6,20 +6,29 @@ import * as bcrypt from 'bcrypt';
 export class UsersService {
     constructor(private prisma: PrismaService) { }
 
-    private mapUser(user: any) {
+    private mapUser(user: any, agencyMap?: Map<string, string>) {
         if (!user) return null;
-        return {
+        const mapped: any = {
             ...user,
             scopeAgencyIds: user.scopeAgencyIds ? (typeof user.scopeAgencyIds === 'string' ? JSON.parse(user.scopeAgencyIds) : user.scopeAgencyIds) : [],
             expertises: user.expertises ? (typeof user.expertises === 'string' ? JSON.parse(user.expertises) : user.expertises) : []
         };
+        // Résoudre le nom de l'agence de rattachement
+        if (user.homeAgencyId && agencyMap) {
+            mapped.homeAgencyName = agencyMap.get(user.homeAgencyId) || null;
+        }
+        return mapped;
     }
 
     async findAll() {
-        const users = await this.prisma.user.findMany({
-            include: { agency: true, roleRef: true }
-        });
-        return users.map(u => this.mapUser(u));
+        const [users, agencies] = await Promise.all([
+            this.prisma.user.findMany({
+                include: { agency: true, roleRef: true }
+            }),
+            this.prisma.agency.findMany({ select: { id: true, name: true } })
+        ]);
+        const agencyMap = new Map(agencies.map(a => [a.id, a.name]));
+        return users.map(u => this.mapUser(u, agencyMap));
     }
 
     async findSystemUsers() {

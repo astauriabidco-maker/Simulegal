@@ -42,6 +42,27 @@ export class NotificationsController {
         }
     }
 
+    @Post('send-appointment-confirmation')
+    @UseGuards(JwtAuthGuard)
+    async sendAppointmentConfirmation(@Body() data: {
+        prospectId: string,
+        prospectPhone: string,
+        prospectFirstName: string,
+        appointment: any,
+        channel: 'SMS' | 'WHATSAPP'
+    }) {
+        const appointmentDate = new Date(data.appointment.date).toLocaleString('fr-FR', {
+            weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
+        });
+        const message = `Bonjour ${data.prospectFirstName},\n\nVotre RDV SimuLegal est confirmé le ${appointmentDate} à l'agence ${data.appointment.agencyName}.\n\nPour toute modification, répondez à ce message.\n\nÀ bientôt !`;
+
+        if (data.channel === 'WHATSAPP') {
+            return this.notificationsService.sendWhatsApp(data.prospectPhone, 'appointment_confirmation', { message });
+        } else {
+            return this.notificationsService.sendSMS(data.prospectPhone, message);
+        }
+    }
+
     @Post('trigger-stage-change')
     @UseGuards(JwtAuthGuard)
     async triggerStageChange(@Body() data: { lead: any, oldStage: string, newStage: string }) {
