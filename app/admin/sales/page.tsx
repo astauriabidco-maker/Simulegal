@@ -10,7 +10,7 @@ const RoleGuard = dynamic(() => import('../../../components/auth/RoleGuard'), { 
 export default function SalesPage() {
     return (
         <RoleGuard allowedRoles={['HQ_ADMIN', 'AGENCY_MANAGER', 'SUPERADMIN']}>
-            <div className="h-screen w-full">
+            <div className="h-full w-full">
                 <SalesDashboard />
             </div>
         </RoleGuard>

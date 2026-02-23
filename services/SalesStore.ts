@@ -2,13 +2,31 @@ import { AuthStore } from './authStore';
 import { LeadScoring } from './LeadScoring';
 import { MarketingAutomation } from './MarketingAutomation';
 
-export type ProspectSource = 'MANUAL' | 'CSV_IMPORT' | 'META_ADS' | 'GOOGLE_ADS' | 'TIKTOK_ADS' | 'PARTNER_API';
-export type ProspectStatus = 'TO_CALL' | 'IN_DISCUSSION' | 'MEETING_BOOKED' | 'LINK_SENT' | 'CONVERTED' | 'LOST';
+export type ProspectSource = 'MANUAL' | 'CSV_IMPORT' | 'META_ADS' | 'GOOGLE_ADS' | 'TIKTOK_ADS' | 'PARTNER_API' | 'WEBSITE' | 'WEBHOOK';
+export type ProspectStatus = 'TO_CALL' | 'IN_DISCUSSION' | 'MEETING_BOOKED' | 'APPOINTMENT_DONE' | 'SIGNED' | 'LOST';
 
 export interface ProspectNote {
+    id?: string;
     authorId: string;
     text: string;
-    date: string;
+    date?: string;
+    createdAt?: string;
+}
+
+export interface AppointmentInfo {
+    date: string;              // ISO date-heure du RDV
+    agencyId: string;          // ID de l'agence
+    agencyName: string;        // Nom lisible ("Agence Paris 15")
+    serviceId?: string;        // Service à traiter lors du RDV
+    confirmed?: boolean;       // Confirmé par le lead ?
+    confirmationSentVia?: 'SMS' | 'WHATSAPP' | 'EMAIL';
+}
+
+export interface EligibilityResult {
+    isEligible: boolean;
+    matchedProcedures: string[];  // IDs des procédures éligibles
+    evaluatedAt: string;          // Date d'évaluation
+    evaluatedBy?: string;         // ID du commercial
 }
 
 export interface Prospect {
@@ -30,6 +48,12 @@ export interface Prospect {
 
     // Pipeline
     status: ProspectStatus;
+
+    // RDV en agence
+    appointment?: AppointmentInfo;
+
+    // Résultat simulateur (rempli lors du RDV en agence)
+    eligibilityResult?: EligibilityResult;
 
     // Historique
     notes: ProspectNote[];
@@ -362,5 +386,69 @@ export const SalesStore = {
             console.error('[SalesStore] Error sending simulation link:', error);
             return { success: false, error: error.message };
         }
+    },
+
+    // ============================================
+    // APPOINTMENT BOOKING
+    // ============================================
+
+    /**
+     * Fixer un RDV en agence pour un prospect
+     * Met à jour le statut en MEETING_BOOKED et stocke les infos RDV
+     */
+    bookAppointment: async (
+        prospectId: string,
+        appointment: AppointmentInfo,
+        sendConfirmation: boolean = true
+    ): Promise<Prospect | null> => {
+        try {
+            // 1. Update prospect with appointment info + status
+            const updated = await SalesStore.updateProspect(prospectId, {
+                status: 'MEETING_BOOKED',
+                appointment
+            } as any);
+
+            // 2. Send confirmation SMS/WhatsApp if requested
+            if (sendConfirmation && updated) {
+                try {
+                    await fetch(`${API_URL}/notifications/send-appointment-confirmation`, {
+                        method: 'POST',
+                        headers: SalesStore.getHeaders(),
+                        body: JSON.stringify({
+                            prospectId,
+                            prospectPhone: updated.phone,
+                            prospectFirstName: updated.firstName,
+                            appointment,
+                            channel: appointment.confirmationSentVia || 'SMS'
+                        })
+                    });
+                } catch (notifError) {
+                    console.warn('[SalesStore] Confirmation notification failed (non-blocking):', notifError);
+                }
+            }
+
+            console.log(`[SalesStore] 📅 RDV fixé pour ${prospectId} le ${appointment.date} à ${appointment.agencyName}`);
+            return updated;
+        } catch (error) {
+            console.error('[SalesStore] Error booking appointment:', error);
+            return null;
+        }
+    },
+
+    /**
+     * Marquer un RDV comme effectué (le lead est venu en agence)
+     */
+    confirmAppointmentDone: async (prospectId: string): Promise<Prospect | null> => {
+        return SalesStore.updateProspect(prospectId, { status: 'APPOINTMENT_DONE' } as any);
+    },
+
+    /**
+     * Sauvegarder le résultat d'éligibilité après simulation en agence
+     */
+    saveEligibilityResult: async (
+        prospectId: string,
+        result: EligibilityResult
+    ): Promise<Prospect | null> => {
+        return SalesStore.updateProspect(prospectId, { eligibilityResult: result } as any);
     }
 };
