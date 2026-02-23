@@ -1,5 +1,5 @@
 
-export type FranchiseLeadStatus = 'NEW' | 'CONTACTED' | 'MEETING' | 'VALIDATED' | 'CONTRACT_SENT' | 'SIGNED' | 'REJECTED';
+export type FranchiseLeadStatus = 'NEW' | 'CONTACTED' | 'MEETING' | 'VALIDATED' | 'DIP_SENT' | 'CONTRACT_SENT' | 'SIGNED' | 'REJECTED';
 
 export interface FranchiseLead {
     id: string;
@@ -11,12 +11,24 @@ export interface FranchiseLead {
     companyName?: string;
     siret?: string;
     legalForm?: string;
-    status: 'NEW' | 'CONTACTED' | 'MEETING' | 'VALIDATED' | 'CONTRACT_SENT' | 'SIGNED' | 'REJECTED';
+    status: FranchiseLeadStatus;
     contractDetails: string; // JSON string
     contractHistory?: string; // JSON string
     documents?: string; // JSON string
     rejectionReason?: string;
     convertedAgencyId?: string;
+    // Loi Doubin fields
+    dipSentAt?: string;
+    coolingPeriodRemaining?: number | null;
+    entryFee?: number;
+    royaltyRate?: number;
+    advertisingFee?: number;
+    contractDuration?: number;
+    renewalTerms?: string;
+    terminationNotice?: number;
+    nonCompeteDuration?: number;
+    exclusiveTerritory?: boolean;
+    exclusiveRadius?: number;
     createdAt: string;
     updatedAt: string;
     notes?: Array<{
@@ -102,7 +114,7 @@ export const FranchiseLeadStore = {
     },
 
     updateDocuments: async (id: string, documents: any[]) => {
-        return (FranchiseLeadStore as any).updateLead(id, { documents: JSON.stringify(documents) });
+        return FranchiseLeadStore.update(id, { documents: JSON.stringify(documents) } as any);
     },
 
     logContractHistory: async (id: string, version: any, currentHistory: string = '[]') => {
@@ -111,7 +123,7 @@ export const FranchiseLeadStore = {
             ...version,
             timestamp: new Date().toISOString()
         });
-        return (FranchiseLeadStore as any).updateLead(id, { contractHistory: JSON.stringify(history) });
+        return FranchiseLeadStore.update(id, { contractHistory: JSON.stringify(history) } as any);
     },
 
     addNote: async (id: string, note: { content: string, author: string, type: 'NOTE' | 'CALL' | 'EMAIL' }) => {
@@ -135,10 +147,70 @@ export const FranchiseLeadStore = {
                 method: 'POST',
                 headers: getHeaders()
             });
-            if (!response.ok) throw new Error('Failed to sign contract');
+            if (!response.ok) {
+                const err = await response.json().catch(() => ({}));
+                throw new Error(err.message || 'Failed to sign contract');
+            }
+            return await response.json();
+        } catch (error: any) {
+            console.error('Error signing contract:', error);
+            alert(error.message || 'Erreur lors de la signature');
+            return null;
+        }
+    },
+
+    sendDIP: async (id: string): Promise<FranchiseLead | null> => {
+        try {
+            const response = await fetch(`${API_URL}/${id}/dip/send`, {
+                method: 'POST',
+                headers: getHeaders()
+            });
+            if (!response.ok) {
+                const err = await response.json().catch(() => ({}));
+                throw new Error(err.message || 'Failed to send DIP');
+            }
+            return await response.json();
+        } catch (error: any) {
+            console.error('Error sending DIP:', error);
+            alert(error.message || 'Erreur lors de l\'envoi du DIP');
+            return null;
+        }
+    },
+
+    downloadDIP: (id: string) => {
+        const token = AuthStore.getToken();
+        window.open(`${API_URL}/${id}/dip?token=${token}`, '_blank');
+    },
+
+    downloadOpeningKit: (id: string) => {
+        const token = AuthStore.getToken();
+        window.open(`${API_URL}/${id}/opening-kit?token=${token}`, '_blank');
+    },
+
+    validateSiret: async (siret: string): Promise<{ valid: boolean; name?: string; address?: string; error?: string } | null> => {
+        try {
+            const response = await fetch(`${API_URL}/siret/validate`, {
+                method: 'POST',
+                headers: getHeaders(),
+                body: JSON.stringify({ siret })
+            });
+            if (!response.ok) throw new Error('Validation failed');
             return await response.json();
         } catch (error) {
-            console.error('Error signing contract:', error);
+            console.error('Error validating SIRET:', error);
+            return null;
+        }
+    },
+
+    getCoolingStatus: async (id: string): Promise<{ daysElapsed: number; daysRemaining: number; canProceed: boolean; expiresAt: string | null } | null> => {
+        try {
+            const response = await fetch(`${API_URL}/${id}/cooling-status`, {
+                headers: getHeaders()
+            });
+            if (!response.ok) throw new Error('Failed to get cooling status');
+            return await response.json();
+        } catch (error) {
+            console.error('Error fetching cooling status:', error);
             return null;
         }
     },
@@ -182,4 +254,3 @@ export const FranchiseLeadStore = {
         window.open(`${API_URL}/export/csv?token=${token}`, '_blank');
     }
 };
-

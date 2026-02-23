@@ -13,6 +13,7 @@ const STATUS_COLUMNS: { id: FranchiseLeadStatus; label: string; color: string; b
     { id: 'CONTACTED', label: 'Contactés', color: 'text-yellow-700', bgColor: 'bg-yellow-100' },
     { id: 'MEETING', label: 'RDV Planifié', color: 'text-purple-700', bgColor: 'bg-purple-100' },
     { id: 'VALIDATED', label: 'Projet Validé', color: 'text-indigo-700', bgColor: 'bg-indigo-100' },
+    { id: 'DIP_SENT', label: 'DIP Envoyé', color: 'text-cyan-700', bgColor: 'bg-cyan-100' },
     { id: 'CONTRACT_SENT', label: 'Contrat Envoyé', color: 'text-orange-700', bgColor: 'bg-orange-100' },
     { id: 'SIGNED', label: 'Signés', color: 'text-emerald-700', bgColor: 'bg-emerald-100' },
     { id: 'REJECTED', label: 'Rejetés', color: 'text-red-700', bgColor: 'bg-red-100' }

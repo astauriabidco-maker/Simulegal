@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Patch, Res, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Patch, Res, UseGuards, Query } from '@nestjs/common';
 import type { Response } from 'express';
 import { FranchiseLeadsService } from './franchise-leads.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -39,6 +39,49 @@ export class FranchiseLeadsController {
         return this.franchiseLeadsService.update(id, body);
     }
 
+    // --- VALIDATION SIRET ---
+
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles('HQ_ADMIN', 'SUPER_ADMIN', 'SUPERADMIN')
+    @Post('siret/validate')
+    validateSiret(@Body() body: { siret: string }) {
+        return this.franchiseLeadsService.validateSiret(body.siret);
+    }
+
+    // --- LOI DOUBIN: DIP (Document d'Information Précontractuelle) ---
+
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles('HQ_ADMIN', 'SUPER_ADMIN', 'SUPERADMIN')
+    @Post(':id/dip/send')
+    sendDIP(@Param('id') id: string) {
+        return this.franchiseLeadsService.sendDIP(id);
+    }
+
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles('HQ_ADMIN', 'SUPER_ADMIN', 'SUPERADMIN')
+    @Get(':id/dip')
+    async getDIP(@Param('id') id: string, @Res() res: Response) {
+        const buffer = await this.franchiseLeadsService.generateDIP(id);
+        res.set({
+            'Content-Type': 'application/pdf',
+            'Content-Disposition': `attachment; filename=DIP-${id}.pdf`,
+            'Content-Length': buffer.length,
+        });
+        res.end(buffer);
+    }
+
+    // --- COOLING PERIOD STATUS ---
+
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles('HQ_ADMIN', 'SUPER_ADMIN', 'SUPERADMIN')
+    @Get(':id/cooling-status')
+    async getCoolingStatus(@Param('id') id: string) {
+        const lead = await this.franchiseLeadsService.findOne(id);
+        return this.franchiseLeadsService.getDIPCoolingStatus(lead);
+    }
+
+    // --- CONTRAT ---
+
     @UseGuards(JwtAuthGuard, RolesGuard)
     @Roles('HQ_ADMIN', 'SUPER_ADMIN', 'SUPERADMIN')
     @Post(':id/sign')
@@ -51,15 +94,30 @@ export class FranchiseLeadsController {
     @Get(':id/contract')
     async getContract(@Param('id') id: string, @Res() res: Response) {
         const buffer = await this.franchiseLeadsService.generateContract(id);
-
         res.set({
             'Content-Type': 'application/pdf',
-            'Content-Disposition': 'attachment; filename=contract.pdf',
+            'Content-Disposition': `attachment; filename=contrat-franchise-${id}.pdf`,
             'Content-Length': buffer.length,
         });
-
         res.end(buffer);
     }
+
+    // --- KIT D'OUVERTURE ---
+
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles('HQ_ADMIN', 'SUPER_ADMIN', 'SUPERADMIN')
+    @Get(':id/opening-kit')
+    async getOpeningKit(@Param('id') id: string, @Res() res: Response) {
+        const buffer = await this.franchiseLeadsService.generateOpeningKit(id);
+        res.set({
+            'Content-Type': 'application/pdf',
+            'Content-Disposition': `attachment; filename=kit-ouverture-${id}.pdf`,
+            'Content-Length': buffer.length,
+        });
+        res.end(buffer);
+    }
+
+    // --- NOTES ---
 
     @UseGuards(JwtAuthGuard, RolesGuard)
     @Roles('HQ_ADMIN', 'SUPER_ADMIN', 'SUPERADMIN')
@@ -89,4 +147,3 @@ export class FranchiseLeadsController {
         res.send('\uFEFF' + csv); // BOM for Excel UTF-8
     }
 }
-
