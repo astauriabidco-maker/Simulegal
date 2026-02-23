@@ -1,20 +1,49 @@
 'use client';
 
 import React, { useEffect, useState, useRef } from 'react';
+import Image from 'next/image';
 import {
     Search,
     MoreVertical,
     Send,
-    User,
     Phone,
-    Calendar,
     CheckCheck,
     Loader2,
     MessageSquare,
-    ChevronLeft
+    ChevronLeft,
+    FileText,
+    Download,
+    Image as ImageIcon,
+    Paperclip
 } from 'lucide-react';
 import { useMessageStore, Conversation, Message } from '../../../services/MessageStore';
 import { InboxAPI } from '../../../services/inbox.api';
+
+// Helpers pour les médias
+function getMediaUrl(mediaUrl: string | undefined | null): string | null {
+    if (!mediaUrl) return null;
+    if (mediaUrl.startsWith('http')) return mediaUrl;
+    const filename = mediaUrl.split('/').pop();
+    return `http://localhost:5000/whatsapp/media/${filename}`;
+}
+
+function isImageType(mediaType: string | undefined | null): boolean {
+    if (!mediaType) return false;
+    return mediaType.startsWith('image/');
+}
+
+function isPdfType(mediaType: string | undefined | null): boolean {
+    return mediaType === 'application/pdf';
+}
+
+function getMediaLabel(mediaType: string | undefined | null): string {
+    if (!mediaType) return 'Fichier';
+    if (mediaType.startsWith('image/')) return 'Photo';
+    if (mediaType.startsWith('video/')) return 'Vidéo';
+    if (mediaType.startsWith('audio/')) return 'Audio';
+    if (mediaType === 'application/pdf') return 'Document PDF';
+    return 'Fichier';
+}
 
 export default function InboxPage() {
     const {
@@ -26,14 +55,16 @@ export default function InboxPage() {
         setMessages,
         addMessage,
         isLoading,
-        setLoading
+        setLoading,
+        initWebSocket
     } = useMessageStore();
 
     const [reply, setReply] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
+    const [lightboxImage, setLightboxImage] = useState<string | null>(null);
     const chatEndRef = useRef<HTMLDivElement>(null);
 
-    // Initial load of conversations
+    // Initial load + WebSocket real-time
     useEffect(() => {
         const fetchConversations = async () => {
             setLoading(true);
@@ -43,9 +74,12 @@ export default function InboxPage() {
         };
         fetchConversations();
 
-        // Polling for new messages (simple real-time for now)
-        const interval = setInterval(fetchConversations, 10000);
-        return () => clearInterval(interval);
+        // Initialiser le WebSocket pour les mises à jour temps réel
+        const cleanupWs = initWebSocket();
+
+        return () => {
+            cleanupWs();
+        };
     }, []);
 
     // Load messages when conversation changes
@@ -74,8 +108,6 @@ export default function InboxPage() {
         const result = await InboxAPI.sendMessage(activeConversation.type, activeConversation.id, content);
 
         if (result.success) {
-            // Optimistic update or wait for backend to confirm communication entry
-            // For now, let's manually add it to the list for immediate feedback
             addMessage({
                 id: Math.random().toString(),
                 direction: 'OUTBOUND',
@@ -124,7 +156,7 @@ export default function InboxPage() {
                             <p className="text-sm font-bold">Aucune conversation trouvée</p>
                         </div>
                     ) : (
-                        filteredConversations.map((conv) => (
+                        filteredConversations.map((conv: any) => (
                             <button
                                 key={`${conv.type}:${conv.id}`}
                                 onClick={() => setActiveConversation(conv)}
@@ -145,7 +177,8 @@ export default function InboxPage() {
                                             }
                                         </span>
                                     </div>
-                                    <p className="text-xs text-slate-500 truncate font-medium">
+                                    <p className="text-xs text-slate-500 truncate font-medium flex items-center gap-1">
+                                        {conv.hasMedia && <Paperclip size={10} className="text-slate-400 shrink-0" />}
                                         {conv.lastMessage}
                                     </p>
                                     <div className="mt-1 flex items-center gap-1">
@@ -193,27 +226,100 @@ export default function InboxPage() {
                         </div>
 
                         {/* Messages Area */}
-                        <div className="flex-1 overflow-y-auto p-6 space-y-4">
-                            {messages.map((msg, idx) => (
-                                <div
-                                    key={msg.id || idx}
-                                    className={`flex ${msg.direction === 'OUTBOUND' ? 'justify-end' : 'justify-start'}`}
-                                >
-                                    <div className={`max-w-[75%] rounded-2xl p-4 shadow-sm relative ${msg.direction === 'OUTBOUND'
-                                            ? 'bg-indigo-600 text-white rounded-br-none'
+                        <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-[#EFEAE2]">
+                            {messages.map((msg: any, idx) => {
+                                const mediaUrl = getMediaUrl(msg.mediaUrl);
+                                const hasImage = isImageType(msg.mediaType) && mediaUrl;
+                                const hasPdf = isPdfType(msg.mediaType) && mediaUrl;
+                                const hasOtherMedia = msg.mediaType && !hasImage && !hasPdf && mediaUrl;
+
+                                return (
+                                    <div
+                                        key={msg.id || idx}
+                                        className={`flex ${msg.direction === 'OUTBOUND' ? 'justify-end' : 'justify-start'}`}
+                                    >
+                                        <div className={`max-w-[75%] rounded-2xl shadow-sm relative overflow-hidden ${msg.direction === 'OUTBOUND'
+                                            ? 'bg-[#D9FDD3] text-slate-800 rounded-br-none'
                                             : 'bg-white text-slate-700 rounded-bl-none'
-                                        }`}>
-                                        <p className="text-sm font-medium whitespace-pre-wrap">{msg.content}</p>
-                                        <div className={`flex items-center justify-end gap-1 mt-2 ${msg.direction === 'OUTBOUND' ? 'text-indigo-200' : 'text-slate-400'
                                             }`}>
-                                            <span className="text-[9px] font-bold">
-                                                {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                            </span>
-                                            {msg.direction === 'OUTBOUND' && <CheckCheck size={12} />}
+
+                                            {/* Image inline */}
+                                            {hasImage && (
+                                                <div
+                                                    className="cursor-pointer group relative"
+                                                    onClick={() => setLightboxImage(mediaUrl)}
+                                                >
+                                                    <Image
+                                                        src={mediaUrl}
+                                                        alt="Photo reçue"
+                                                        width={500}
+                                                        height={256}
+                                                        className="w-full max-h-64 object-cover"
+                                                        unoptimized
+                                                        onError={(e) => {
+                                                            (e.target as HTMLImageElement).style.display = 'none';
+                                                        }}
+                                                    />
+                                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                                                        <ImageIcon size={32} className="text-white drop-shadow-lg" />
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* PDF inline */}
+                                            {hasPdf && (
+                                                <a
+                                                    href={mediaUrl}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="flex items-center gap-3 p-4 mx-2 mt-2 bg-slate-100 rounded-xl hover:bg-slate-200 transition-colors group"
+                                                >
+                                                    <div className="p-3 bg-red-100 text-red-600 rounded-xl shrink-0">
+                                                        <FileText size={24} />
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-sm font-bold text-slate-700 truncate">{msg.mediaFilename || 'document.pdf'}</p>
+                                                        <p className="text-xs text-slate-400">PDF • Cliquer pour ouvrir</p>
+                                                    </div>
+                                                    <Download size={18} className="text-slate-400 group-hover:text-slate-600 transition-colors shrink-0" />
+                                                </a>
+                                            )}
+
+                                            {/* Autre fichier */}
+                                            {hasOtherMedia && (
+                                                <a
+                                                    href={mediaUrl}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="flex items-center gap-3 p-4 mx-2 mt-2 bg-slate-100 rounded-xl hover:bg-slate-200 transition-colors"
+                                                >
+                                                    <div className="p-3 bg-blue-100 text-blue-600 rounded-xl shrink-0">
+                                                        <FileText size={24} />
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-sm font-bold text-slate-700">{getMediaLabel(msg.mediaType)}</p>
+                                                        <p className="text-xs text-slate-400">{msg.mediaFilename || 'fichier'}</p>
+                                                    </div>
+                                                </a>
+                                            )}
+
+                                            {/* Texte */}
+                                            <div className="p-4">
+                                                {(msg.content && !(msg.mediaUrl && msg.content === '📎 Pièce jointe')) && (
+                                                    <p className="text-sm font-medium whitespace-pre-wrap">{msg.content}</p>
+                                                )}
+                                                <div className={`flex items-center justify-end gap-1 mt-2 ${msg.direction === 'OUTBOUND' ? 'text-slate-400' : 'text-slate-400'
+                                                    }`}>
+                                                    <span className="text-[9px] font-bold">
+                                                        {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                    </span>
+                                                    {msg.direction === 'OUTBOUND' && <CheckCheck size={12} className="text-[#53BDEB]" />}
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                             <div ref={chatEndRef} />
                         </div>
 
@@ -250,6 +356,24 @@ export default function InboxPage() {
                     </div>
                 )}
             </div>
+
+            {/* Lightbox pour les images agrandies */}
+            {lightboxImage && (
+                <div
+                    className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[999] flex items-center justify-center cursor-pointer"
+                    onClick={() => setLightboxImage(null)}
+                >
+                    <Image
+                        src={lightboxImage}
+                        alt="Image agrandie"
+                        width={1200}
+                        height={800}
+                        className="max-w-[90vw] max-h-[85vh] object-contain rounded-2xl shadow-2xl"
+                        unoptimized
+                    />
+                    <button className="absolute top-6 right-6 text-white/80 hover:text-white font-black text-2xl">✕</button>
+                </div>
+            )}
         </div>
     );
 }
