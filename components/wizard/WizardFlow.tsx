@@ -9,7 +9,7 @@ import { WizardAnalytics } from '@/services/WizardAnalytics';
 
 interface WizardFlowProps {
     userProfile: UserProfile;
-    updateProfile: (section: keyof UserProfile, data: any) => void;
+    updateProfile: (section: keyof UserProfile, data: Record<string, unknown>) => void;
     serviceId: string;
     forceAgencyId?: string;
 }
@@ -155,12 +155,15 @@ export default function WizardFlow({ userProfile, updateProfile, serviceId, forc
     }, [DRAFT_KEY]);
 
     /* ─── Generic field value getter ─── */
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const getFieldValue = (field: QuestionField): any => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const section = userProfile[field.section] as any;
         return section?.[field.key];
     };
 
     /* ─── Generic field update ─── */
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const setFieldValue = (field: QuestionField, value: any) => {
         // Analytics: record interaction
         if (analyticsSessionRef.current) {

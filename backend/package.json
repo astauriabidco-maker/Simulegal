@@ -17,7 +17,8 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json"
+    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "twilio:templates": "npx ts-node scripts/deploy-twilio-templates.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
@@ -26,6 +27,9 @@
     "@nestjs/jwt": "^11.0.2",
     "@nestjs/passport": "^11.0.5",
     "@nestjs/platform-express": "^11.0.1",
+    "@nestjs/platform-socket.io": "^11.1.14",
+    "@nestjs/schedule": "^6.1.1",
+    "@nestjs/websockets": "^11.1.14",
     "@prisma/client": "^6.4.1",
     "@types/bcrypt": "^6.0.0",
     "@types/passport-jwt": "^4.0.1",
@@ -43,6 +47,7 @@
     "prisma": "^6.4.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
+    "socket.io": "^4.8.3",
     "stripe": "^20.2.0",
     "twilio": "^5.0.0",
     "uuid": "^11.0.5"

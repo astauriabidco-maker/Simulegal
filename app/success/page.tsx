@@ -1,11 +1,11 @@
 'use client';
 
-import React from 'react';
+import React, { Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { CheckCircle2, ArrowRight, Download, Calendar, Home } from 'lucide-react';
 
-export default function SuccessPage() {
+function SuccessPageContent() {
     const searchParams = useSearchParams();
     const sessionId = searchParams.get('session_id');
     const isMock = searchParams.get('mock_payment') === 'true';
@@ -72,5 +72,13 @@ export default function SuccessPage() {
                 Besoin d'aide ? <a href="mailto:support@simulegal.fr" className="text-indigo-600 hover:underline">support@simulegal.fr</a> • +33 1 23 45 67 89
             </p>
         </div>
+    );
+}
+
+export default function SuccessPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen bg-slate-50 flex items-center justify-center p-6"><div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div></div>}>
+            <SuccessPageContent />
+        </Suspense>
     );
 }

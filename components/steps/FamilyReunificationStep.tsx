@@ -367,7 +367,7 @@ export default function FamilyReunificationStep({ userProfile, updateProfile, on
                         <p className="text-slate-500 text-lg font-medium">Voici le résumé de votre déclaration.</p>
                     </div>
                     <RecapCard title="Projet Familial" icon={<Heart className="w-5 h-5 text-rose-500" />} onEdit={() => goTo('QUI_FAIRE_VENIR', 'backward')}>
-                        <RecapRow label="Bénéficiaires" value={({ SPOUSE_AND_CHILDREN: 'Conjoint + Enfants', SPOUSE_ONLY: 'Conjoint seul', CHILDREN_ONLY: 'Enfants seuls' } as Record<string, string>)[family.rf_who_to_bring] || '-'} />
+                        <RecapRow label="Bénéficiaires" value={({ SPOUSE_AND_CHILDREN: 'Conjoint + Enfants', SPOUSE_ONLY: 'Conjoint seul', CHILDREN_ONLY: 'Enfants seuls' } as Record<string, string>)[family.rf_who_to_bring || ''] || '-'} />
                         <RecapRow label="Statut" value={({ MARRIED: 'Marié(e)', SINGLE: 'Célibataire' } as Record<string, string>)[family.rf_marital_status || ''] || '-'} />
                     </RecapCard>
                     <RecapCard title="Situation Admin." icon={<Shield className="w-5 h-5 text-indigo-500" />} onEdit={() => goTo('TITRE_SEJOUR', 'backward')}>

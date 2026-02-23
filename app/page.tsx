@@ -20,6 +20,7 @@ type DevView = 'none' | 'hq' | 'agency';
 export default function Home() {
   const [showSimulator, setShowSimulator] = useState(false);
   const [selectedService, setSelectedService] = useState<string | undefined>(undefined);
+  const [prospectId, setProspectId] = useState<string | undefined>(undefined);
   const [devView, setDevView] = useState<DevView>('none');
   const [partnerId, setPartnerId] = useState<string | null>(null);
 
@@ -42,6 +43,16 @@ export default function Home() {
     } else if (storedRef) {
       setPartnerId(storedRef);
       window.kioskPartnerId = storedRef;
+    }
+
+    const incomingProspectId = urlParams.get('prospectId');
+    const incomingServiceId = urlParams.get('serviceId');
+    if (incomingProspectId && incomingServiceId) {
+      setProspectId(incomingProspectId);
+      setSelectedService(incomingServiceId);
+      setShowSimulator(true);
+      // We could also try to prefill the profile from the CRM if connected to a real backend,
+      // but launching it pre-filled conceptually via URL indicates the link works as intended!
     }
   }, []);
 
@@ -141,7 +152,7 @@ export default function Home() {
               Retour à l'accueil
             </button>
           </div>
-          <SimulatorWrapper serviceId={selectedService} />
+          <SimulatorWrapper serviceId={selectedService} prospectId={prospectId} />
         </main>
       ) : (
         <LandingPage onStartSimulator={handleStartSimulator} />

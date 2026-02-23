@@ -4,6 +4,8 @@ import React, { useMemo } from 'react';
 import { UserProfile, ProcedureRule } from '@/types';
 import { evaluateRule } from '@/lib/engine';
 import EligibilityStore from '@/services/EligibilityStore';
+import { SalesStore } from '@/services/SalesStore';
+import { useRouter } from 'next/navigation';
 import { ArrowRight, Bell, Scale, CheckCircle2, AlertTriangle, AlertCircle, FileText, Smartphone, Car, Info, XCircle, MapPin, Languages, GraduationCap, Phone, Clock, Home } from 'lucide-react';
 
 import { clsx, type ClassValue } from 'clsx';
@@ -17,10 +19,11 @@ interface ResultsViewProps {
     userProfile: UserProfile;
     onReset: () => void;
     serviceId?: string;
+    prospectId?: string;
     forceAgencyId?: string;
 }
 
-export default function ResultsView({ userProfile, onReset, serviceId, forceAgencyId }: ResultsViewProps) {
+export default function ResultsView({ userProfile, onReset, serviceId, prospectId, forceAgencyId }: ResultsViewProps) {
     const [showLeadModal, setShowLeadModal] = React.useState(false);
     const [leadForm, setLeadForm] = React.useState({ name: '', phone: '' });
     const isFamilyReunification = serviceId === 'regroupement_familial';
@@ -226,12 +229,30 @@ export default function ResultsView({ userProfile, onReset, serviceId, forceAgen
 
     const [isProcessing, setIsProcessing] = React.useState(false);
     const [pendingAction, setPendingAction] = React.useState<{ amount: number, label: string } | null>(null);
+    const router = useRouter();
 
     const performCheckout = async (contactInfo: { name: string, phone: string, email?: string }) => {
         setIsProcessing(true);
         try {
             const amount = pendingAction?.amount || 0;
             const label = pendingAction?.label || 'Service Simulegal';
+
+            if (prospectId) {
+                // IN-AGENCY MODE: Update CRM and return to dashboard
+                const results = {
+                    eligibleStays: eligibleStays.map(r => r.id),
+                    eligibleNaturalization: eligibleNaturalization.map(r => r.id),
+                    drivingResult: isDrivingExchange ? getDrivingResult() : null,
+                    familyResult: isFamilyReunification ? getFamilyFailureReason() : null,
+                    matchedProcedures: [...eligibleStays, ...eligibleNaturalization].map(r => r.id)
+                };
+
+                await SalesStore.saveEligibilityResult(prospectId, results as any);
+                await SalesStore.addNote(prospectId, `🟢 Simulation complétée en agence. Choix du forfait : ${label}.`);
+                alert('✅ Résultats et choix enregistrés dans le CRM.');
+                router.push('/admin/sales');
+                return;
+            }
 
             // 1. Create Lead
             const leadPayload = {

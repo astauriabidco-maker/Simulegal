@@ -24,8 +24,8 @@ function compareFrenchLevel(a: string, b: string): number | null {
 /**
  * Retrieves a nested value from an object using a dot-separated path.
  */
-function getValueByPath(obj: any, path: string): any {
-    return path.split('.').reduce((acc, part) => acc && acc[part], obj);
+function getValueByPath(obj: unknown, path: string): unknown {
+    return path.split('.').reduce((acc: unknown, part: string) => (acc as Record<string, unknown>)?.[part], obj);
 }
 
 /**
@@ -71,16 +71,16 @@ export function evaluateRule(user: UserProfile, condition: RuleCondition): boole
                     result = userValue !== targetValue;
                     break;
                 case 'GTE':
-                    result = frenchCmp !== null ? frenchCmp >= 0 : userValue >= targetValue;
+                    result = frenchCmp !== null ? frenchCmp >= 0 : (userValue as number) >= (targetValue as number);
                     break;
                 case 'GT':
-                    result = frenchCmp !== null ? frenchCmp > 0 : userValue > targetValue;
+                    result = frenchCmp !== null ? frenchCmp > 0 : (userValue as number) > (targetValue as number);
                     break;
                 case 'LTE':
-                    result = frenchCmp !== null ? frenchCmp <= 0 : userValue <= targetValue;
+                    result = frenchCmp !== null ? frenchCmp <= 0 : (userValue as number) <= (targetValue as number);
                     break;
                 case 'LT':
-                    result = frenchCmp !== null ? frenchCmp < 0 : userValue < targetValue;
+                    result = frenchCmp !== null ? frenchCmp < 0 : (userValue as number) < (targetValue as number);
                     break;
                 case 'IN':
                     result = Array.isArray(targetValue) && targetValue.includes(userValue);
@@ -112,7 +112,7 @@ export function evaluateRule(user: UserProfile, condition: RuleCondition): boole
 export function findFirstFailedCondition(
     user: UserProfile,
     condition: RuleCondition
-): { var: string; op: string; val: any; userValue: any } | null {
+): { var: string; op: string; val: unknown; userValue: unknown } | null {
     if (condition.AND) {
         for (const sub of condition.AND) {
             const failed = findFirstFailedCondition(user, sub);

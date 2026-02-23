@@ -1,36 +1,120 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SimuLegal — Plateforme SaaS de Franchise Juridique
 
-## Getting Started
+> Simulateur d'éligibilité immigration + CRM commercial + Réseau de franchise pour l'accompagnement juridique en droit des étrangers.
 
-First, run the development server:
+## 🏗️ Architecture
+
+| Couche      | Stack                          | Port  |
+|-------------|--------------------------------|-------|
+| Frontend    | Next.js 14 (App Router) + Tailwind v4 | 3000  |
+| Backend     | NestJS + Prisma (SQLite)       | 3005  |
+
+## 🚀 Démarrage rapide
 
 ```bash
+# 1. Frontend
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+
+# 2. Backend (dans un second terminal)
+cd backend
+npm install
+npx prisma generate
+npx prisma db push
+npm run start:dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Ouvrir [http://localhost:3000](http://localhost:3000) pour le simulateur public.
+Ouvrir [http://localhost:3000/staff-login](http://localhost:3000/staff-login) pour l'accès professionnel.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 📦 Modules
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Cœur Métier
+- **Simulateur d'éligibilité** — Moteur de règles JSON (séjour, naturalisation, famille, permis, asile) avec Wizard multi-étapes
+- **Checkout** — Flow de paiement intégré avec Stripe (contrat, signature, paiement, RDV)
+- **Espace Client** — Portail client avec upload de documents et scan guidé
 
-## Learn More
+### Pipeline Commercial (CRM)
+- **Sales Dashboard** — Kanban de prospects avec tiroir de détail
+- **Call Cockpit** — Intégration Twilio Voice SDK pour appels sortants
+- **Booking** — Prise de RDV en agence avec confirmation SMS/WhatsApp
+- **Analytics** — Dashboard analytique commercial
+- **Lead Router** — Scoring et dispatch automatique des leads
+- **Marketing Automation** — Emails/SMS déclenchés par changement de statut
 
-To learn more about Next.js, take a look at the following resources:
+### Réseau de Franchise
+- **HQ Dashboard** — Vue réseau global avec carte de France interactive
+- **Franchise Leads** — Pipeline candidats franchisés (conformité Loi Doubin / DIP)
+- **Gestion des agences** — CRUD, paramétrage, fleet monitor de bornes/tablettes
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Administration
+- **RBAC** — Système de rôles et permissions granulaires
+- **Configuration** — Services, tarification, intégrations (Twilio, SMTP, Stripe), templates, automations pipeline
+- **Veille juridique** — Suivi des évolutions légales avec audit trail
+- **Finance** — Transactions, facturation, reversements aux franchisés
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 🔑 Variables d'environnement
 
-## Deploy on Vercel
+### Backend (`backend/.env`)
+```env
+DATABASE_URL="file:./dev.db"
+JWT_SECRET="your-jwt-secret"
+STRIPE_SECRET_KEY="sk_test_..."
+STRIPE_WEBHOOK_SECRET="whsec_..."
+FRONTEND_URL="http://localhost:3000"
+TWILIO_ACCOUNT_SID="..."
+TWILIO_AUTH_TOKEN="..."
+TWILIO_PHONE_NUMBER="..."
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Frontend (`.env.local`)
+```env
+NEXT_PUBLIC_API_URL=http://localhost:3005
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 🗂️ Structure du projet
+
+```
+├── app/                    # Pages Next.js (App Router)
+│   ├── admin/              # Back-office (18 sous-modules)
+│   ├── staff-login/        # Connexion personnel
+│   ├── espace-client/      # Portail client
+│   └── page.tsx            # Landing + Simulateur public
+├── backend/                # API NestJS
+│   ├── prisma/             # Schema + migrations
+│   └── src/                # Modules (26 modules)
+├── components/             # Composants React
+│   ├── admin/              # Dashboard, settings, finance
+│   ├── backoffice/         # HQ, Agency, Eligibility config
+│   ├── sales/              # CRM, Call cockpit, Analytics
+│   ├── steps/              # Étapes du wizard simulateur
+│   └── client/             # Portail client
+├── data/                   # Règles d'éligibilité (JSON)
+├── lib/                    # Moteur de règles + utilitaires
+├── services/               # Stores frontend (30 services)
+└── specs/                  # Spécifications métier
+```
+
+## 🧪 Tests
+
+```bash
+# Tests unitaires du moteur de règles
+npm test
+
+# Lint
+npm run lint
+
+# Build de production
+npm run build
+```
+
+## 🐳 Docker
+
+```bash
+docker-compose up --build
+```
+
+## 📄 Licence
+
+Propriétaire — © SimuLegal 2026. Tous droits réservés.

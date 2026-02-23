@@ -171,11 +171,12 @@ const INITIAL_STATE: UserProfile = {
 
 interface SimulatorWrapperProps {
     serviceId?: string;
+    prospectId?: string;
     forceAgencyId?: string;
     onComplete?: () => void;
 }
 
-export default function SimulatorWrapper({ serviceId, forceAgencyId, onComplete }: SimulatorWrapperProps) {
+export default function SimulatorWrapper({ serviceId, prospectId, forceAgencyId, onComplete }: SimulatorWrapperProps) {
     const [step, setStep] = useState(1);
     const [userProfile, setUserProfile] = useState<UserProfile>({
         ...INITIAL_STATE,
@@ -275,7 +276,7 @@ export default function SimulatorWrapper({ serviceId, forceAgencyId, onComplete 
                 updatedSection = { ...prev.callback, ...data };
             }
 
-            let nextProfile = { ...prev, [section]: updatedSection };
+            const nextProfile = { ...prev, [section]: updatedSection };
 
             if (nextProfile.admin.current_visa_type === 'NONE') {
                 nextProfile.admin = {
@@ -464,10 +465,8 @@ export default function SimulatorWrapper({ serviceId, forceAgencyId, onComplete 
                 if (lead && onComplete) {
                     onComplete();
                 } else {
-                    // @ts-ignore
                     if (window.openAuthAndPaymentFlow) {
-                        // @ts-ignore
-                        window.openAuthAndPaymentFlow(amount / 100);
+                        window.openAuthAndPaymentFlow(selectedServiceId, amount / 100);
                     } else {
                         alert(`Dossier ${lead?.id} créé avec succès !`);
                     }

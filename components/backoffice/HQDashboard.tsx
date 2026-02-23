@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Lead, LeadDocument, LeadNote } from '../../services/crmStore';
 import { DossierStore } from '../../services/DossierStore';
 import { UserStore, StaffUser } from '../../services/UserStore';
-import { WorkflowService, WorkflowStage } from '../../services/WorkflowService';
+import { WorkflowService, WorkflowStage, CATEGORY_LABELS } from '../../services/WorkflowService';
 import { NotificationService } from '../../services/NotificationService';
+import { WhatsAppWidget } from './WhatsAppWidget';
 import {
     Sparkles,
     FolderOpen,
@@ -31,15 +32,6 @@ import {
     Plus
 } from 'lucide-react';
 
-// Services disponibles pour le filtre
-const SERVICES = [
-    { id: 'all', label: 'Tous les services' },
-    { id: 'naturalisation', label: 'Naturalisation' },
-    { id: 'rdv_prefecture', label: 'RDV Préfecture' },
-    { id: 'regroupement_familial', label: 'Regroupement Familial' },
-    { id: 'permis_conduire', label: 'Permis de conduire' },
-];
-
 interface HQDashboardProps {
     onViewDossier?: (lead: Lead) => void;
 }
@@ -52,6 +44,8 @@ export default function HQDashboard({ onViewDossier }: HQDashboardProps) {
     const [serviceFilter, setServiceFilter] = useState('all');
     const [searchQuery, setSearchQuery] = useState('');
     const [activeTab, setActiveTab] = useState<'PRODUCTION' | 'QUALIFICATION'>('PRODUCTION');
+    const [servicesByCategory, setServicesByCategory] = useState<Record<string, { id: string; name: string; shortName: string }[]>>({});
+    const [catalogLoaded, setCatalogLoaded] = useState(false);
 
     useEffect(() => {
         loadLeads();
@@ -71,22 +65,32 @@ export default function HQDashboard({ onViewDossier }: HQDashboardProps) {
         setStaff(users);
     };
 
+    // Charger le catalogue de services depuis le backend
+    const loadServiceCatalog = useCallback(async () => {
+        const catalog = await WorkflowService.loadServiceCatalog();
+        if (catalog) {
+            setServicesByCategory(WorkflowService.getServicesByCategory());
+            setCatalogLoaded(true);
+        }
+    }, []);
+
     useEffect(() => {
         loadLeads();
         loadStaff();
+        loadServiceCatalog();
     }, []);
+
+    // Pré-charger les pipelines quand les leads changent
+    useEffect(() => {
+        if (leads.length > 0) {
+            const serviceIds = leads.map(l => l.serviceId).filter(Boolean);
+            WorkflowService.preloadPipelines(serviceIds);
+        }
+    }, [leads]);
 
     // Déterminer les colonnes à afficher
     const columns = useMemo(() => {
-        if (activeTab === 'QUALIFICATION') {
-            return ['NEW', 'TO_CONTACT', 'QUALIFIED', 'ARCHIVED'] as WorkflowStage[];
-        }
-
-        if (serviceFilter === 'all') {
-            // Vue par défaut pour "Tous"
-            return ['NEW', 'COLLECTING', 'REVIEW', 'DRAFTING', 'SUBMITTED', 'DECISION_WAIT', 'CLOSED'] as WorkflowStage[];
-        }
-        return WorkflowService.getStepsForService(serviceFilter);
+        return WorkflowService.getKanbanColumns(serviceFilter, activeTab);
     }, [serviceFilter, activeTab]);
 
     // Filtrer les leads selon le service, la recherche et l'onglet actif
@@ -211,19 +215,25 @@ export default function HQDashboard({ onViewDossier }: HQDashboardProps) {
                             <select
                                 value={serviceFilter}
                                 onChange={(e) => setServiceFilter(e.target.value)}
-                                className="pl-10 pr-8 py-2.5 bg-slate-100 border-none rounded-xl text-sm font-bold text-slate-700 appearance-none focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer"
+                                className="pl-10 pr-8 py-2.5 bg-slate-100 border-none rounded-xl text-sm font-bold text-slate-700 appearance-none focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer min-w-[220px]"
                             >
                                 {activeTab === 'PRODUCTION' ? (
                                     <>
-                                        <option value="all">Tous les dossiers</option>
-                                        <option value="naturalisation">Naturalisation</option>
-                                        <option value="rdv_prefecture">RDV Préfecture</option>
-                                        <option value="regroupement_familial">Regroupement Familial</option>
-                                        <option value="permis_conduire">Permis de conduire</option>
+                                        <option value="all">📁 Tous les dossiers</option>
+                                        {Object.entries(servicesByCategory)
+                                            .filter(([cat]) => cat !== 'CONSULTATION' || false)
+                                            .map(([category, services]) => (
+                                                <optgroup key={category} label={CATEGORY_LABELS[category] || category}>
+                                                    {services.map(s => (
+                                                        <option key={s.id} value={s.id}>{s.shortName}</option>
+                                                    ))}
+                                                </optgroup>
+                                            ))
+                                        }
                                     </>
                                 ) : (
                                     <>
-                                        <option value="all">Tous les flux</option>
+                                        <option value="all">📞 Tous les flux</option>
                                         <option value="rappel_echeances">Rappels</option>
                                         <option value="contact_simple">Contact Simple</option>
                                         <option value="rdv_juriste">RDV Juriste</option>
@@ -555,7 +565,7 @@ function LeadDetailModal({
                         </div>
 
                         {/* Documents */}
-                        <div className="col-span-2">
+                        <div className="col-span-1">
                             <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-3">Dossier Digital ({lead.documents?.length || 0} pièces)</label>
                             <div className="space-y-3 shadow-inner bg-slate-50/50 p-4 rounded-3xl min-h-[300px]">
                                 {lead.documents && lead.documents.length > 0 ? (
@@ -566,7 +576,7 @@ function LeadDetailModal({
                                                     <FileText size={20} />
                                                 </div>
                                                 <div>
-                                                    <p className="text-sm font-black text-slate-800">{doc.docType}</p>
+                                                    <p className="text-sm font-black text-slate-800 break-all">{doc.docType}</p>
                                                     <p className="text-[11px] text-slate-400 font-medium">Reçu le 12/01 • PDF (1.2MB)</p>
                                                 </div>
                                             </div>
@@ -595,6 +605,17 @@ function LeadDetailModal({
                                     </div>
                                 )}
                             </div>
+                        </div>
+
+                        {/* WhatsApp Widget */}
+                        <div className="col-span-1">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-3">Communication Client</label>
+                            <WhatsAppWidget
+                                contactId={lead.id}
+                                contactType="LEAD"
+                                contactName={lead.name}
+                                contactPhone={lead.phone || '0600000000'}
+                            />
                         </div>
                     </div>
                 </div>

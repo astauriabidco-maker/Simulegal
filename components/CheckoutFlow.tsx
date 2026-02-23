@@ -30,8 +30,6 @@ export default function CheckoutFlow({
     onKioskReset,
     extraData
 }: CheckoutFlowProps) {
-    if (!isOpen) return null;
-
     const [step, setStep] = useState<1 | 2 | 3 | 4 | 5>(1);
     const [formData, setFormData] = useState({ name: '', email: '', phone: '', zipCode: '' });
     const [isProcessing, setIsProcessing] = useState(false);
@@ -41,6 +39,8 @@ export default function CheckoutFlow({
     const [createdLeadId, setCreatedLeadId] = useState<string | null>(null);
     const [assignedAgency, setAssignedAgency] = useState<any>(null); // Store agency for booking
     const contractRef = useRef<HTMLDivElement>(null);
+
+    if (!isOpen) return null;
 
     const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
         const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;

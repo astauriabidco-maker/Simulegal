@@ -5,7 +5,7 @@ import { UserProfile } from '@/types';
 
 interface StepProps {
     data: UserProfile;
-    update: (section: keyof UserProfile, data: any) => void;
+    update: (section: keyof UserProfile, data: Record<string, unknown>) => void;
     onNext: () => void;
     onBack: () => void;
     canNext: boolean;
