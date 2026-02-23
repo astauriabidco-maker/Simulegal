@@ -62,6 +62,7 @@ model User {
   homeAgencyId   String?
   scopeAgencyIds String        @default("[]")
   permissions    String
+  isActive       Boolean       @default(true)
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
   lastLogin      DateTime?
@@ -201,6 +202,22 @@ model FranchiseLead {
   documents         String              @default("[]")
   convertedAgencyId String?             @unique
   rejectionReason   String?
+
+  // === LOI DOUBIN — Art. L330-3 & R330-1 ===
+  dipSentAt           DateTime?           // Date d'envoi du DIP (Document d'Information Précontractuelle)
+  // Conditions financières (Art. R330-1, 3°)
+  entryFee            Int?                // Droit d'entrée (en centimes €)
+  royaltyRate         Float?              // Redevance périodique (%)
+  advertisingFee      Float?              // Contribution fonds publicité (%)
+  // Durée & Résiliation (Art. R330-1, 4° et 6°)
+  contractDuration    Int?                // Durée en mois (null = indéterminée)
+  renewalTerms        String?             // Conditions de renouvellement (texte libre)
+  terminationNotice   Int?                // Préavis de résiliation en mois
+  nonCompeteDuration  Int?                // Clause de non-concurrence post-contrat en mois
+  // Exclusivité territoriale (Art. R330-1, 5°)
+  exclusiveTerritory  Boolean             @default(false)
+  exclusiveRadius     Int?                // Rayon d'exclusivité en km
+
   createdAt         DateTime            @default(now())
   updatedAt         DateTime            @updatedAt
   convertedAgency   Agency?             @relation(fields: [convertedAgencyId], references: [id])
@@ -252,13 +269,17 @@ model AppointmentSlot {
 }
 
 model SystemSettings {
-  id            String   @id @default("GLOBAL")
-  company       String   @default("{}")
-  payment       String   @default("{}")
-  notifications String   @default("{}")
-  integrations  String   @default("{}")
-  storage       String   @default("{}")
-  updatedAt     DateTime @updatedAt
+  id               String   @id @default("GLOBAL")
+  company          String   @default("{}")
+  payment          String   @default("{}")
+  notifications    String   @default("{}")
+  integrations     String   @default("{}")
+  storage          String   @default("{}")
+  servicePricing   String   @default("{}")   // Prix dynamiques par service { serviceId: { price: number, promoPrice?: number, promoUntil?: string } }
+  legalDocuments   String   @default("{}")   // CGV, contrat de représentation, mentions légales (HTML/Markdown)
+  catalogOverrides    String   @default("{}")   // Surcharges du catalogue (enable/disable services, durées custom, etc.)
+  pipelineAutomations String   @default("{}")   // Règles d'automatisation pipeline (relances, escalades, transitions, etc.)
+  updatedAt           DateTime @updatedAt
 }
 
 model Transaction {
@@ -348,6 +369,7 @@ enum FranchiseLeadStatus {
   CONTACTED
   MEETING
   VALIDATED
+  DIP_SENT        // Loi Doubin: DIP envoyé, délai 20 jours commence
   CONTRACT_SENT
   SIGNED
   REJECTED
@@ -366,18 +388,21 @@ enum AppointmentStatus {
 }
 
 model Communication {
-  id          String   @id @default(cuid())
-  direction   String   // INBOUND or OUTBOUND
-  type        String   @default("WHATSAPP") // WHATSAPP, SMS, EMAIL
-  content     String
-  sender      String   // Phone number or User ID or "SYSTEM"
-  senderName  String?
-  leadId      String?
-  prospectId  String?
-  createdAt   DateTime @default(now())
+  id             String   @id @default(cuid())
+  direction      String   // INBOUND or OUTBOUND
+  type           String   @default("WHATSAPP") // WHATSAPP, SMS, EMAIL
+  content        String
+  sender         String   // Phone number or User ID or "SYSTEM"
+  senderName     String?
+  mediaUrl       String?  // URL locale ou distante du fichier reçu
+  mediaType      String?  // MIME type: image/jpeg, application/pdf, etc.
+  mediaFilename  String?  // Nom du fichier original
+  leadId         String?
+  prospectId     String?
+  createdAt      DateTime @default(now())
   
-  lead        Lead?     @relation(fields: [leadId], references: [id])
-  prospect    Prospect? @relation(fields: [prospectId], references: [id])
+  lead           Lead?     @relation(fields: [leadId], references: [id])
+  prospect       Prospect? @relation(fields: [prospectId], references: [id])
 }
 
 // ─── Veille Juridique ──────────────────────────────────────────────
@@ -410,4 +435,28 @@ model RuleAuditLog {
   newValue       String?  // JSON snapshot après modification  
   changeDetails  String?  // description textuelle du changement
   createdAt      DateTime @default(now())
+}
+
+// ─── Blog / Insights ──────────────────────────────────────────────
+
+model Article {
+  id             String   @id @default(cuid())
+  title          String
+  slug           String   @unique
+  excerpt        String?  // Short summary for cards/SEO
+  content        String   // Markdown or HTML content
+  category       String   @default("GENERAL") // IMMIGRATION, NATURALISATION, SEJOUR, PERMIS, FAMILY, GENERAL
+  status         String   @default("DRAFT")   // DRAFT, PUBLISHED, ARCHIVED
+  coverImage     String?  // URL to cover image
+  authorName     String   @default("Rédaction SimuLegal")
+  authorRole     String?  // e.g. "Juriste en droit des étrangers"
+  tags           String?  // comma-separated tags
+  metaTitle      String?  // SEO title override
+  metaDescription String? // SEO description override
+  readTimeMin    Int      @default(5)
+  viewCount      Int      @default(0)
+  featured       Boolean  @default(false) // Show in hero section
+  publishedAt    DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }

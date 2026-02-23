@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import {
     ArrowRight,
     Flag,
@@ -18,7 +19,9 @@ import {
     X,
     Car,
     Calendar,
-    Gavel
+    Gavel,
+    Newspaper,
+    Clock
 } from 'lucide-react';
 import { SERVICES_CATALOG, Service } from '../data/services';
 
@@ -41,9 +44,35 @@ interface LandingPageProps {
     onStartSimulator: (serviceId?: string) => void;
 }
 
+const CATEGORY_COLORS: Record<string, { bg: string; text: string }> = {
+    IMMIGRATION: { bg: 'bg-emerald-50', text: 'text-emerald-700' },
+    NATURALISATION: { bg: 'bg-blue-50', text: 'text-blue-700' },
+    SEJOUR: { bg: 'bg-indigo-50', text: 'text-indigo-700' },
+    PERMIS: { bg: 'bg-amber-50', text: 'text-amber-700' },
+    FAMILY: { bg: 'bg-rose-50', text: 'text-rose-700' },
+    GENERAL: { bg: 'bg-slate-50', text: 'text-slate-600' },
+};
+const CATEGORY_LABELS: Record<string, string> = {
+    IMMIGRATION: '🌍 Immigration',
+    NATURALISATION: '🇫🇷 Naturalisation',
+    SEJOUR: '📄 Titre de séjour',
+    PERMIS: '🚗 Permis',
+    FAMILY: '👨‍👩‍👧‍👦 Famille',
+    GENERAL: '📰 Général',
+};
+
 export default function LandingPage({ onStartSimulator }: LandingPageProps) {
     const [showContactModal, setShowContactModal] = useState(false);
     const [selectedServiceForContact, setSelectedServiceForContact] = useState<Service | null>(null);
+    const [blogArticles, setBlogArticles] = useState<any[]>([]);
+
+    useEffect(() => {
+        const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+        fetch(`${API}/public/blog?limit=3`)
+            .then(r => r.ok ? r.json() : { articles: [] })
+            .then(data => setBlogArticles(data.articles || []))
+            .catch(() => { });
+    }, []);
 
     const handleServiceClick = (service: Service) => {
         if (service.isSimulatable) {
@@ -194,12 +223,103 @@ export default function LandingPage({ onStartSimulator }: LandingPageProps) {
                 </div>
             </section>
 
+            {/* Blog Insights Section */}
+            {blogArticles.length > 0 && (
+                <section className="py-24 bg-gradient-to-b from-slate-50 to-white">
+                    <div className="max-w-7xl mx-auto px-6">
+                        <div className="flex items-center justify-between mb-12">
+                            <div className="flex items-center gap-4">
+                                <div className="w-14 h-14 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center">
+                                    <Newspaper className="w-7 h-7" />
+                                </div>
+                                <div>
+                                    <h2 className="text-3xl font-black text-slate-900 tracking-tight">Derniers Insights</h2>
+                                    <p className="text-slate-400 font-medium text-sm mt-1">Décryptages juridiques et guides pratiques</p>
+                                </div>
+                            </div>
+                            <Link
+                                href="/blog"
+                                className="hidden md:inline-flex items-center gap-2 px-6 py-3 bg-white border-2 border-slate-200 hover:border-indigo-600 text-slate-700 hover:text-indigo-600 font-bold text-sm rounded-2xl transition-all hover:shadow-lg"
+                            >
+                                Voir tous les articles
+                                <ArrowRight className="w-4 h-4" />
+                            </Link>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                            {blogArticles.map((article: any) => {
+                                const catColor = CATEGORY_COLORS[article.category] || CATEGORY_COLORS.GENERAL;
+                                const catLabel = CATEGORY_LABELS[article.category] || article.category;
+                                return (
+                                    <Link
+                                        key={article.id}
+                                        href={`/blog/${article.slug}`}
+                                        className="group bg-white rounded-[2rem] border border-slate-100 overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 flex flex-col"
+                                    >
+                                        {/* Colored top bar */}
+                                        <div className="h-1.5" style={{
+                                            background: article.category === 'NATURALISATION' ? '#3b82f6' :
+                                                article.category === 'SEJOUR' ? '#6366f1' :
+                                                    article.category === 'PERMIS' ? '#f59e0b' :
+                                                        article.category === 'IMMIGRATION' ? '#10b981' :
+                                                            article.category === 'FAMILY' ? '#f43f5e' : '#94a3b8'
+                                        }} />
+
+                                        <div className="p-8 flex-1 flex flex-col">
+                                            <span className={`self-start px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider mb-4 ${catColor.bg} ${catColor.text}`}>
+                                                {catLabel}
+                                            </span>
+
+                                            <h3 className="text-xl font-bold text-slate-900 mb-3 group-hover:text-indigo-600 transition-colors leading-tight line-clamp-2">
+                                                {article.title}
+                                            </h3>
+
+                                            {article.excerpt && (
+                                                <p className="text-sm text-slate-400 font-medium leading-relaxed mb-6 line-clamp-3 flex-1">
+                                                    {article.excerpt}
+                                                </p>
+                                            )}
+
+                                            <div className="flex items-center justify-between mt-auto pt-4 border-t border-slate-50">
+                                                <div className="flex items-center gap-3 text-[11px] text-slate-400 font-bold">
+                                                    <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {article.readTimeMin} min</span>
+                                                    {article.authorName && <span>{article.authorName}</span>}
+                                                </div>
+                                                <span className="text-indigo-600 font-bold text-sm flex items-center gap-1 group-hover:gap-2 transition-all">
+                                                    Lire <ArrowRight className="w-3.5 h-3.5" />
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </Link>
+                                );
+                            })}
+                        </div>
+
+                        {/* Mobile CTA */}
+                        <div className="mt-8 text-center md:hidden">
+                            <Link
+                                href="/blog"
+                                className="inline-flex items-center gap-2 px-8 py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-2xl transition-all shadow-lg shadow-indigo-200"
+                            >
+                                Voir tous les articles
+                                <ArrowRight className="w-5 h-5" />
+                            </Link>
+                        </div>
+                    </div>
+                </section>
+            )}
+
             {/* Footer */}
             <footer className="bg-slate-900 py-20 text-white/50 text-center text-sm font-bold uppercase tracking-[0.3em]">
                 <div className="max-w-7xl mx-auto px-6">
                     <div className="flex justify-center items-center gap-4 mb-10 grayscale opacity-40 hover:opacity-100 transition-opacity cursor-pointer">
                         <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center text-white text-xl">S</div>
                         <span className="text-white">SimuLegal</span>
+                    </div>
+                    <div className="flex justify-center gap-8 mb-8 text-[11px]">
+                        <a href="/blog" className="text-white/40 hover:text-white transition-colors">Blog & Insights</a>
+                        <a href="/connexion" className="text-white/40 hover:text-white transition-colors">Espace Client</a>
+                        <a href="/staff-login" className="text-white/40 hover:text-white transition-colors">Accès Pro</a>
                     </div>
                     <p className="mb-4">© 2026 SimuLegal Platform. Tous droits réservés.</p>
                     <p className="text-[10px] opacity-30">Expertise non-officielle à titre indicatif • CESEDA Compliant</p>
