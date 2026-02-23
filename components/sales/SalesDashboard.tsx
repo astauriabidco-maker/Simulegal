@@ -51,8 +51,8 @@ export default function SalesDashboard() {
     const [callHistory, setCallHistory] = useState<any[]>([]);
 
     const [isEditingInfo, setIsEditingInfo] = useState(false);
-    const [editForm, setEditForm] = useState({ firstName: '', lastName: '', phone: '', email: '' });
-    const [addForm, setAddForm] = useState({ firstName: '', lastName: '', phone: '', email: '', source: 'WEBSITE' });
+    const [editForm, setEditForm] = useState({ firstName: '', lastName: '', phone: '', email: '', address: '', city: '', zipCode: '', country: 'France' });
+    const [addForm, setAddForm] = useState({ firstName: '', lastName: '', phone: '', email: '', source: 'WEBSITE', address: '', city: '', zipCode: '', country: 'France' });
 
     // Advanced Filters
     const [filters, setFilters] = useState<{
@@ -79,7 +79,11 @@ export default function SalesDashboard() {
                 firstName: selectedProspect.firstName || '',
                 lastName: selectedProspect.lastName || '',
                 phone: selectedProspect.phone || '',
-                email: selectedProspect.email || ''
+                email: selectedProspect.email || '',
+                address: selectedProspect.address || '',
+                city: selectedProspect.city || '',
+                zipCode: selectedProspect.zipCode || '',
+                country: selectedProspect.country || 'France'
             });
             setIsEditingInfo(false);
         } else {
@@ -463,6 +467,12 @@ export default function SalesDashboard() {
                                                         <input type="text" value={editForm.phone} onChange={e => setEditForm(prev => ({ ...prev, phone: e.target.value }))} className="flex-1 px-3 py-1.5 text-sm rounded-lg bg-slate-800/80 text-white border border-slate-700 focus:border-indigo-500 focus:outline-none placeholder:text-slate-500" placeholder="Téléphone" />
                                                         <input type="email" value={editForm.email} onChange={e => setEditForm(prev => ({ ...prev, email: e.target.value }))} className="flex-1 px-3 py-1.5 text-sm rounded-lg bg-slate-800/80 text-white border border-slate-700 focus:border-indigo-500 focus:outline-none placeholder:text-slate-500" placeholder="Email" />
                                                     </div>
+                                                    <input type="text" value={editForm.address} onChange={e => setEditForm(prev => ({ ...prev, address: e.target.value }))} className="w-full px-3 py-1.5 text-sm rounded-lg bg-slate-800/80 text-white border border-slate-700 focus:border-indigo-500 focus:outline-none placeholder:text-slate-500" placeholder="Adresse (rue)" />
+                                                    <div className="flex gap-2">
+                                                        <input type="text" value={editForm.zipCode} onChange={e => setEditForm(prev => ({ ...prev, zipCode: e.target.value }))} className="w-24 px-3 py-1.5 text-sm rounded-lg bg-slate-800/80 text-white border border-slate-700 focus:border-indigo-500 focus:outline-none placeholder:text-slate-500" placeholder="CP" />
+                                                        <input type="text" value={editForm.city} onChange={e => setEditForm(prev => ({ ...prev, city: e.target.value }))} className="flex-1 px-3 py-1.5 text-sm rounded-lg bg-slate-800/80 text-white border border-slate-700 focus:border-indigo-500 focus:outline-none placeholder:text-slate-500" placeholder="Ville" />
+                                                        <input type="text" value={editForm.country} onChange={e => setEditForm(prev => ({ ...prev, country: e.target.value }))} className="w-28 px-3 py-1.5 text-sm rounded-lg bg-slate-800/80 text-white border border-slate-700 focus:border-indigo-500 focus:outline-none placeholder:text-slate-500" placeholder="Pays" />
+                                                    </div>
                                                     <div className="flex gap-2 pt-1">
                                                         <button onClick={handleSaveInfo} className="px-4 py-1.5 bg-indigo-500 hover:bg-indigo-600 text-white text-xs font-bold rounded-lg transition-colors flex items-center gap-1 shadow-sm">
                                                             <CheckCircle size={14} /> Enregistrer
@@ -478,7 +488,7 @@ export default function SalesDashboard() {
                                                     <button onClick={() => setIsEditingInfo(true)} className="absolute right-0 top-0 opacity-0 group-hover/edit:opacity-100 text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition-all cursor-pointer" title="Modifier le prospect">
                                                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                                                     </button>
-                                                    <div className="flex items-center gap-2 text-slate-300 text-sm mb-3">
+                                                    <div className="flex items-center gap-2 text-slate-300 text-sm mb-1">
                                                         <Phone size={13} />
                                                         <span>{selectedProspect.phone}</span>
                                                         {selectedProspect.email && (
@@ -489,6 +499,18 @@ export default function SalesDashboard() {
                                                             </>
                                                         )}
                                                     </div>
+                                                    {(selectedProspect.city || selectedProspect.zipCode) && (
+                                                        <div className="flex items-center gap-1.5 text-slate-400 text-xs mb-3">
+                                                            <MapPin size={11} />
+                                                            <span>{[selectedProspect.address, selectedProspect.zipCode, selectedProspect.city, selectedProspect.country].filter(Boolean).join(', ')}</span>
+                                                        </div>
+                                                    )}
+                                                    {!selectedProspect.city && !selectedProspect.zipCode && (
+                                                        <div className="flex items-center gap-1.5 text-amber-400/70 text-xs mb-3">
+                                                            <MapPin size={11} />
+                                                            <span className="italic">Adresse non renseignée — à qualifier</span>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             )}
 
@@ -732,6 +754,36 @@ export default function SalesDashboard() {
                                         )}
                                     </div>
 
+                                    {/* Adresse & Localisation */}
+                                    <div className="px-5 py-4 border-b border-slate-100">
+                                        <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3">📍 Adresse & Localisation</h3>
+                                        {(selectedProspect.address || selectedProspect.city || selectedProspect.zipCode) ? (
+                                            <div className="bg-slate-50 rounded-xl p-4 space-y-2">
+                                                {selectedProspect.address && (
+                                                    <p className="text-sm text-slate-700 font-medium">{selectedProspect.address}</p>
+                                                )}
+                                                <p className="text-sm text-slate-900 font-bold">
+                                                    {[selectedProspect.zipCode, selectedProspect.city].filter(Boolean).join(' ')}
+                                                </p>
+                                                <p className="text-xs text-slate-500">{selectedProspect.country || 'France'}</p>
+                                            </div>
+                                        ) : (
+                                            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center gap-3">
+                                                <MapPin size={18} className="text-amber-500 flex-shrink-0" />
+                                                <div>
+                                                    <p className="text-sm font-bold text-amber-700">Adresse non renseignée</p>
+                                                    <p className="text-xs text-amber-600">À compléter lors de la qualification téléphonique pour le routage agence</p>
+                                                </div>
+                                                <button
+                                                    onClick={() => setIsEditingInfo(true)}
+                                                    className="ml-auto px-3 py-1.5 bg-amber-500 text-white text-xs font-bold rounded-lg hover:bg-amber-600 transition-colors flex-shrink-0"
+                                                >
+                                                    Compléter
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+
                                     {/* Contexte Marketing */}
                                     <div className="px-5 py-4 border-b border-slate-100">
                                         <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3">Contexte Marketing</h3>
@@ -967,6 +1019,19 @@ export default function SalesDashboard() {
                                         <label className="block text-xs font-bold text-slate-500 mb-1">Email (Optionnel)</label>
                                         <input type="email" value={addForm.email} onChange={e => setAddForm({ ...addForm, email: e.target.value })} className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="contact@email.com" />
                                     </div>
+
+                                    {/* Section Adresse (optionnelle à la création) */}
+                                    <div className="pt-2 border-t border-slate-100">
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 flex items-center gap-1"><MapPin size={10} /> Adresse (optionnel — pour le routage agence)</p>
+                                        <div className="space-y-3">
+                                            <input type="text" value={addForm.address} onChange={e => setAddForm({ ...addForm, address: e.target.value })} className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Adresse (rue)" />
+                                            <div className="grid grid-cols-3 gap-3">
+                                                <input type="text" value={addForm.zipCode} onChange={e => setAddForm({ ...addForm, zipCode: e.target.value })} className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Code postal" />
+                                                <input type="text" value={addForm.city} onChange={e => setAddForm({ ...addForm, city: e.target.value })} className="col-span-2 px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Ville" />
+                                            </div>
+                                        </div>
+                                    </div>
+
                                     <div>
                                         <label className="block text-xs font-bold text-slate-500 mb-1">Source</label>
                                         <select value={addForm.source} onChange={e => setAddForm({ ...addForm, source: e.target.value })} className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
@@ -986,13 +1051,17 @@ export default function SalesDashboard() {
                                                 lastName: addForm.lastName || 'Prospect',
                                                 phone: addForm.phone || '0600000000',
                                                 email: addForm.email || undefined,
+                                                address: addForm.address || undefined,
+                                                city: addForm.city || undefined,
+                                                zipCode: addForm.zipCode || undefined,
+                                                country: addForm.country || 'France',
                                                 source: addForm.source as any,
                                                 agencyId: 'HQ-001',
                                                 score: 0
                                             }).then((newProspect) => {
                                                 loadProspects();
                                                 setShowAddModal(false);
-                                                setAddForm({ firstName: '', lastName: '', phone: '', email: '', source: 'WEBSITE' });
+                                                setAddForm({ firstName: '', lastName: '', phone: '', email: '', source: 'WEBSITE', address: '', city: '', zipCode: '', country: 'France' });
                                                 // Optionnel : ouvrir directement le prospect créé
                                                 if (newProspect) setSelectedProspect(newProspect);
                                             });

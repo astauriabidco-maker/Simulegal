@@ -13,6 +13,13 @@ model Prospect {
   lastName          String
   phone             String
   email             String?
+
+  // Adresse — remplie progressivement lors de la qualification
+  address           String?        // Numéro + rue
+  city              String?
+  zipCode           String?        // Code postal — sert au routage agence
+  country           String?        @default("France")
+
   source            String         @default("MANUAL")
   campaignName      String?
   interestServiceId String?

@@ -36,6 +36,12 @@ export interface Prospect {
     phone: string;
     email?: string;
 
+    // Adresse (qualification progressive)
+    address?: string;
+    city?: string;
+    zipCode?: string;
+    country?: string;
+
     // Marketing
     source: ProspectSource;
     campaignName?: string;
