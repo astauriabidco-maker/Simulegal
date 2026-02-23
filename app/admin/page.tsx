@@ -18,6 +18,7 @@ import { MOCK_AGENCIES } from '../../types/backoffice';
 import RoleGuard from '../../components/auth/RoleGuard';
 import AgencyDashboard from '../../components/backoffice/AgencyDashboard';
 import FranceMap from '../../components/admin/FranceMap';
+import AiReportingChat from '../../components/admin/dashboard/AiReportingChat';
 
 export default function AdminPage() {
     const { can, user: currentUser } = usePermission();
@@ -102,6 +103,13 @@ export default function AdminPage() {
                         </div>
                     </div>
                 </div>
+
+                {/* AI BI Chat Agent */}
+                {can('crm.view_all') && (
+                    <div className="mb-6">
+                        <AiReportingChat />
+                    </div>
+                )}
 
                 {/* Top Stat Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

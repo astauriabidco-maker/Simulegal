@@ -30,6 +30,7 @@ import { AppointmentsSlotsModule } from './appointments-slots/appointments-slots
 import { EmailModule } from './email/email.module';
 import { PipelineAutomationModule } from './pipeline-automation/pipeline-automation.module';
 import { BlogModule } from './blog/blog.module';
+import { AiReportingModule } from './ai-reporting/ai-reporting.module';
 
 @Module({
   imports: [
@@ -61,6 +62,7 @@ import { BlogModule } from './blog/blog.module';
     ScheduleModule.forRoot(),
     PipelineAutomationModule,
     BlogModule,
+    AiReportingModule,
   ],
   controllers: [AppController],
   providers: [AppService],
