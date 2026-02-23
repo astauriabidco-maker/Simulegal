@@ -1,9 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { ProspectPipelineService } from '../prospect-pipeline.service';
 
 @Injectable()
 export class CallLogsService {
-    constructor(private prisma: PrismaService) { }
+    constructor(
+        private prisma: PrismaService,
+        private prospectPipeline: ProspectPipelineService,
+    ) { }
 
     async create(data: {
         prospectId: string;
@@ -11,7 +15,7 @@ export class CallLogsService {
         direction?: string;
         twilioCallSid?: string;
     }) {
-        return this.prisma.callLog.create({
+        const callLog = await this.prisma.callLog.create({
             data: {
                 prospectId: data.prospectId,
                 userId: data.userId,
@@ -20,6 +24,11 @@ export class CallLogsService {
                 twilioCallSid: data.twilioCallSid,
             },
         });
+
+        // ─── RÈGLE 1 : Premier appel → NEW → CONTACTED ───────
+        await this.prospectPipeline.onCallStarted(data.prospectId);
+
+        return callLog;
     }
 
     async update(id: string, data: {

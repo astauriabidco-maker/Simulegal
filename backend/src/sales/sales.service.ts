@@ -2,12 +2,14 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prospect, ProspectStatus } from '@prisma/client';
 import { AssignmentService } from './assignment.service';
+import { ProspectPipelineService } from './prospect-pipeline.service';
 
 @Injectable()
 export class SalesService {
     constructor(
         private prisma: PrismaService,
-        private assignmentService: AssignmentService
+        private assignmentService: AssignmentService,
+        private prospectPipeline: ProspectPipelineService,
     ) { }
 
     async findAll(params: {
@@ -141,8 +143,21 @@ export class SalesService {
             data,
         });
 
+        // Trigger notification automations on manual status change
         if (data.status && data.status !== oldProspect.status) {
             await this.triggerAutomation(updatedProspect, data.status);
+        }
+
+        // ─── RÈGLE 2 : Auto-qualification check ───────────────
+        // Si score, adresse ou service viennent d'être mis à jour
+        if (data.score !== undefined || data.zipCode !== undefined || data.interestServiceId !== undefined) {
+            await this.prospectPipeline.checkQualification(id);
+        }
+
+        // ─── RÈGLE 3 & 5 : Appointment booked ─────────────────
+        // Quand le statut passe à MEETING_BOOKED manuellement, on log la transition
+        if (data.status === 'MEETING_BOOKED' && oldProspect.status !== 'MEETING_BOOKED') {
+            await this.prospectPipeline.onAppointmentBooked(id, new Date().toISOString());
         }
 
         return updatedProspect;

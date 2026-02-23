@@ -5,6 +5,7 @@ import { AuthGuard } from '@nestjs/passport';
 
 import { SalesAnalyticsService } from './sales-analytics.service';
 import { AssignmentService } from './assignment.service';
+import { ProspectPipelineService } from './prospect-pipeline.service';
 
 @Controller('sales')
 @UseGuards(AuthGuard('jwt'))
@@ -12,7 +13,8 @@ export class SalesController {
     constructor(
         private readonly salesService: SalesService,
         private readonly analyticsService: SalesAnalyticsService,
-        private readonly assignmentService: AssignmentService
+        private readonly assignmentService: AssignmentService,
+        private readonly prospectPipeline: ProspectPipelineService,
     ) { }
 
     @Get('analytics')
@@ -85,7 +87,6 @@ export class SalesController {
         @Param('id') id: string,
         @Body() data: { salesUserId?: string }
     ) {
-        // If salesUserId is provided, assign to that user. Otherwise, trigger round-robin.
         const prospect = await this.salesService.findOne(id);
         if (!prospect) {
             return { success: false, error: 'Prospect not found' };
@@ -93,7 +94,6 @@ export class SalesController {
 
         let newSalesId: string | null | undefined = data.salesUserId;
         if (!newSalesId) {
-            // Trigger round-robin
             newSalesId = await this.assignmentService.getNextSalesAgent(prospect.agencyId);
         }
 
@@ -109,5 +109,26 @@ export class SalesController {
     @UseInterceptors(FileInterceptor('file'))
     async importProspects(@UploadedFile() file: any) {
         return this.salesService.importFromCSV(file.buffer);
+    }
+
+    // ═══════════════════════════════════════════════
+    // PIPELINE AUTOMATION ENDPOINTS
+    // ═══════════════════════════════════════════════
+
+    @Get('pipeline/stats')
+    async getPipelineStats() {
+        return this.prospectPipeline.getAutomationStats();
+    }
+
+    @Get('prospects/:id/transitions')
+    async getTransitions(@Param('id') id: string) {
+        const logs = await this.prospectPipeline.getTransitionLogs(id);
+        return { transitions: logs, count: logs.length };
+    }
+
+    @Post('pipeline/force-check')
+    async forceCheck() {
+        const result = await this.prospectPipeline.forceCheck();
+        return { success: true, ...result };
     }
 }
