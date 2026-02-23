@@ -65,6 +65,7 @@ export interface Prospect {
     notes: ProspectNote[];
     createdAt: string;
     lastContactAt?: string;
+    convertedLeadId?: string;  // Lien vers le Lead CRM après signature
 }
 
 // Mock database
@@ -456,5 +457,30 @@ export const SalesStore = {
         result: EligibilityResult
     ): Promise<Prospect | null> => {
         return SalesStore.updateProspect(prospectId, { eligibilityResult: result } as any);
+    },
+
+    /**
+     * Convertir un prospect en Lead CRM (appel backend)
+     * Retourne le leadId créé pour redirection
+     */
+    convertToLead: async (prospectId: string, serviceId?: string): Promise<{ leadId: string; success: boolean } | null> => {
+        try {
+            const response = await fetch(`${API_URL}/sales/prospects/${prospectId}/convert`, {
+                method: 'POST',
+                headers: SalesStore.getHeaders(),
+                body: JSON.stringify({ serviceId }),
+            });
+            if (!response.ok) throw new Error('Conversion failed');
+            const data = await response.json();
+            if (data.success) {
+                console.log(`[SalesStore] ✅ Prospect ${prospectId} converti en Lead ${data.leadId}`);
+                return { leadId: data.leadId, success: true };
+            }
+            console.error('[SalesStore] ❌ Conversion échouée:', data.error);
+            return null;
+        } catch (error) {
+            console.error('[SalesStore] ❌ Erreur conversion:', error);
+            return null;
+        }
     }
 };

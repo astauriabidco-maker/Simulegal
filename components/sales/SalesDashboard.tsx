@@ -24,8 +24,8 @@ import {
     Clock,
     Microscope
 } from 'lucide-react';
-import { CRM } from '../../services/crmStore';
-import { getRequirementsForService } from '../../config/DocumentTemplates';
+
+
 import { SalesAnalyticsDashboard } from './SalesAnalyticsDashboard';
 import { WhatsAppWidget } from '../backoffice/WhatsAppWidget';
 import BookAppointmentModal from './BookAppointmentModal';
@@ -159,32 +159,26 @@ export default function SalesDashboard() {
         }
         if (!confirm(`Confirmer la signature de ${prospect.firstName} ${prospect.lastName} ?\n\nCela créera un dossier client dans le CRM.`)) return;
 
-        // Initialiser les documents requis pour le service validé
-        const serviceId = prospect.eligibilityResult?.matchedProcedures?.[0] || prospect.interestServiceId || 'default';
-        const requirements = getRequirementsForService(serviceId);
-        const initialDocs = requirements.map(req => ({
-            id: req.id,
-            docType: req.label,
-            status: 'EMPTY' as const,
-            required: req.required
-        }));
+        // Déterminer le service
+        const serviceId = prospect.eligibilityResult?.matchedProcedures?.[0] || prospect.interestServiceId || 'consultation_juridique';
 
-        // Create actual Lead in CRM
-        await CRM.saveLead({
-            id: `LEAD-${Date.now()}`,
-            name: `${prospect.firstName} ${prospect.lastName}`,
-            email: prospect.email,
-            phone: prospect.phone,
-            serviceId,
-            serviceName: serviceId,
-            status: 'NEW',
-            currentStage: 'NEW',
-            documents: initialDocs,
-            originAgencyId: prospect.agencyId
-        });
+        // Appel backend : conversion complète (crée Lead + transfère données + lie prospect)
+        const result = await SalesStore.convertToLead(prospect.id, serviceId);
 
-        await handleStatusChange(prospect.id, 'SIGNED');
-        alert('✅ Contrat signé ! Dossier créé dans le CRM.');
+        if (result?.success && result.leadId) {
+            // Mise à jour optimiste du frontend
+            const updatedProspect = { ...prospect, status: 'SIGNED' as ProspectStatus, convertedLeadId: result.leadId };
+            setProspects((prev: Prospect[]) => prev.map((p: Prospect) =>
+                p.id === prospect.id ? updatedProspect : p
+            ));
+            setSelectedProspect(updatedProspect);
+
+            // Redirection vers le dossier CRM créé
+            alert(`✅ Contrat signé ! Dossier ${result.leadId} créé dans le CRM.\n\nVous allez être redirigé vers le dossier.`);
+            router.push(`/admin/leads?id=${result.leadId}`);
+        } else {
+            alert('❌ Erreur lors de la conversion. Veuillez réessayer.');
+        }
     };
 
     const handleImport = async () => {
@@ -606,7 +600,7 @@ export default function SalesDashboard() {
                                     {/* SIGNED : Voir le dossier */}
                                     {selectedProspect.status === 'SIGNED' && (
                                         <button
-                                            onClick={() => router.push('/admin/leads')}
+                                            onClick={() => router.push(selectedProspect.convertedLeadId ? `/admin/leads?id=${selectedProspect.convertedLeadId}` : '/admin/leads')}
                                             className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl text-sm font-bold hover:bg-emerald-100 transition-all active:scale-[0.97]"
                                         >
                                             <CheckCircle size={15} />

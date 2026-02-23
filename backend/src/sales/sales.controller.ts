@@ -131,4 +131,20 @@ export class SalesController {
         const result = await this.prospectPipeline.forceCheck();
         return { success: true, ...result };
     }
+
+    @Post('prospects/:id/convert')
+    async convertToLead(
+        @Param('id') id: string,
+        @Body() data: { serviceId?: string }
+    ) {
+        try {
+            const result = await this.salesService.convertToLead(id, data.serviceId);
+            if (!result) {
+                return { success: false, error: 'Prospect not found' };
+            }
+            return { success: true, leadId: result.leadId, prospect: result.prospect };
+        } catch (err: any) {
+            return { success: false, error: err.message };
+        }
+    }
 }

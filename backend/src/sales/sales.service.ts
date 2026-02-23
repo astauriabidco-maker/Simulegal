@@ -256,4 +256,104 @@ export class SalesService {
 
         return count;
     }
+
+    // ═══════════════════════════════════════════════════════════
+    // CONVERSION : PROSPECT → LEAD CRM
+    // ═══════════════════════════════════════════════════════════
+
+    /**
+     * Convertit un prospect signé en Lead CRM complet.
+     * Transfère toutes les données et crée le lien bidirectionnel.
+     */
+    async convertToLead(prospectId: string, serviceId?: string): Promise<{ leadId: string; prospect: any } | null> {
+        const prospect = await this.prisma.prospect.findUnique({
+            where: { id: prospectId },
+            include: { notes: true, callLogs: true },
+        });
+
+        if (!prospect) return null;
+
+        // Vérifier que le prospect peut être converti
+        if (prospect.status !== 'MEETING_BOOKED' && prospect.status !== 'NO_SHOW' && prospect.status !== 'SIGNED') {
+            throw new Error(`Impossible de convertir : statut actuel = ${prospect.status}. Le prospect doit avoir un RDV fixé.`);
+        }
+
+        // Déjà converti ?
+        if (prospect.convertedLeadId) {
+            return { leadId: prospect.convertedLeadId, prospect };
+        }
+
+        const resolvedServiceId = serviceId || prospect.interestServiceId || 'consultation_juridique';
+        const leadId = `LEAD-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+
+        // Préparer les données enrichies depuis le prospect
+        const prospectData = {
+            qualificationScore: prospect.score,
+            source: prospect.source,
+            campaignName: prospect.campaignName,
+            address: prospect.address,
+            city: prospect.city,
+            zipCode: prospect.zipCode,
+            country: prospect.country,
+            callCount: prospect.callLogs.length,
+            conversionDate: new Date().toISOString(),
+            prospectId: prospect.id,
+        };
+
+        // Créer le Lead dans le CRM
+        const lead = await this.prisma.lead.create({
+            data: {
+                id: leadId,
+                name: `${prospect.firstName} ${prospect.lastName}`,
+                email: prospect.email || `${prospect.phone}@prospect.simulegal.fr`,
+                phone: prospect.phone,
+                serviceId: resolvedServiceId,
+                serviceName: resolvedServiceId,
+                status: 'NEW',
+                originAgencyId: prospect.agencyId,
+                documents: '[]',
+                data: JSON.stringify(prospectData),
+            },
+        });
+
+        // Transférer les notes du prospect vers le Lead
+        const relevantNotes = prospect.notes.filter(n => !n.text.startsWith('[AUTO]'));
+        for (const note of relevantNotes) {
+            await this.prisma.leadNote.create({
+                data: {
+                    leadId: lead.id,
+                    content: `[Prospect → Sales] ${note.text}`,
+                    author: 'HQ',
+                },
+            });
+        }
+
+        // Note de conversion sur le Lead
+        await this.prisma.leadNote.create({
+            data: {
+                leadId: lead.id,
+                content: `✅ Lead créé automatiquement depuis le pipeline Sales.\n` +
+                    `Prospect: ${prospect.firstName} ${prospect.lastName} (${prospect.id})\n` +
+                    `Score: ${prospect.score}/100 | Source: ${prospect.source}\n` +
+                    `Appels: ${prospect.callLogs.length} | Adresse: ${prospect.address || 'N/A'}, ${prospect.zipCode || ''} ${prospect.city || ''}`,
+                author: 'HQ',
+            },
+        });
+
+        // Lier le prospect au lead (lien bidirectionnel)
+        const updatedProspect = await this.prisma.prospect.update({
+            where: { id: prospectId },
+            data: {
+                status: 'SIGNED',
+                convertedLeadId: leadId,
+            },
+        });
+
+        // Trigger notification automation
+        await this.triggerAutomation(updatedProspect, 'SIGNED');
+
+        console.log(`[CONVERSION] ✅ ${prospect.firstName} ${prospect.lastName} → Lead ${leadId} (service: ${resolvedServiceId})`);
+
+        return { leadId: lead.id, prospect: updatedProspect };
+    }
 }

@@ -27,6 +27,7 @@ model Prospect {
   agencyId          String
   assignedToSalesId String?
   status            ProspectStatus @default(NEW)
+  convertedLeadId   String?        // Lien vers le Lead CRM après signature
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
   lastContactAt     DateTime?
