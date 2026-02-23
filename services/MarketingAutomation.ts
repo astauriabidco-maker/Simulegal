@@ -11,11 +11,16 @@ export const MarketingAutomation = {
         await new Promise(resolve => setTimeout(resolve, 800));
 
         switch (newStatus) {
-            case 'TO_CALL':
-                // Send welcome only if it's a fresh lead (logic handled in caller or assumed here for simplicity)
-                // In a real app we would check if previous status was 'NEW' or undefined.
-                // For now, let's assume this triggers on creation.
+            case 'NEW':
                 MarketingAutomation.sendWelcomeSMS(prospect);
+                break;
+
+            case 'CONTACTED':
+                // No automation on contacted — manual follow-up
+                break;
+
+            case 'QUALIFIED':
+                MarketingAutomation.sendSimulationLink(prospect);
                 break;
 
             case 'MEETING_BOOKED':
@@ -30,8 +35,11 @@ export const MarketingAutomation = {
                 MarketingAutomation.sendWelcomePackEmail(prospect);
                 break;
 
-            case 'APPOINTMENT_DONE':
-                MarketingAutomation.sendSimulationLink(prospect);
+            case 'NO_SHOW':
+                // Send a reminder / re-engagement message
+                if (prospect.phone) {
+                    console.log(`[SMS] 📤 To ${prospect.phone}: "Bonjour ${prospect.firstName}, nous avons remarqué que vous n'avez pas pu venir. Souhaitez-vous reprogrammer ?"`);
+                }
                 break;
         }
     },

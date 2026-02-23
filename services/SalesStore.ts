@@ -3,7 +3,7 @@ import { LeadScoring } from './LeadScoring';
 import { MarketingAutomation } from './MarketingAutomation';
 
 export type ProspectSource = 'MANUAL' | 'CSV_IMPORT' | 'META_ADS' | 'GOOGLE_ADS' | 'TIKTOK_ADS' | 'PARTNER_API' | 'WEBSITE' | 'WEBHOOK';
-export type ProspectStatus = 'TO_CALL' | 'IN_DISCUSSION' | 'MEETING_BOOKED' | 'APPOINTMENT_DONE' | 'SIGNED' | 'LOST';
+export type ProspectStatus = 'NEW' | 'CONTACTED' | 'QUALIFIED' | 'MEETING_BOOKED' | 'SIGNED' | 'NO_SHOW' | 'LOST';
 
 export interface ProspectNote {
     id?: string;
@@ -80,7 +80,7 @@ let prospectsDB: Prospect[] = [
         interestServiceId: 'naturalisation',
         score: 75,
         agencyId: 'HQ-001',
-        status: 'TO_CALL',
+        status: 'NEW',
         notes: [],
         createdAt: new Date(Date.now() - 86400000).toISOString() // Hier
     },
@@ -95,7 +95,7 @@ let prospectsDB: Prospect[] = [
         interestServiceId: 'permis_conduire',
         score: 40,
         agencyId: 'OWN-001',
-        status: 'TO_CALL',
+        status: 'NEW',
         notes: [],
         createdAt: new Date().toISOString()
     }
@@ -442,10 +442,10 @@ export const SalesStore = {
     },
 
     /**
-     * Marquer un RDV comme effectué (le lead est venu en agence)
+     * Marquer un prospect comme non venu au RDV (NO_SHOW)
      */
-    confirmAppointmentDone: async (prospectId: string): Promise<Prospect | null> => {
-        return SalesStore.updateProspect(prospectId, { status: 'APPOINTMENT_DONE' } as any);
+    markNoShow: async (prospectId: string): Promise<Prospect | null> => {
+        return SalesStore.updateProspect(prospectId, { status: 'NO_SHOW' } as any);
     },
 
     /**

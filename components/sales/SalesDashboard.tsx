@@ -31,11 +31,12 @@ import { WhatsAppWidget } from '../backoffice/WhatsAppWidget';
 import BookAppointmentModal from './BookAppointmentModal';
 
 const COLUMNS: { id: ProspectStatus; label: string; color: string; icon: string }[] = [
-    { id: 'TO_CALL', label: 'À Appeler', color: 'bg-amber-100 text-amber-800', icon: '🟡' },
-    { id: 'IN_DISCUSSION', label: 'En Discussion', color: 'bg-purple-100 text-purple-800', icon: '🟣' },
-    { id: 'MEETING_BOOKED', label: 'RDV Fixé', color: 'bg-indigo-100 text-indigo-800', icon: '🔵' },
-    { id: 'APPOINTMENT_DONE', label: 'RDV Effectué', color: 'bg-cyan-100 text-cyan-800', icon: '🟢' },
+    { id: 'NEW', label: 'Nouveau', color: 'bg-amber-100 text-amber-800', icon: '🟡' },
+    { id: 'CONTACTED', label: 'Contacté', color: 'bg-purple-100 text-purple-800', icon: '🟣' },
+    { id: 'QUALIFIED', label: 'Qualifié', color: 'bg-blue-100 text-blue-800', icon: '🔵' },
+    { id: 'MEETING_BOOKED', label: 'RDV Fixé', color: 'bg-indigo-100 text-indigo-800', icon: '�' },
     { id: 'SIGNED', label: 'Signé', color: 'bg-emerald-100 text-emerald-800', icon: '✅' },
+    { id: 'NO_SHOW', label: 'Non Honoré', color: 'bg-red-100 text-red-800', icon: '🚫' },
     { id: 'LOST', label: 'Perdu', color: 'bg-slate-100 text-slate-800', icon: '⚫' }
 ];
 
@@ -144,16 +145,16 @@ export default function SalesDashboard() {
         }
     };
 
-    // Confirmer que le RDV a eu lieu (le lead est venu en agence)
-    const handleAppointmentDone = async (prospect: Prospect) => {
-        if (!confirm(`Confirmer que ${prospect.firstName} est venu au RDV ?`)) return;
-        await handleStatusChange(prospect.id, 'APPOINTMENT_DONE');
+    // Marquer comme non honoré (no-show)
+    const handleNoShow = async (prospect: Prospect) => {
+        if (!confirm(`Confirmer que ${prospect.firstName} n'est pas venu au RDV ?`)) return;
+        await handleStatusChange(prospect.id, 'NO_SHOW');
     };
 
-    // Conversion finale : uniquement après RDV effectué + simulateur
+    // Conversion finale : signature lors du RDV en agence
     const handleSign = async (prospect: Prospect) => {
-        if (prospect.status !== 'APPOINTMENT_DONE') {
-            alert('⚠️ Le lead doit d\'abord venir au RDV en agence avant de pouvoir signer.');
+        if (prospect.status !== 'MEETING_BOOKED' && prospect.status !== 'NO_SHOW') {
+            alert('⚠️ Le lead doit avoir un RDV fixé avant de pouvoir signer.');
             return;
         }
         if (!confirm(`Confirmer la signature de ${prospect.firstName} ${prospect.lastName} ?\n\nCela créera un dossier client dans le CRM.`)) return;
@@ -359,8 +360,8 @@ export default function SalesDashboard() {
                                             {prospects
                                                 .filter(p => p.status === column.id)
                                                 .sort((a, b) => {
-                                                    // Special sort for TO_CALL: High score first
-                                                    if (column.id === 'TO_CALL') {
+                                                    // Special sort for NEW: High score first
+                                                    if (column.id === 'NEW') {
                                                         return b.score - a.score;
                                                     }
                                                     // Default: Newest first
@@ -543,8 +544,8 @@ export default function SalesDashboard() {
 
                                 {/* ─── STICKY ACTION BAR (Dynamique selon statut) ─── */}
                                 <div className="px-5 py-3 bg-white border-b border-slate-100 flex items-center gap-2 shadow-sm">
-                                    {/* TO_CALL : Appeler est l'action principale */}
-                                    {(selectedProspect.status === 'TO_CALL' || selectedProspect.status === 'IN_DISCUSSION') && (
+                                    {/* NEW / CONTACTED : Appeler est l'action principale */}
+                                    {(selectedProspect.status === 'NEW' || selectedProspect.status === 'CONTACTED') && (
                                         <>
                                             <button
                                                 onClick={() => setShowCallCockpit(true)}
@@ -563,15 +564,15 @@ export default function SalesDashboard() {
                                         </>
                                     )}
 
-                                    {/* MEETING_BOOKED : Confirmer présence est l'action principale */}
-                                    {selectedProspect.status === 'MEETING_BOOKED' && (
+                                    {/* QUALIFIED : Fixer RDV est l'action principale */}
+                                    {selectedProspect.status === 'QUALIFIED' && (
                                         <>
                                             <button
-                                                onClick={() => handleAppointmentDone(selectedProspect)}
-                                                className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700 transition-all shadow-sm shadow-emerald-200 active:scale-[0.97]"
+                                                onClick={() => setShowBookingModal(true)}
+                                                className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 transition-all shadow-sm shadow-indigo-200 active:scale-[0.97]"
                                             >
-                                                <CheckCircle size={15} />
-                                                Lead présent
+                                                <Calendar size={15} />
+                                                Fixer RDV
                                             </button>
                                             <button
                                                 onClick={() => setShowCallCockpit(true)}
@@ -583,22 +584,21 @@ export default function SalesDashboard() {
                                         </>
                                     )}
 
-                                    {/* APPOINTMENT_DONE : Simulateur + Signer */}
-                                    {selectedProspect.status === 'APPOINTMENT_DONE' && (
+                                    {/* MEETING_BOOKED : Signer ou No-Show */}
+                                    {selectedProspect.status === 'MEETING_BOOKED' && (
                                         <>
-                                            <button
-                                                onClick={() => router.push(`/?prospectId=${selectedProspect.id}&serviceId=${encodeURIComponent(selectedProspect.interestServiceId || '')}`)}
-                                                className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 transition-all shadow-sm shadow-indigo-200 active:scale-[0.97]"
-                                            >
-                                                <Microscope size={15} />
-                                                Simulateur
-                                            </button>
                                             <button
                                                 onClick={() => handleSign(selectedProspect)}
                                                 className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700 transition-all shadow-sm shadow-emerald-200 active:scale-[0.97]"
                                             >
                                                 <CheckCircle size={15} />
                                                 Signer
+                                            </button>
+                                            <button
+                                                onClick={() => handleNoShow(selectedProspect)}
+                                                className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-white border border-red-200 text-red-600 rounded-xl text-sm font-bold hover:bg-red-50 transition-all active:scale-[0.97]"
+                                            >
+                                                🚫 Non honoré
                                             </button>
                                         </>
                                     )}
@@ -614,10 +614,30 @@ export default function SalesDashboard() {
                                         </button>
                                     )}
 
+                                    {/* NO_SHOW : Reprogrammer ou Abandonner */}
+                                    {selectedProspect.status === 'NO_SHOW' && (
+                                        <>
+                                            <button
+                                                onClick={() => setShowBookingModal(true)}
+                                                className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 transition-all shadow-sm shadow-indigo-200 active:scale-[0.97]"
+                                            >
+                                                <Calendar size={15} />
+                                                Reprogrammer
+                                            </button>
+                                            <button
+                                                onClick={() => setShowCallCockpit(true)}
+                                                className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl text-sm font-bold hover:bg-slate-50 transition-all active:scale-[0.97]"
+                                            >
+                                                <Phone size={15} />
+                                                Rappeler
+                                            </button>
+                                        </>
+                                    )}
+
                                     {/* LOST : Réactiver */}
                                     {selectedProspect.status === 'LOST' && (
                                         <button
-                                            onClick={() => handleStatusChange(selectedProspect.id, 'TO_CALL')}
+                                            onClick={() => handleStatusChange(selectedProspect.id, 'NEW')}
                                             className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-amber-50 border border-amber-200 text-amber-700 rounded-xl text-sm font-bold hover:bg-amber-100 transition-all active:scale-[0.97]"
                                         >
                                             <ArrowRight size={15} />
@@ -648,8 +668,8 @@ export default function SalesDashboard() {
                                         </div>
                                     </div>
 
-                                    {/* RDV Info (si RDV fixé ou effectué) */}
-                                    {selectedProspect.appointment && ['MEETING_BOOKED', 'APPOINTMENT_DONE', 'SIGNED'].includes(selectedProspect.status) && (
+                                    {/* RDV Info (si RDV fixé) */}
+                                    {selectedProspect.appointment && ['MEETING_BOOKED', 'NO_SHOW', 'SIGNED'].includes(selectedProspect.status) && (
                                         <div className="px-5 py-4 border-b border-slate-100">
                                             <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3">Rendez-vous</h3>
                                             <div className={`p-4 rounded-2xl border ${selectedProspect.status === 'MEETING_BOOKED' ? 'bg-indigo-50 border-indigo-100' : 'bg-emerald-50 border-emerald-100'}`}>
@@ -701,7 +721,7 @@ export default function SalesDashboard() {
 
                                     {/* Action Zone contextuelle */}
                                     <div className="px-5 py-4 border-b border-slate-100">
-                                        {selectedProspect.status === 'TO_CALL' && (
+                                        {selectedProspect.status === 'NEW' && (
                                             <button
                                                 onClick={() => { setShowCallCockpit(true); }}
                                                 className="w-full flex items-center gap-4 p-4 rounded-2xl bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50 border border-amber-100 hover:border-amber-200 transition-all group active:scale-[0.98]"
@@ -716,35 +736,59 @@ export default function SalesDashboard() {
                                                 <ArrowRight size={18} className="text-amber-400 group-hover:translate-x-1 transition-transform" />
                                             </button>
                                         )}
-                                        {selectedProspect.status === 'IN_DISCUSSION' && (
+                                        {selectedProspect.status === 'CONTACTED' && (
+                                            <button
+                                                onClick={() => { setShowCallCockpit(true); }}
+                                                className="w-full flex items-center gap-4 p-4 rounded-2xl bg-gradient-to-r from-purple-50 via-violet-50 to-purple-50 border border-purple-100 hover:border-purple-200 transition-all group active:scale-[0.98]"
+                                            >
+                                                <div className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center group-hover:scale-110 transition-transform">
+                                                    <Phone className="text-purple-600" size={20} />
+                                                </div>
+                                                <div className="flex-1 text-left">
+                                                    <p className="font-bold text-slate-900 text-sm">Rappeler pour compléter la qualification</p>
+                                                    <p className="text-xs text-slate-500">Collecter les infos manquantes et fixer un RDV</p>
+                                                </div>
+                                                <ArrowRight size={18} className="text-purple-400 group-hover:translate-x-1 transition-transform" />
+                                            </button>
+                                        )}
+                                        {selectedProspect.status === 'QUALIFIED' && (
                                             <button
                                                 onClick={() => setShowBookingModal(true)}
-                                                className="w-full flex items-center gap-4 p-4 rounded-2xl bg-gradient-to-r from-indigo-50 via-purple-50 to-indigo-50 border border-indigo-100 hover:border-indigo-200 transition-all group active:scale-[0.98]"
+                                                className="w-full flex items-center gap-4 p-4 rounded-2xl bg-gradient-to-r from-indigo-50 via-blue-50 to-indigo-50 border border-indigo-100 hover:border-indigo-200 transition-all group active:scale-[0.98]"
                                             >
                                                 <div className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center group-hover:scale-110 transition-transform">
                                                     <Calendar className="text-indigo-600" size={20} />
                                                 </div>
                                                 <div className="flex-1 text-left">
                                                     <p className="font-bold text-slate-900 text-sm">Fixer un rendez-vous en agence</p>
-                                                    <p className="text-xs text-slate-500">Proposer un créneau pour dérouler le simulateur</p>
+                                                    <p className="text-xs text-slate-500">Lead qualifié — proposer un créneau pour signer</p>
                                                 </div>
                                                 <ArrowRight size={18} className="text-indigo-400 group-hover:translate-x-1 transition-transform" />
                                             </button>
                                         )}
-                                        {selectedProspect.status === 'APPOINTMENT_DONE' && (
+                                        {selectedProspect.status === 'MEETING_BOOKED' && (
                                             <button
                                                 onClick={() => router.push(`/?prospectId=${selectedProspect.id}&serviceId=${encodeURIComponent(selectedProspect.interestServiceId || '')}`)}
-                                                className="w-full flex items-center gap-4 p-4 rounded-2xl bg-gradient-to-r from-cyan-50 via-blue-50 to-cyan-50 border border-cyan-100 hover:border-cyan-200 transition-all group active:scale-[0.98]"
+                                                className="w-full flex items-center gap-4 p-4 rounded-2xl bg-gradient-to-r from-indigo-50 via-purple-50 to-indigo-50 border border-indigo-100 hover:border-indigo-200 transition-all group active:scale-[0.98]"
                                             >
                                                 <div className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center group-hover:scale-110 transition-transform">
-                                                    <Microscope className="text-cyan-600" size={20} />
+                                                    <Microscope className="text-indigo-600" size={20} />
                                                 </div>
                                                 <div className="flex-1 text-left">
                                                     <p className="font-bold text-slate-900 text-sm">Dérouler le simulateur d'éligibilité</p>
-                                                    <p className="text-xs text-slate-500">Vérifier l'éligibilité du lead en agence</p>
+                                                    <p className="text-xs text-slate-500">Vérifier l'éligibilité du lead lors du RDV en agence</p>
                                                 </div>
-                                                <ArrowRight size={18} className="text-cyan-400 group-hover:translate-x-1 transition-transform" />
+                                                <ArrowRight size={18} className="text-indigo-400 group-hover:translate-x-1 transition-transform" />
                                             </button>
+                                        )}
+                                        {selectedProspect.status === 'NO_SHOW' && (
+                                            <div className="flex items-center gap-3 p-4 bg-red-50 rounded-2xl border border-red-100 text-red-700">
+                                                🚫
+                                                <div>
+                                                    <p className="font-bold text-sm">RDV non honoré</p>
+                                                    <p className="text-xs text-red-500">Relancer le prospect ou reprogrammer un nouveau RDV</p>
+                                                </div>
+                                            </div>
                                         )}
                                         {selectedProspect.status === 'SIGNED' && (
                                             <div className="flex items-center gap-3 p-4 bg-emerald-50 rounded-2xl border border-emerald-100 text-emerald-700">

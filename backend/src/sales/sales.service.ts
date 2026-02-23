@@ -123,12 +123,12 @@ export class SalesService {
             data: {
                 ...data,
                 score,
-                status: 'TO_CALL',
+                status: 'NEW',
                 assignedToSalesId,
             },
         });
 
-        await this.triggerAutomation(prospect, 'TO_CALL');
+        await this.triggerAutomation(prospect, 'NEW');
         return prospect;
     }
 
@@ -171,14 +171,17 @@ export class SalesService {
 
         // Mocking automation calls
         switch (status) {
-            case 'TO_CALL':
+            case 'NEW':
                 console.log(`[SMS] 📤 To ${prospect.phone}: "Bonjour ${prospect.firstName}, merci de votre intérêt pour Simulegal. Un expert va vous rappeler ds les 2h."`);
                 break;
             case 'MEETING_BOOKED':
                 console.log(`[EMAIL] 📧 To ${prospect.email}: "Votre RDV Simulegal est confirmé."`);
                 break;
-            case 'LINK_SENT':
-                console.log(`[SMS] 📤 To ${prospect.phone}: "Voici votre lien sécurisé: https://simulegal.fr/pay/${prospect.id}"`);
+            case 'NO_SHOW':
+                console.log(`[SMS] 📤 To ${prospect.phone}: "Bonjour ${prospect.firstName}, nous avons remarqué que vous n'avez pas pu venir. Souhaitez-vous reprogrammer ?"`);
+                break;
+            case 'SIGNED':
+                console.log(`[EMAIL] 📧 To ${prospect.email}: "Bienvenue chez Simulegal ! Votre dossier est ouvert."`);
                 break;
         }
     }
@@ -224,7 +227,7 @@ export class SalesService {
             if (data.firstName && data.lastName) {
                 // Set defaults
                 data.source = data.source || 'CSV_IMPORT';
-                data.status = 'TO_CALL';
+                data.status = 'NEW';
                 data.score = 10; // Base score for imported
                 data.agencyId = data.agencyId || 'HQ-001'; // Default to HQ
 

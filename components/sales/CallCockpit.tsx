@@ -218,9 +218,13 @@ export default function CallCockpit({ prospect, onClose, onSaveNote }: CallCockp
 
         // Status change based on outcome
         if (callOutcome === 'QUALIFIED') {
-            updates.status = 'IN_DISCUSSION' as any;
+            updates.status = 'QUALIFIED' as any;
+        } else if (callOutcome === 'CALLBACK') {
+            updates.status = 'CONTACTED' as any;
         } else if (callOutcome === 'NOT_INTERESTED' || callOutcome === 'WRONG_NUMBER') {
             updates.status = 'LOST' as any;
+        } else if (callOutcome === 'NO_ANSWER') {
+            updates.status = 'CONTACTED' as any;
         }
 
         // Last contact
@@ -353,8 +357,8 @@ export default function CallCockpit({ prospect, onClose, onSaveNote }: CallCockp
                                 key={tab.id}
                                 onClick={() => setActiveTab(tab.id)}
                                 className={`flex-1 px-4 py-3 text-sm font-bold flex items-center justify-center gap-2 transition-all border-b-2 ${activeTab === tab.id
-                                        ? 'border-indigo-500 text-indigo-600 bg-white'
-                                        : 'border-transparent text-slate-400 hover:text-slate-600 hover:bg-white/50'
+                                    ? 'border-indigo-500 text-indigo-600 bg-white'
+                                    : 'border-transparent text-slate-400 hover:text-slate-600 hover:bg-white/50'
                                     }`}
                             >
                                 {tab.icon} {tab.label}
@@ -403,13 +407,13 @@ export default function CallCockpit({ prospect, onClose, onSaveNote }: CallCockp
                                                         key={step.id}
                                                         onClick={() => toggleStep(step.id)}
                                                         className={`w-full text-left p-3 rounded-xl border transition-all flex items-start gap-3 group ${checkedSteps.has(step.id)
-                                                                ? 'bg-emerald-50 border-emerald-200'
-                                                                : 'bg-white border-slate-100 hover:border-slate-200 hover:bg-slate-50'
+                                                            ? 'bg-emerald-50 border-emerald-200'
+                                                            : 'bg-white border-slate-100 hover:border-slate-200 hover:bg-slate-50'
                                                             }`}
                                                     >
                                                         <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 mt-0.5 transition-all ${checkedSteps.has(step.id)
-                                                                ? 'bg-emerald-500 border-emerald-500 text-white'
-                                                                : 'border-slate-300 group-hover:border-indigo-300'
+                                                            ? 'bg-emerald-500 border-emerald-500 text-white'
+                                                            : 'border-slate-300 group-hover:border-indigo-300'
                                                             }`}>
                                                             {checkedSteps.has(step.id) && <CheckCircle size={12} />}
                                                         </div>
@@ -444,8 +448,8 @@ export default function CallCockpit({ prospect, onClose, onSaveNote }: CallCockp
                                                 key={service.id}
                                                 onClick={() => setSelectedService(service.id)}
                                                 className={`text-left p-3 rounded-xl border transition-all ${selectedService === service.id
-                                                        ? 'bg-indigo-50 border-indigo-300 ring-1 ring-indigo-200'
-                                                        : 'bg-white border-slate-100 hover:border-slate-200'
+                                                    ? 'bg-indigo-50 border-indigo-300 ring-1 ring-indigo-200'
+                                                    : 'bg-white border-slate-100 hover:border-slate-200'
                                                     }`}
                                             >
                                                 <p className={`text-xs font-bold truncate ${selectedService === service.id ? 'text-indigo-700' : 'text-slate-700'}`}>
@@ -554,8 +558,8 @@ export default function CallCockpit({ prospect, onClose, onSaveNote }: CallCockp
                                                 key={outcome.id}
                                                 onClick={() => setCallOutcome(outcome.id)}
                                                 className={`text-left p-3 rounded-xl border transition-all flex items-center gap-3 ${callOutcome === outcome.id
-                                                        ? `${outcome.color} ring-1 ring-current/20`
-                                                        : 'bg-white border-slate-100 hover:border-slate-200 text-slate-600'
+                                                    ? `${outcome.color} ring-1 ring-current/20`
+                                                    : 'bg-white border-slate-100 hover:border-slate-200 text-slate-600'
                                                     }`}
                                             >
                                                 <span className="text-lg">{outcome.icon}</span>

@@ -24,7 +24,7 @@ export class SalesAnalyticsService {
         // 1. Basic Counts
         const [totalLeads, convertedLeads, newLeads] = await Promise.all([
             this.prisma.prospect.count(),
-            this.prisma.prospect.count({ where: { status: 'CONVERTED' } }),
+            this.prisma.prospect.count({ where: { status: 'SIGNED' } }),
             this.prisma.prospect.count({ where: { createdAt: { gte: startDate } } })
         ]);
 
@@ -60,16 +60,17 @@ export class SalesAnalyticsService {
 
     private estimatePipelineValue(groupedStatus: any[]): number {
         // Simple estimation: 1 Client = 1500€ (avg basket)
-        // Probabilities: TO_CALL (5%), MEETING (30%), CONVERTED (100%)
+        // Probabilities: NEW (5%), CONTACTED (10%), QUALIFIED (25%), MEETING (40%), SIGNED (100%)
         let total = 0;
         groupedStatus.forEach(group => {
             const count = group._count.status;
             switch (group.status) {
-                case 'TO_CALL': total += count * 1500 * 0.05; break;
-                case 'IN_DISCUSSION': total += count * 1500 * 0.15; break;
-                case 'MEETING_BOOKED': total += count * 1500 * 0.30; break;
-                case 'LINK_SENT': total += count * 1500 * 0.60; break;
-                case 'CONVERTED': total += count * 1500 * 1.0; break;
+                case 'NEW': total += count * 1500 * 0.05; break;
+                case 'CONTACTED': total += count * 1500 * 0.10; break;
+                case 'QUALIFIED': total += count * 1500 * 0.25; break;
+                case 'MEETING_BOOKED': total += count * 1500 * 0.40; break;
+                case 'SIGNED': total += count * 1500 * 1.0; break;
+                case 'NO_SHOW': total += count * 1500 * 0.15; break;
             }
         });
         return Math.round(total);

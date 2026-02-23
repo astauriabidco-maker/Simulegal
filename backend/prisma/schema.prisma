@@ -26,7 +26,7 @@ model Prospect {
   score             Int            @default(0)
   agencyId          String
   assignedToSalesId String?
-  status            ProspectStatus @default(TO_CALL)
+  status            ProspectStatus @default(NEW)
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
   lastContactAt     DateTime?
@@ -363,11 +363,12 @@ enum LeadStatus {
 }
 
 enum ProspectStatus {
-  TO_CALL
-  IN_DISCUSSION
+  NEW
+  CONTACTED
+  QUALIFIED
   MEETING_BOOKED
-  LINK_SENT
-  CONVERTED
+  SIGNED
+  NO_SHOW
   LOST
 }
 
