@@ -5,6 +5,8 @@ import { LeadsService } from '../leads/leads.service';
 import { EmailService } from '../email/email.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PipelineAutomationService } from '../pipeline-automation/pipeline-automation.service';
+import { SalesService } from '../sales/sales.service';
+import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class PaymentsService implements OnModuleInit {
@@ -17,6 +19,8 @@ export class PaymentsService implements OnModuleInit {
         private emailService: EmailService,
         private notificationsService: NotificationsService,
         private pipelineAutomation: PipelineAutomationService,
+        @Inject(forwardRef(() => SalesService)) private salesService: SalesService,
+        private prisma: PrismaService,
     ) { }
 
     async onModuleInit() {
@@ -70,6 +74,78 @@ export class PaymentsService implements OnModuleInit {
         return { url: session.url };
     }
 
+    // ═════════════════════════════════════════════════
+    // CHECKOUT POUR PROSPECTS (paiement avant création Lead)
+    // ═════════════════════════════════════════════════
+
+    async createProspectCheckoutSession(
+        prospectId: string,
+        options: {
+            amount: number;        // Montant en euros
+            serviceId: string;     // Service sélectionné
+            serviceName: string;   // Label du service
+            installments?: 1 | 3;  // Paiement en 1x ou 3x
+            successUrl: string;
+            cancelUrl: string;
+        }
+    ) {
+        if (!this.stripe) throw new Error('Stripe is not configured');
+
+        const prospect = await this.prisma.prospect.findUnique({ where: { id: prospectId } });
+        if (!prospect) throw new Error('Prospect not found');
+
+        // Construire la session Stripe
+        const sessionConfig: Stripe.Checkout.SessionCreateParams = {
+            payment_method_types: ['card'],
+            line_items: [
+                {
+                    price_data: {
+                        currency: 'eur',
+                        product_data: {
+                            name: `SimuLegal — ${options.serviceName}`,
+                            description: `Prestation pour ${prospect.firstName} ${prospect.lastName}`,
+                        },
+                        unit_amount: options.amount * 100, // Centimes
+                    },
+                    quantity: 1,
+                },
+            ],
+            mode: 'payment',
+            success_url: options.successUrl,
+            cancel_url: options.cancelUrl,
+            customer_email: prospect.email || undefined,
+            client_reference_id: prospectId,
+            metadata: {
+                type: 'PROSPECT_CONVERSION',
+                prospectId,
+                serviceId: options.serviceId,
+                serviceName: options.serviceName,
+                installments: String(options.installments || 1),
+            },
+        };
+
+        // Paiement en 3x via Stripe (payment_intent_data)
+        if (options.installments === 3) {
+            sessionConfig.payment_intent_data = {
+                metadata: {
+                    type: 'PROSPECT_CONVERSION',
+                    prospectId,
+                    installments: '3',
+                    installment_note: `Paiement 1/3 de ${options.amount}€ (total: ${options.amount * 3}€)`,
+                },
+            };
+        }
+
+        const session = await this.stripe.checkout.sessions.create(sessionConfig);
+
+        this.logger.log(
+            `[💳 Prospect Checkout] ${prospect.firstName} ${prospect.lastName} — ${options.amount}€ ` +
+            `(${options.installments || 1}x) — Service: ${options.serviceName}`
+        );
+
+        return { url: session.url, sessionId: session.id };
+    }
+
     async handleWebhook(signature: string, payload: Buffer) {
         if (!this.stripe) return;
 
@@ -91,9 +167,51 @@ export class PaymentsService implements OnModuleInit {
 
         if (event.type === 'checkout.session.completed') {
             const session = event.data.object as Stripe.Checkout.Session;
+            const metadata = session.metadata || {};
+
+            // ─── PROSPECT PAYMENT : Auto-conversion ────────────
+            if (metadata.type === 'PROSPECT_CONVERSION' && metadata.prospectId) {
+                const prospectId = metadata.prospectId;
+                this.logger.log(`[💳] Payment confirmed for Prospect ${prospectId} — auto-converting to SIGNED + Lead`);
+
+                try {
+                    // Auto-conversion : Prospect → SIGNED + Lead CRM
+                    const result = await this.salesService.convertToLead(prospectId, metadata.serviceId);
+
+                    if (result) {
+                        // Enregistrer le paiement sur le Lead créé
+                        await this.leadsService.recordPayment(result.leadId, {
+                            amount: session.amount_total || 0,
+                            method: 'STRIPE',
+                            reference: session.payment_intent as string,
+                        });
+
+                        // Envoyer confirmation au client
+                        const prospect = await this.prisma.prospect.findUnique({ where: { id: prospectId } });
+                        if (prospect?.phone) {
+                            await this.notificationsService.sendWhatsApp(
+                                prospect.phone,
+                                'payment_confirmation',
+                                {
+                                    name: prospect.firstName,
+                                    message: `✅ ${prospect.firstName}, votre paiement de ${(session.amount_total || 0) / 100}€ a été confirmé ! ` +
+                                        `Votre dossier ${metadata.serviceName} est maintenant ouvert. Nous vous recontacterons sous 24h.`,
+                                },
+                            );
+                        }
+
+                        this.logger.log(`[✅] Prospect ${prospectId} → Lead ${result.leadId} (auto-converted on payment)`);
+                    }
+                } catch (err) {
+                    this.logger.error(`[❌] Failed to auto-convert prospect ${prospectId}: ${err.message}`);
+                }
+                return;
+            }
+
+            // ─── LEAD PAYMENT (existing flow) ─────────────────
             const leadId = session.client_reference_id;
 
-            if (leadId) {
+            if (leadId && metadata.type !== 'PROSPECT_CONVERSION') {
                 this.logger.log(`Payment confirmed for Lead ${leadId}`);
                 await this.leadsService.recordPayment(leadId, {
                     amount: session.amount_total || 0,

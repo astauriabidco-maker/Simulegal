@@ -151,33 +151,49 @@ export default function SalesDashboard() {
         await handleStatusChange(prospect.id, 'NO_SHOW');
     };
 
-    // Conversion finale : signature lors du RDV en agence
-    const handleSign = async (prospect: Prospect) => {
-        if (prospect.status !== 'MEETING_BOOKED' && prospect.status !== 'NO_SHOW') {
-            alert('⚠️ Le lead doit avoir un RDV fixé avant de pouvoir signer.');
-            return;
-        }
-        if (!confirm(`Confirmer la signature de ${prospect.firstName} ${prospect.lastName} ?\n\nCela créera un dossier client dans le CRM.`)) return;
-
-        // Déterminer le service
+    // Encaissement : crée une session Stripe pour le prospect
+    // Le webhook Stripe déclenchera auto : SIGNED + Lead CRM
+    const handleStartPayment = async (prospect: Prospect, installments: 1 | 3 = 1) => {
         const serviceId = prospect.eligibilityResult?.matchedProcedures?.[0] || prospect.interestServiceId || 'consultation_juridique';
+        // Prix selon le service (à terme, vient de la config backend)
+        const SERVICE_PRICES: Record<string, { price: number; label: string }> = {
+            'naturalisation': { price: 1500, label: 'Naturalisation' },
+            'regroupement_familial': { price: 1200, label: 'Regroupement familial' },
+            'titre_sejour': { price: 800, label: 'Titre de séjour' },
+            'changement_statut': { price: 900, label: 'Changement de statut' },
+            'consultation_juridique': { price: 150, label: 'Consultation juridique' },
+        };
+        const service = SERVICE_PRICES[serviceId] || { price: 1000, label: serviceId };
+        const amount = installments === 3 ? Math.ceil(service.price / 3) : service.price;
 
-        // Appel backend : conversion complète (crée Lead + transfère données + lie prospect)
-        const result = await SalesStore.convertToLead(prospect.id, serviceId);
+        try {
+            const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+            const response = await fetch(`${API_URL}/payments/prospect-checkout`, {
+                method: 'POST',
+                headers: SalesStore.getHeaders(),
+                body: JSON.stringify({
+                    prospectId: prospect.id,
+                    amount,
+                    serviceId,
+                    serviceName: service.label,
+                    installments,
+                    successUrl: `${window.location.origin}/admin/sales?payment=success&prospect=${prospect.id}`,
+                    cancelUrl: `${window.location.origin}/admin/sales?payment=cancelled&prospect=${prospect.id}`,
+                }),
+            });
 
-        if (result?.success && result.leadId) {
-            // Mise à jour optimiste du frontend
-            const updatedProspect = { ...prospect, status: 'SIGNED' as ProspectStatus, convertedLeadId: result.leadId };
-            setProspects((prev: Prospect[]) => prev.map((p: Prospect) =>
-                p.id === prospect.id ? updatedProspect : p
-            ));
-            setSelectedProspect(updatedProspect);
+            if (!response.ok) throw new Error('Checkout creation failed');
+            const data = await response.json();
 
-            // Redirection vers le dossier CRM créé
-            alert(`✅ Contrat signé ! Dossier ${result.leadId} créé dans le CRM.\n\nVous allez être redirigé vers le dossier.`);
-            router.push(`/admin/leads?id=${result.leadId}`);
-        } else {
-            alert('❌ Erreur lors de la conversion. Veuillez réessayer.');
+            if (data.url) {
+                // Redirection vers Stripe Checkout
+                window.location.href = data.url;
+            } else {
+                alert('❌ Impossible de créer la session de paiement. Vérifiez la configuration Stripe.');
+            }
+        } catch (error) {
+            console.error('[Payment] Error:', error);
+            alert('❌ Erreur de paiement. Vérifiez votre connexion ou la configuration Stripe.');
         }
     };
 
@@ -346,6 +362,11 @@ export default function SalesDashboard() {
                                             setHoveredColumnId(null);
                                             const prospectId = e.dataTransfer.getData('prospectId');
                                             if (prospectId) {
+                                                // SIGNED ne peut être atteint que par paiement
+                                                if (column.id === 'SIGNED') {
+                                                    alert('⚠️ Le statut "Signé" est automatique.\n\nIl se déclenche uniquement après encaissement (paiement Stripe validé).\n\n→ Ouvrez le prospect → Cliquez sur "Encaisser"');
+                                                    return;
+                                                }
                                                 handleStatusChange(prospectId, column.id as ProspectStatus);
                                             }
                                         }}
@@ -578,23 +599,41 @@ export default function SalesDashboard() {
                                         </>
                                     )}
 
-                                    {/* MEETING_BOOKED : Signer ou No-Show */}
+                                    {/* MEETING_BOOKED : Simulateur → Encaisser → Auto SIGNED */}
                                     {selectedProspect.status === 'MEETING_BOOKED' && (
-                                        <>
-                                            <button
-                                                onClick={() => handleSign(selectedProspect)}
-                                                className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700 transition-all shadow-sm shadow-emerald-200 active:scale-[0.97]"
-                                            >
-                                                <CheckCircle size={15} />
-                                                Signer
-                                            </button>
-                                            <button
-                                                onClick={() => handleNoShow(selectedProspect)}
-                                                className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-white border border-red-200 text-red-600 rounded-xl text-sm font-bold hover:bg-red-50 transition-all active:scale-[0.97]"
-                                            >
-                                                🚫 Non honoré
-                                            </button>
-                                        </>
+                                        <div className="flex flex-col gap-2 w-full">
+                                            {/* Ligne 1 : Simulateur + Non honoré */}
+                                            <div className="flex gap-2">
+                                                <button
+                                                    onClick={() => router.push(`/simulateur?prospectId=${selectedProspect.id}`)}
+                                                    className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 transition-all shadow-sm shadow-indigo-200 active:scale-[0.97]"
+                                                >
+                                                    <Microscope size={15} />
+                                                    Simulateur
+                                                </button>
+                                                <button
+                                                    onClick={() => handleNoShow(selectedProspect)}
+                                                    className="flex items-center justify-center gap-2 py-2.5 px-4 bg-white border border-red-200 text-red-600 rounded-xl text-sm font-bold hover:bg-red-50 transition-all active:scale-[0.97]"
+                                                >
+                                                    🚫 Non honoré
+                                                </button>
+                                            </div>
+                                            {/* Ligne 2 : Encaissement (déclenche auto-SIGNED via Stripe) */}
+                                            <div className="flex gap-2">
+                                                <button
+                                                    onClick={() => handleStartPayment(selectedProspect, 1)}
+                                                    className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700 transition-all shadow-sm shadow-emerald-200 active:scale-[0.97]"
+                                                >
+                                                    💳 Encaisser (1x)
+                                                </button>
+                                                <button
+                                                    onClick={() => handleStartPayment(selectedProspect, 3)}
+                                                    className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-white border border-emerald-300 text-emerald-700 rounded-xl text-sm font-bold hover:bg-emerald-50 transition-all active:scale-[0.97]"
+                                                >
+                                                    💳 Encaisser (3x)
+                                                </button>
+                                            </div>
+                                        </div>
                                     )}
 
                                     {/* SIGNED : Voir le dossier */}

@@ -13,6 +13,34 @@ export class PaymentsController {
         return this.paymentsService.createCheckoutSession(data.leadId, data.successUrl, data.cancelUrl);
     }
 
+    /**
+     * Créer une session de paiement pour un prospect (avant conversion en Lead).
+     * Le webhook Stripe déclenchera automatiquement : SIGNED + création Lead CRM.
+     */
+    @Post('prospect-checkout')
+    async createProspectCheckout(@Body() data: {
+        prospectId: string;
+        amount: number;
+        serviceId: string;
+        serviceName: string;
+        installments?: 1 | 3;
+        successUrl: string;
+        cancelUrl: string;
+    }) {
+        if (!data.prospectId) throw new BadRequestException('prospectId is required');
+        if (!data.amount || data.amount <= 0) throw new BadRequestException('amount must be positive');
+        if (!data.serviceId) throw new BadRequestException('serviceId is required');
+
+        return this.paymentsService.createProspectCheckoutSession(data.prospectId, {
+            amount: data.amount,
+            serviceId: data.serviceId,
+            serviceName: data.serviceName || data.serviceId,
+            installments: data.installments || 1,
+            successUrl: data.successUrl,
+            cancelUrl: data.cancelUrl,
+        });
+    }
+
     @Post('webhook')
     async stripeWebhook(
         @Headers('stripe-signature') signature: string,
