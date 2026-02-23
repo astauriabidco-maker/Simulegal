@@ -26,11 +26,11 @@ export const MarketingAutomation = {
                 MarketingAutomation.addToRetargetingAudience(prospect);
                 break;
 
-            case 'CONVERTED':
+            case 'SIGNED':
                 MarketingAutomation.sendWelcomePackEmail(prospect);
                 break;
 
-            case 'LINK_SENT':
+            case 'APPOINTMENT_DONE':
                 MarketingAutomation.sendSimulationLink(prospect);
                 break;
         }

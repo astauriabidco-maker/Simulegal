@@ -19,22 +19,34 @@ interface AdminLoginProps {
     onLoginSuccess: (user: AdminUser) => void;
 }
 
-const ROLE_CONFIG: Record<UserRole, { icon: React.ReactNode; color: string; label: string }> = {
-    HQ: {
-        icon: <Building2 size={14} />,
-        color: 'bg-indigo-100 text-indigo-700',
-        label: 'Siège'
-    },
-    AGENCY: {
-        icon: <Users size={14} />,
-        color: 'bg-emerald-100 text-emerald-700',
-        label: 'Agence'
-    },
-    SUPERADMIN: {
-        icon: <Crown size={14} />,
-        color: 'bg-amber-100 text-amber-700',
-        label: 'Super Admin'
-    }
+const getRoleConfig = (roleId: string) => {
+    const icons: Record<string, React.ReactNode> = {
+        'SUPER_ADMIN': <Crown size={14} />, 'SUPERADMIN': <Crown size={14} />,
+        'HQ_ADMIN': <Building2 size={14} />, 'HQ': <Building2 size={14} />,
+        'CASE_WORKER': <Users size={14} />,
+        'AGENCY_MANAGER': <Users size={14} />, 'AGENCY': <Users size={14} />,
+        'SALES': <Users size={14} />,
+        'KIOSK_AGENT': <Users size={14} />,
+    };
+    const colors: Record<string, string> = {
+        'SUPER_ADMIN': 'bg-red-100 text-red-700', 'SUPERADMIN': 'bg-red-100 text-red-700',
+        'HQ_ADMIN': 'bg-amber-100 text-amber-700', 'HQ': 'bg-amber-100 text-amber-700',
+        'CASE_WORKER': 'bg-blue-100 text-blue-700',
+        'AGENCY_MANAGER': 'bg-emerald-100 text-emerald-700', 'AGENCY': 'bg-emerald-100 text-emerald-700',
+        'SALES': 'bg-violet-100 text-violet-700',
+        'KIOSK_AGENT': 'bg-purple-100 text-purple-700',
+    };
+    const labels: Record<string, string> = {
+        'SUPER_ADMIN': 'Super Admin', 'SUPERADMIN': 'Super Admin',
+        'HQ_ADMIN': 'Siège', 'HQ': 'Siège',
+        'CASE_WORKER': 'Juriste', 'AGENCY_MANAGER': 'Agence', 'AGENCY': 'Agence',
+        'SALES': 'Commercial', 'KIOSK_AGENT': 'Kiosque',
+    };
+    return {
+        icon: icons[roleId] || <Users size={14} />,
+        color: colors[roleId] || 'bg-slate-100 text-slate-700',
+        label: labels[roleId] || roleId,
+    };
 };
 
 export default function AdminLogin({ onLoginSuccess }: AdminLoginProps) {
@@ -181,7 +193,7 @@ export default function AdminLogin({ onLoginSuccess }: AdminLoginProps) {
                         {showDemoAccounts && (
                             <div className="px-4 pb-4 space-y-2 animate-in slide-in-from-top-2 duration-200">
                                 {demoCredentials.map((cred) => {
-                                    const roleConfig = ROLE_CONFIG[cred.role];
+                                    const roleConfig = getRoleConfig(cred.role);
                                     return (
                                         <button
                                             key={cred.email}

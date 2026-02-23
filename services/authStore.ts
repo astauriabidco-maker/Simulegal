@@ -3,7 +3,9 @@
  * Gère les rôles et sessions des utilisateurs admin
  */
 
-export type UserRole = 'HQ' | 'AGENCY' | 'SUPERADMIN';
+// Rôles standardisés du système + aliases legacy pour compatibilité
+export type UserRole = 'SUPER_ADMIN' | 'HQ_ADMIN' | 'CASE_WORKER' | 'AGENCY_MANAGER' | 'SALES' | 'KIOSK_AGENT' | 'API_PARTNER'
+    | 'SUPERADMIN' | 'HQ' | 'AGENCY'; // Legacy aliases
 
 export interface AdminUser {
     id: string;
@@ -40,11 +42,17 @@ export const AuthStore = {
             const data = await response.json();
             const { access_token, user: apiUser } = data;
 
-            // Mapping des rôles Backend -> Frontend
-            let role: UserRole = 'HQ';
-            if (apiUser.role === 'SUPER_ADMIN' || apiUser.role === 'SUPERADMIN') role = 'SUPERADMIN';
-            else if (apiUser.role === 'HQ_ADMIN') role = 'HQ';
-            else role = 'AGENCY';
+            // Mapping des rôles Backend -> Frontend (normalisation)
+            const roleMap: Record<string, UserRole> = {
+                'SUPER_ADMIN': 'SUPER_ADMIN', 'SUPERADMIN': 'SUPER_ADMIN',
+                'HQ_ADMIN': 'HQ_ADMIN', 'HQ': 'HQ_ADMIN',
+                'CASE_WORKER': 'CASE_WORKER',
+                'AGENCY_MANAGER': 'AGENCY_MANAGER', 'AGENCY': 'AGENCY_MANAGER',
+                'SALES': 'SALES',
+                'KIOSK_AGENT': 'KIOSK_AGENT',
+                'API_PARTNER': 'API_PARTNER',
+            };
+            const role: UserRole = roleMap[apiUser.role] || 'KIOSK_AGENT';
 
             const user: AdminUser = {
                 id: apiUser.id,
@@ -140,7 +148,7 @@ export const AuthStore = {
     hasRole: (role: UserRole): boolean => {
         const user = AuthStore.getCurrentUser();
         if (!user) return false;
-        if (user.role === 'SUPERADMIN') return true; // Super admin a tous les rôles
+        if (user.role === 'SUPERADMIN' || user.role === 'SUPER_ADMIN') return true; // Super admin a tous les rôles
         return user.role === role;
     },
 
@@ -159,10 +167,12 @@ export const AuthStore = {
      */
     getDemoCredentials: () => {
         return [
-            { email: 'hq.admin@simulegal.fr', password: 'demo', role: 'HQ', name: 'Sophie Martin (Siège)' },
-            { email: 'agency.paris@simulegal.fr', password: 'demo', role: 'AGENCY', name: 'Agence Paris Louvre' },
-            { email: 'super.admin@simulegal.fr', password: 'demo', role: 'SUPERADMIN', name: 'Admin Système' }
-        ] as const;
+            { email: 'super.admin@simulegal.fr', password: 'demo', role: 'SUPER_ADMIN' as UserRole, name: 'Admin Système' },
+            { email: 'hq.admin@simulegal.fr', password: 'demo', role: 'HQ_ADMIN' as UserRole, name: 'Sophie Martin (Siège)' },
+            { email: 'juriste@simulegal.fr', password: 'demo', role: 'CASE_WORKER' as UserRole, name: 'Marie Dupont (Juriste)' },
+            { email: 'agency.paris@simulegal.fr', password: 'demo', role: 'AGENCY_MANAGER' as UserRole, name: 'Agence Paris Louvre' },
+            { email: 'commercial@simulegal.fr', password: 'demo', role: 'SALES' as UserRole, name: 'Karim Bensalem (Commercial)' },
+        ];
     }
 };
 

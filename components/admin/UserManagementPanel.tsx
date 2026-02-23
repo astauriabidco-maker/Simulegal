@@ -44,7 +44,7 @@ export default function UserManagementPanel() {
     useEffect(() => {
         // Check role before loading
         const currentUser = AuthStore.getCurrentUser();
-        if (!currentUser || !['SUPERADMIN', 'HQ'].includes(currentUser.role)) {
+        if (!currentUser || !['SUPERADMIN', 'SUPER_ADMIN', 'HQ', 'HQ_ADMIN'].includes(currentUser.role)) {
             setAccessDenied(true);
             return;
         }
@@ -118,11 +118,13 @@ export default function UserManagementPanel() {
         }
     };
 
-    const getRoleBadgeColor = (role: UserRole) => {
+    const getRoleBadgeColor = (role: string) => {
         switch (role) {
+            case 'SUPER_ADMIN': return 'bg-red-100 text-red-700 border-red-200';
             case 'HQ_ADMIN': return 'bg-amber-100 text-amber-700 border-amber-200';
             case 'CASE_WORKER': return 'bg-blue-100 text-blue-700 border-blue-200';
             case 'AGENCY_MANAGER': return 'bg-emerald-100 text-emerald-700 border-emerald-200';
+            case 'SALES': return 'bg-violet-100 text-violet-700 border-violet-200';
             case 'KIOSK_AGENT': return 'bg-purple-100 text-purple-700 border-purple-200';
             default: return 'bg-slate-100 text-slate-700 border-slate-200';
         }
@@ -207,16 +209,16 @@ export default function UserManagementPanel() {
                                     </div>
                                 </td>
                                 <td className="p-6">
-                                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase border ${getRoleBadgeColor(user.role as UserRole)}`}>
+                                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase border ${getRoleBadgeColor(user.role)}`}>
                                         <Shield size={12} />
-                                        {ROLE_LABELS[user.role as UserRole]}
+                                        {ROLE_LABELS[user.role as UserRole] || user.role}
                                     </span>
                                 </td>
                                 <td className="p-6">
                                     {user.homeAgencyId && user.homeAgencyId !== 'HQ' ? (
                                         <div className="flex items-center gap-2 text-sm text-slate-600 font-medium">
                                             <Building2 size={16} className="text-slate-400" />
-                                            {agencies.find(a => a.id === user.homeAgencyId)?.name || 'Agence inconnue'}
+                                            {(user as any).homeAgencyName || agencies.find(a => a.id === user.homeAgencyId)?.name || `Agence ${user.homeAgencyId}`}
                                         </div>
                                     ) : (
                                         <div className="flex flex-col gap-1">
@@ -325,7 +327,7 @@ export default function UserManagementPanel() {
                                         <select
                                             className="w-full h-14 bg-slate-50 border-2 border-slate-100 rounded-2xl px-4 font-bold text-slate-900 focus:border-indigo-500 outline-none transition-all appearance-none"
                                             value={formData.role}
-                                            onChange={(e) => setFormData({ ...formData, role: e.target.value as UserRole })}
+                                            onChange={(e) => setFormData({ ...formData, role: e.target.value as StaffUser['role'] })}
                                         >
                                             {Object.entries(ROLE_LABELS).map(([val, label]) => (
                                                 <option key={val} value={val}>{label}</option>

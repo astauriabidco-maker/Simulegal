@@ -40,6 +40,28 @@ export default function StaffCalendarView({ currentUserRole, currentUserAgencyId
     const [allStaff, setAllStaff] = useState<any[]>([]);
     const [bookingAgencyId, setBookingAgencyId] = useState<string>('');
     const [bookingHostUserId, setBookingHostUserId] = useState<string>('');
+    const [preselectedLead, setPreselectedLead] = useState<Lead | null>(null);
+
+    useEffect(() => {
+        // Read URL params for preselected lead (from Sales Hub/Pipeline)
+        if (typeof window !== 'undefined') {
+            const params = new URLSearchParams(window.location.search);
+            const leadId = params.get('leadId');
+            if (leadId) {
+                const lead: Partial<Lead> = {
+                    id: leadId,
+                    name: params.get('name') || '',
+                    email: params.get('email') || '',
+                    serviceId: params.get('service') || ''
+                };
+                setPreselectedLead(lead as Lead);
+                setSelectedLead(lead as Lead);
+                if (lead.serviceId) {
+                    setBookingService(lead.serviceId);
+                }
+            }
+        }
+    }, []);
 
     useEffect(() => {
         loadData();
@@ -210,7 +232,7 @@ export default function StaffCalendarView({ currentUserRole, currentUserAgencyId
     const handleSlotClick = (day: Date, hour: number, minutes: number) => {
         const slot = new Date(day);
         slot.setHours(hour, minutes, 0, 0);
-        setSelectedLead(null);
+        setSelectedLead(preselectedLead);
         setBookingHostUserId('');
         setBookingAgencyId(currentUserAgencyId || '');
         setSlotToBook(slot);
@@ -233,7 +255,7 @@ export default function StaffCalendarView({ currentUserRole, currentUserAgencyId
             );
             setIsBooking(false);
             setSlotToBook(null);
-            setSelectedLead(null);
+            setSelectedLead(preselectedLead);
             setBookingHostUserId('');
             loadData();
         } catch (error) {
@@ -307,7 +329,25 @@ export default function StaffCalendarView({ currentUserRole, currentUserAgencyId
     };
 
     return (
-        <div className="h-full flex flex-col bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
+        <div className="h-full flex flex-col bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden relative">
+            {/* Context Banner */}
+            {preselectedLead && (
+                <div className="bg-indigo-600 text-white px-6 py-2 flex justify-between items-center shadow-md z-10">
+                    <div className="flex items-center gap-3">
+                        <div className="bg-white/20 p-1 rounded-full"><User size={16} /></div>
+                        <span className="text-sm font-bold">Sélection d'un créneau pour : {preselectedLead.name}</span>
+                    </div>
+                    <button onClick={() => {
+                        setPreselectedLead(null);
+                        setSelectedLead(null);
+                        const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+                        window.history.pushState({ path: newUrl }, '', newUrl);
+                    }} className="text-xs bg-white/10 hover:bg-white/20 px-3 py-1 rounded-lg font-bold transition-colors">
+                        Quitter
+                    </button>
+                </div>
+            )}
+
             {/* Header */}
             <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
                 <div className="flex items-center gap-4">
@@ -666,7 +706,7 @@ export default function StaffCalendarView({ currentUserRole, currentUserAgencyId
                                     {format(slotToBook, 'EEEE d MMMM à HH:mm', { locale: fr })}
                                 </p>
                             </div>
-                            <button onClick={() => { setIsBooking(false); setSelectedLead(null); }} className="p-2 hover:bg-slate-100 rounded-full text-slate-400">
+                            <button onClick={() => { setIsBooking(false); setSelectedLead(preselectedLead); }} className="p-2 hover:bg-slate-100 rounded-full text-slate-400">
                                 <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                             </button>
                         </div>

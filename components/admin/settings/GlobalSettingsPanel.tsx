@@ -5,17 +5,24 @@ import {
     Building2, CreditCard, Bell, Cpu, Save,
     RefreshCcw, Eye, EyeOff, ShieldAlert,
     Mail, MessageSquare, HardDrive, Smartphone,
-    CheckCircle, AlertTriangle, Users
+    CheckCircle, AlertTriangle, Users, DollarSign, FileText, Zap
 } from 'lucide-react';
 import { SettingsStore, SystemSettings, IntegrationSettings } from '../../../services/SettingsStore';
 import IntegrationsTab from './IntegrationsTab';
 import SystemUsersTab from './SystemUsersTab';
+import TwilioTemplatesTab from './TwilioTemplatesTab';
+import ServicePricingTab from './ServicePricingTab';
+import LegalDocumentsTab from './LegalDocumentsTab';
+import PipelineAutomationsTab from './PipelineAutomationsTab';
 
-type TabType = 'COMPANY' | 'PAYMENT' | 'NOTIFICATIONS' | 'INTEGRATIONS' | 'SYSTEM_USERS';
+type TabType = 'COMPANY' | 'PAYMENT' | 'NOTIFICATIONS' | 'WHATSAPP_TEMPLATES' | 'SERVICE_PRICING' | 'LEGAL_DOCS' | 'AUTOMATIONS' | 'INTEGRATIONS' | 'SYSTEM_USERS';
 
-export default function GlobalSettingsPanel() {
+const VALID_TABS: TabType[] = ['COMPANY', 'PAYMENT', 'NOTIFICATIONS', 'WHATSAPP_TEMPLATES', 'SERVICE_PRICING', 'LEGAL_DOCS', 'AUTOMATIONS', 'INTEGRATIONS', 'SYSTEM_USERS'];
+
+export default function GlobalSettingsPanel({ initialTab }: { initialTab?: string }) {
+    const resolvedInitialTab = (initialTab && VALID_TABS.includes(initialTab as TabType)) ? initialTab as TabType : 'COMPANY';
     const [settings, setSettings] = useState<SystemSettings | null>(null);
-    const [activeTab, setActiveTab] = useState<TabType>('COMPANY');
+    const [activeTab, setActiveTab] = useState<TabType>(resolvedInitialTab);
     const [isSaving, setIsSaving] = useState(false);
     const [showSecrets, setShowSecrets] = useState<Record<string, boolean>>({});
     const [testResults, setTestResults] = useState<Record<string, { success: boolean, message: string } | null>>({});
@@ -70,7 +77,11 @@ export default function GlobalSettingsPanel() {
                 {[
                     { id: 'COMPANY', label: 'Société', icon: Building2 },
                     { id: 'PAYMENT', label: 'Paiement', icon: CreditCard },
+                    { id: 'SERVICE_PRICING', label: 'Tarifs', icon: DollarSign },
+                    { id: 'LEGAL_DOCS', label: 'Juridique', icon: FileText },
+                    { id: 'AUTOMATIONS', label: 'Automatisations', icon: Zap },
                     { id: 'NOTIFICATIONS', label: 'Notifications', icon: Bell },
+                    { id: 'WHATSAPP_TEMPLATES', label: 'WhatsApp', icon: Smartphone },
                     { id: 'INTEGRATIONS', label: 'Intégrations', icon: Cpu },
                     { id: 'SYSTEM_USERS', label: 'Système', icon: Users },
                 ].map(tab => (
@@ -293,6 +304,18 @@ export default function GlobalSettingsPanel() {
                         </div>
                     )}
 
+                    {activeTab === 'WHATSAPP_TEMPLATES' && (
+                        <TwilioTemplatesTab />
+                    )}
+
+                    {activeTab === 'SERVICE_PRICING' && (
+                        <ServicePricingTab />
+                    )}
+
+                    {activeTab === 'LEGAL_DOCS' && (
+                        <LegalDocumentsTab />
+                    )}
+
                     {activeTab === 'INTEGRATIONS' && (
                         <IntegrationsTab
                             settings={settings.integrations}
@@ -309,6 +332,12 @@ export default function GlobalSettingsPanel() {
 
                     {activeTab === 'SYSTEM_USERS' && (
                         <SystemUsersTab />
+                    )}
+
+                    {activeTab === 'AUTOMATIONS' && (
+                        <div className="bg-slate-900 rounded-[2rem] p-8 border-2 border-slate-800 shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-500">
+                            <PipelineAutomationsTab />
+                        </div>
                     )}
                 </div>
 

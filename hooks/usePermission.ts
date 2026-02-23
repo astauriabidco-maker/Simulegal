@@ -50,7 +50,7 @@ export const usePermission = () => {
         if (!user) return false;
 
         // Le Super Administrateur a accès à tout (God Mode)
-        if (user.role === 'SUPERADMIN') return true;
+        if (user.role === 'SUPERADMIN' || user.role === 'SUPER_ADMIN') return true;
 
         // On vérifie soit dans le rôle complet, soit dans les permissions directes du user (JWT)
         const userPermissions = role?.permissions || (user.permissions as PermissionKey[]) || [];

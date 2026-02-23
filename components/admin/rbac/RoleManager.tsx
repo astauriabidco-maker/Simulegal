@@ -36,7 +36,7 @@ export default function RoleManager() {
     };
 
     const handleTogglePermission = (key: PermissionKey) => {
-        if (!selectedRole || selectedRole.id === 'SUPERADMIN') return;
+        if (!selectedRole || selectedRole.id === 'SUPER_ADMIN') return;
 
         const newPermissions = selectedRole.permissions.includes(key)
             ? selectedRole.permissions.filter(p => p !== key)
@@ -146,7 +146,7 @@ export default function RoleManager() {
                             </div>
                             <button
                                 onClick={handleSave}
-                                disabled={isSaving || selectedRole.id === 'SUPERADMIN'}
+                                disabled={isSaving || selectedRole.id === 'SUPER_ADMIN'}
                                 className="bg-indigo-600 hover:bg-slate-900 text-white px-8 py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-xl shadow-indigo-100 flex items-center gap-2 disabled:bg-slate-100 disabled:text-slate-300 disabled:shadow-none"
                             >
                                 {isSaving ? 'Enregistrement...' : (
@@ -166,7 +166,7 @@ export default function RoleManager() {
                                 </div>
                             )}
 
-                            {selectedRole.id === 'SUPERADMIN' && (
+                            {selectedRole.id === 'SUPER_ADMIN' && (
                                 <div className="bg-indigo-50 border border-indigo-100 p-6 rounded-3xl flex items-start gap-4">
                                     <Info className="text-indigo-600 mt-1" size={20} />
                                     <div>
@@ -180,20 +180,20 @@ export default function RoleManager() {
                             )}
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-                                {Object.entries(PERMISSION_GROUPS).map(([group, keys]) => (
+                                {Object.entries(PERMISSION_GROUPS).map(([group, groupData]) => (
                                     <div key={group} className="space-y-6">
                                         <h5 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] px-1 border-l-4 border-indigo-600 pl-4">
-                                            Catégorie : {group}
+                                            {groupData.label}
                                         </h5>
                                         <div className="space-y-3">
-                                            {keys.map(key => (
+                                            {groupData.permissions.map(key => (
                                                 <div
                                                     key={key}
                                                     onClick={() => handleTogglePermission(key)}
                                                     className={`p-5 rounded-2xl border-2 transition-all cursor-pointer flex items-center justify-between ${selectedRole.permissions.includes(key)
                                                         ? 'bg-indigo-50/50 border-indigo-200'
                                                         : 'bg-white border-slate-50 hover:border-slate-100'
-                                                        } ${selectedRole.id === 'SUPERADMIN' ? 'pointer-events-none' : ''}`}
+                                                        } ${selectedRole.id === 'SUPER_ADMIN' ? 'pointer-events-none' : ''}`}
                                                 >
                                                     <div className="flex items-center gap-4">
                                                         <div className={`w-3 h-3 rounded-full ${selectedRole.permissions.includes(key) ? 'bg-indigo-600 animate-pulse' : 'bg-slate-200'}`} />

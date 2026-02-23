@@ -6,12 +6,11 @@
 import rulesSejour from '../specs/rules_sejour.json';
 import rulesNaturalisation from '../specs/rules_naturalisation.json';
 import rulesFamily from '../specs/rules_family.json';
-import rulesAsile from '../specs/rules_asile.json';
 import rulesPermis from '../specs/rules_permis.json';
 import defaultThresholds from '../specs/config_thresholds.json';
 import { ProcedureRule } from '../types';
 
-type RuleCategory = 'sejour' | 'naturalisation' | 'family' | 'asile' | 'permis';
+type RuleCategory = 'sejour' | 'naturalisation' | 'family' | 'permis';
 
 const THRESHOLDS_KEY = 'v2_eligibility_thresholds';
 const RULES_KEY_PREFIX = 'v2_eligibility_rules_';
@@ -38,7 +37,7 @@ export const EligibilityStore = {
             }
 
             // 2. Rules — sync all categories
-            const categories: RuleCategory[] = ['naturalisation', 'sejour', 'family', 'asile', 'permis'];
+            const categories: RuleCategory[] = ['naturalisation', 'sejour', 'family', 'permis'];
             for (const category of categories) {
                 try {
                     const rRes = await fetch(`${API_URL}/eligibility/rules/${category}`);
@@ -102,11 +101,10 @@ export const EligibilityStore = {
      */
     getRules: (category: RuleCategory): ProcedureRule[] => {
         const fallbacks: Record<RuleCategory, ProcedureRule[]> = {
-            sejour: rulesSejour as ProcedureRule[],
-            naturalisation: rulesNaturalisation as ProcedureRule[],
-            family: rulesFamily as ProcedureRule[],
-            asile: rulesAsile as ProcedureRule[],
-            permis: rulesPermis as ProcedureRule[],
+            sejour: rulesSejour as unknown as ProcedureRule[],
+            naturalisation: rulesNaturalisation as unknown as ProcedureRule[],
+            family: rulesFamily as unknown as ProcedureRule[],
+            permis: rulesPermis as unknown as ProcedureRule[],
         };
 
         if (typeof window === 'undefined') {

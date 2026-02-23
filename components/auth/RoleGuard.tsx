@@ -9,7 +9,7 @@ import AuthStore, { UserRole } from '../../services/authStore';
 // AGENCY -> AGENCY
 // CLIENT -> Session client (basée sur leadId)
 
-export type ProtectedRole = 'CLIENT' | 'AGENCY' | 'HQ_ADMIN' | 'SUPERADMIN' | 'AGENCY_MANAGER';
+export type ProtectedRole = 'CLIENT' | 'AGENCY' | 'HQ_ADMIN' | 'SUPERADMIN' | 'SUPER_ADMIN' | 'AGENCY_MANAGER' | 'CASE_WORKER';
 
 interface RoleGuardProps {
     children: React.ReactNode;
@@ -29,17 +29,21 @@ export default function RoleGuard({ children, allowedRoles }: RoleGuardProps) {
                 const currentRole = user.role;
                 let normalizedRole: ProtectedRole;
 
-                if (currentRole === 'SUPERADMIN') {
+                if (currentRole === 'SUPERADMIN' || (currentRole as string) === 'SUPER_ADMIN') {
                     normalizedRole = 'SUPERADMIN';
                 } else if (currentRole === 'HQ' || (currentRole as string) === 'HQ_ADMIN') {
                     normalizedRole = 'HQ_ADMIN';
                 } else if ((currentRole as string) === 'AGENCY_MANAGER') {
                     normalizedRole = 'AGENCY_MANAGER';
+                } else if ((currentRole as string) === 'CASE_WORKER') {
+                    normalizedRole = 'AGENCY';
                 } else {
                     normalizedRole = 'AGENCY';
                 }
 
-                if (allowedRoles.includes(normalizedRole)) {
+                // SUPERADMIN/SUPER_ADMIN always has access everywhere
+                const isSuperAdmin = normalizedRole === 'SUPERADMIN';
+                if (isSuperAdmin || allowedRoles.includes(normalizedRole)) {
                     setIsAuthorized(true);
                 } else {
                     console.error(`SecurityAlert: User ${user.id} attempted unauthorized access to a protected area restricted to ${allowedRoles.join(', ')}`);

@@ -17,7 +17,7 @@ export interface Agency {
 
 export interface UserRole {
     id: string;
-    role: 'SUPER_ADMIN' | 'HQ_ADMIN' | 'AGENCY_MANAGER' | 'CASE_WORKER' | 'SALES' | 'KIOSK_AGENT';
+    role: 'SUPER_ADMIN' | 'HQ_ADMIN' | 'AGENCY_MANAGER' | 'CASE_WORKER' | 'SALES' | 'KIOSK_AGENT' | 'API_PARTNER';
     agencyId: string; // Lien vers l'agence d'appartenance
 }
 
@@ -27,7 +27,7 @@ export interface StaffUser {
     email: string;
     phone?: string;
     isActive: boolean;
-    role: 'SUPER_ADMIN' | 'HQ_ADMIN' | 'AGENCY_MANAGER' | 'CASE_WORKER' | 'SALES' | 'KIOSK_AGENT';
+    role: 'SUPER_ADMIN' | 'HQ_ADMIN' | 'AGENCY_MANAGER' | 'CASE_WORKER' | 'SALES' | 'KIOSK_AGENT' | 'API_PARTNER';
 
     // RATTACHEMENT PRIMAIRE (Où travaille-t-il physiquement ?)
     // - Si 'HQ' ou null : Il est au Siège.
