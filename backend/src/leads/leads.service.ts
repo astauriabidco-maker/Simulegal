@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PipelineAutomationService } from '../pipeline-automation/pipeline-automation.service';
@@ -20,6 +21,7 @@ export class LeadsService {
         private notifications: NotificationsService,
         private pipelineAutomation: PipelineAutomationService,
         private documentsService: DocumentsService,
+        private eventEmitter: EventEmitter2,
     ) {
         if (!fs.existsSync(UPLOAD_DIR)) {
             fs.mkdirSync(UPLOAD_DIR, { recursive: true });
@@ -570,6 +572,9 @@ export class LeadsService {
             const requiredDocs = lead.requiredDocs ? JSON.parse(lead.requiredDocs) : [];
             const docLabel = requiredDocs.find((r: any) => r.id === docId)?.name || docId;
             await this.notifications.onDocumentValidated(lead, docLabel);
+
+            // 🤖 Déclencher l'Agent de Supervision en arrière-plan
+            this.eventEmitter.emit('lead.document.validated', { leadId });
         }
 
         // ════════════════════════════════════════════════════════

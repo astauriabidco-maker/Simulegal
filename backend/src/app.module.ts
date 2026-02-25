@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
@@ -31,10 +32,12 @@ import { EmailModule } from './email/email.module';
 import { PipelineAutomationModule } from './pipeline-automation/pipeline-automation.module';
 import { BlogModule } from './blog/blog.module';
 import { AiReportingModule } from './ai-reporting/ai-reporting.module';
+import { AgentsModule } from './agents/agents.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    EventEmitterModule.forRoot(),
     AuthModule,
     UsersModule,
     PrismaModule,
@@ -63,6 +66,7 @@ import { AiReportingModule } from './ai-reporting/ai-reporting.module';
     PipelineAutomationModule,
     BlogModule,
     AiReportingModule,
+    AgentsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
