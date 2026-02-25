@@ -9,6 +9,8 @@ import { SalesService } from '../sales/sales.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { SERVICE_CATALOG } from '../config/services-pipeline.config';
 
+import { EventEmitter2 } from '@nestjs/event-emitter';
+
 @Injectable()
 export class PaymentsService implements OnModuleInit {
     private readonly logger = new Logger(PaymentsService.name);
@@ -22,6 +24,7 @@ export class PaymentsService implements OnModuleInit {
         private pipelineAutomation: PipelineAutomationService,
         @Inject(forwardRef(() => SalesService)) private salesService: SalesService,
         private prisma: PrismaService,
+        private eventEmitter: EventEmitter2,
     ) { }
 
     async onModuleInit() {
@@ -374,6 +377,14 @@ export class PaymentsService implements OnModuleInit {
                 const leadForAutomation = await this.leadsService.findOne(leadId);
                 if (leadForAutomation) {
                     await this.pipelineAutomation.onPaymentReceived(leadForAutomation);
+                    // 🤖 Déclencher l'Agent de Supervision (Veille Fraude Paiement)
+                    this.eventEmitter.emit('lead.payment.received', {
+                        leadId,
+                        amount: session.amount_total,
+                        sessionId: session.id,
+                        customerEmail: session.customer_details?.email,
+                        customerName: session.customer_details?.name
+                    });
                 }
 
                 // Envoi des emails de facturation / de notification

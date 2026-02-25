@@ -89,4 +89,38 @@ Réponds UNIQUEMENT via un objet JSON valide, sans texte additionnel, avec cette
             return null; // Fail gracefully
         }
     }
+
+    async generatePromoMessage(name: string, serviceName: string): Promise<string | null> {
+        if (this.isAvailable === false || !(this.isAvailable ?? await this.checkAvailability())) {
+            return null;
+        }
+
+        const prompt = `Agis comme un conseiller juridique sympathique et bienveillant. 
+Ce prospect nommé "${name}" était intéressé par notre service "${serviceName}" il y a 6 mois, mais n'a pas finalisé son dossier.
+Rédige un message WhatsApp court, courtois et sans pression, pour reprendre contact, demander s'il a pu avancer dans ses démarches ou s'il a besoin de faire le point.
+Tutoie ou vouvoie selon ce qui te semble naturel. Inclue des emojis. Le message doit faire moins de 4 phrases. Ne met pas d'objet.`;
+
+        try {
+            const response = await fetch(`${this.ollamaUrl}/api/generate`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    model: this.model,
+                    prompt: prompt,
+                    stream: false,
+                    options: { temperature: 0.7, num_predict: 200 }
+                    // Pas de format json ici, on veut du texte pur.
+                }),
+                signal: AbortSignal.timeout(15000)
+            });
+
+            if (!response.ok) throw new Error('Ollama connection failed');
+
+            const result: any = await response.json();
+            return result.response?.trim();
+        } catch (error: any) {
+            this.logger.warn(`[OllamaText] Failed to generate promo message: ${error.message}`);
+            return null;
+        }
+    }
 }

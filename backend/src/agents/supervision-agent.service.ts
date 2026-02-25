@@ -214,6 +214,78 @@ export class SupervisionAgentService {
             }
         }
 
+        // 3. Réveil des prospects dormants (Créés il y a plus de 6 mois et toujours NEW/COLLECTING/REVIEW sans suite)
+        const sixMonthsAgo = new Date();
+        sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+
+        const dormantLeads = await this.prisma.lead.findMany({
+            where: {
+                status: { in: ['NEW', 'COLLECTING', 'REVIEW'] },
+                stageEnteredAt: { lte: sixMonthsAgo }
+            }
+        });
+
+        for (const lead of dormantLeads) {
+            const existingAlert = await this.prisma.leadNote.findFirst({
+                where: { leadId: lead.id, content: { contains: 'Campagne de Réveil' } }
+            });
+
+            if (!existingAlert && lead.phone) {
+                // Demander à l'IA d'Ollama de pondre un petit message hyper amical
+                const promoMsg = await this.ollamaText.generatePromoMessage(lead.name, lead.serviceName);
+
+                if (promoMsg) {
+                    const warningMessage = `🤖 **Résumé Agent IA** :\nCe dossier est dormant depuis plus de 6 mois sans avancement.\nJ'ai généré une proposition de reprise de contact douce (Campagne de Réveil) :\n\n*"${promoMsg}"*\n\n**Intention** : Réveil Prospect\n**Urgence** : LOW\n\n💡 *Conseil* : Copier/Coller ce message dans WhatsApp pour prendre la température.`;
+
+                    await this.prisma.leadNote.create({
+                        data: {
+                            content: warningMessage,
+                            author: '🤖 Assistant IA',
+                            leadId: lead.id,
+                        }
+                    });
+                    this.logger.log(`🤖 [Supervision Agent] Prospect dormant détecté et message de réveil généré (Lead: ${lead.id})`);
+                }
+            }
+        }
+
         this.logger.log(`🤖 [Supervision Agent] Scan nocturne terminé.`);
+    }
+
+    /**
+     * Agent de sécurité des Paiements : Réveillé par le webhook Stripe
+     */
+    @OnEvent('lead.payment.received', { async: true })
+    async verifyPaymentSecurity(payload: { leadId: string, amount: number, sessionId: string, customerEmail?: string, customerName?: string }) {
+        this.logger.log(`🤖 [Supervision Agent] Contrôle de sécurité sur le paiement du dossier ${payload.leadId}`);
+
+        // Simuler une vérification IP/Geo (normalement fait via un fetch(Stripe_API) pour extraire l'IP ou la carte)
+        const lead = await this.prisma.lead.findUnique({ where: { id: payload.leadId } });
+        if (!lead) return;
+
+        // Contrôle IA / Règles Métier
+        // Ex: Si le nom entré dans Stripe ne correspond absolument pas au Lead Name ou si le mail est très différent.
+        const leadNameStripped = lead.name.toLowerCase().replace(/[^a-z]/g, '');
+        const stripeNameStripped = payload.customerName?.toLowerCase().replace(/[^a-z]/g, '') || '';
+
+        // Calcul simple et fictif d'anomalie
+        const isSuspicious = stripeNameStripped && !stripeNameStripped.includes(leadNameStripped) && !leadNameStripped.includes(stripeNameStripped);
+
+        if (isSuspicious) {
+            // Dans la réalité: recouper country de l'IP, timezone et la nationalité du dossier
+            const warningMessage = `🤖 **Alerte Sécurité Fraude** 💳 :\nUne anomalie a été détectée lors du dernier paiement (Session Stripe: ${payload.sessionId}).\nLe nom renseigné par le porteur de la carte bancaire (\`${payload.customerName}\` - \`${payload.customerEmail}\`) ne correspond pas du tout au titulaire du dossier (\`${lead.name}\`).\n\n**Possibilité de Fraude** : Usurpation, Paiement via un Tiers ou IP localisée sous VPN.\n\n💡 *Conseil* : Demandez l'attestation de procuration du payeur ou une copie de sa CNI si le dossier comporte des prestations sensibles.`;
+
+            this.logger.warn(`🤖 [Supervision Agent] Controverse détectée sur le paiement ${payload.sessionId}`);
+
+            await this.prisma.leadNote.create({
+                data: {
+                    content: warningMessage,
+                    author: '🤖 Agent QA',
+                    leadId: lead.id,
+                }
+            });
+        } else {
+            this.logger.log(`🤖 [Supervision Agent] Paiement OK (+${payload.amount / 100}€). Pas d'anomalie signalée.`);
+        }
     }
 }
