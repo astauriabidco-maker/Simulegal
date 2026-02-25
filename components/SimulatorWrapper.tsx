@@ -19,154 +19,29 @@ import { CRM } from '@/services/crmStore';
 import { SMIC_BRUT_MENSUEL } from '@/lib/computeDerivedFields';
 
 const INITIAL_STATE: UserProfile = {
-    identity: {
-        age: 25,
-        nationality_group: 'NON_EU',
-        born_in_france: false,
-        name: '',
-        email: '',
-        phone: ''
-    },
-    timeline: {
-        entry_date: new Date().toISOString().split('T')[0],
-        years_continuous_residence: 2,
-    },
-    admin: {
-        has_valid_visa_or_permit: false,
-        health_insurance: true,
-        entered_legally: true,
-        current_visa_type: 'NONE',
-        entry_mode: 'STANDARD',
-    },
-    family: {
-        spouse_nationality: 'NONE',
-        marriage_duration_years: 0,
-        community_of_life: false,
-        is_polygamous: false,
-        has_french_child: false,
-        spouse_kept_nationality: true,
-        contributes_to_education: true,
-    },
-    work: {
-        contract_type: 'NONE',
-        annual_gross_salary: 0,
-        salary_monthly_gross: 0,
-        has_work_authorization: false,
-        job_in_tension_list: false,
-        company_role: 'EMPLOYEE',
-        main_situation: 'WORKER',
-        has_payslips: false,
-        business_project_viable: false,
-        wants_to_work: false,
-        // Q1 factorized booleans (default all false)
-        is_researcher: false,
-        has_hosting_agreement: false,
-        is_artist: false,
-        is_sportif_haut_niveau: false,
-        is_intern: false,
-        is_au_pair: false,
-        is_volunteer: false,
-        is_salarie_mission: false,
-        is_ict_transfer: false,
-        is_manager_or_expert: false,
-        is_entrepreneur: false,
-        is_innovative_company: false,
-        job_related_to_rd: false,
-        // Q5 factorized booleans
-        served_french_military: false,
-        has_legion_honneur: false,
-        has_work_accident_pension: false,
-        work_accident_rate: 0,
-        years_experience_comparable: 0,
-        contract_duration_months: 0,
-        group_seniority_months: 0,
-    },
-    education: {
-        diploma_level: 'NONE',
-        has_french_higher_education_diploma: false,
-        is_enrolled_higher_ed: false,
-        // Q4 factorized fields
-        years_schooling_france: 0,
-        years_higher_education: 0,
-        schooling_in_france_age_6_to_16: false,
-    },
-    financial: {
-        resources_stable_sufficient: false,
-        resources_monthly_average: 0,
-        resources_annual_total: 0,
-    },
-    investment: {
-        amount: 0,
-        creates_jobs: false,
-    },
-    integration: {
-        french_level: 'A1',
-        adheres_to_republican_values: true,
-        civic_exam_passed: false,
-    },
-    civic: {
-        clean_criminal_record: true,
-        no_expulsion_order: true,
-    },
-    vulnerability: {
-        show_vulnerability: false,
-        is_victim_trafficking: false,
-        is_victim_domestic_violence: false,
-        has_protection_order_violence: false,
-    },
-    health: {
-        personal_needs_treatment: false,
-        treatment_unavailable_in_origin: false,
-        treatment_available_origin: true,
-        child_needs_care: false,
-    },
-    asylum: {
-        is_asylum_seeker: false,
-        asylum_application_pending: false,
-    },
-    regularisation: {
-        has_children_schooled_3y: false,
-        has_exceptional_talent: false,
-        years_presence_france: 0,
-    },
-    nationality_extra: {
-        possession_etat_francais: false,
-    },
-    residence: {
-        maintains_home_abroad: false,
-    },
-    project: {
-        target_goal: 'BOTH',
-    },
-    driving: {
-        status: undefined,
-        license_country: undefined,
-        residence_start_date: '',
-    },
-    rdv_prefecture: {
-        prefecture_dept: '',
-        rdv_reason: undefined,
-        current_status: undefined,
-    },
-    rdv_juriste: {
-        subject: undefined,
-        mode: undefined,
-    },
-    french: {
-        goal: undefined,
-        current_level: undefined,
-        location_zip: undefined,
-    },
-    civic_exam: {
-        civic_goal: undefined,
-        knowledge_level: undefined,
-        location_zip: undefined,
-    },
-    callback: {
-        callback_subject: undefined,
-        callback_urgency: undefined,
-        location_zip: undefined,
-    }
+    identity: {} as any,
+    timeline: {} as any,
+    admin: {} as any,
+    family: {} as any,
+    work: {} as any,
+    education: {} as any,
+    financial: {} as any,
+    investment: {} as any,
+    integration: {} as any,
+    civic: {} as any,
+    vulnerability: {} as any,
+    health: {} as any,
+    asylum: {} as any,
+    regularisation: {} as any,
+    nationality_extra: {} as any,
+    residence: {} as any,
+    project: { target_goal: 'BOTH' } as any,
+    driving: {} as any,
+    rdv_prefecture: {} as any,
+    rdv_juriste: {} as any,
+    french: {} as any,
+    civic_exam: {} as any,
+    callback: {} as any,
 };
 
 interface SimulatorWrapperProps {
@@ -301,8 +176,8 @@ export default function SimulatorWrapper({ serviceId, prospectId, forceAgencyId,
             }
 
             // ─── Computed timeline variables ───
-            const age = nextProfile.identity.age;
-            const residenceYears = nextProfile.timeline.years_continuous_residence;
+            const age = nextProfile.identity.age || 0;
+            const residenceYears = nextProfile.timeline.years_continuous_residence || 0;
             const ageAtEntry = Math.max(0, age - residenceYears);
             nextProfile.timeline = {
                 ...nextProfile.timeline,

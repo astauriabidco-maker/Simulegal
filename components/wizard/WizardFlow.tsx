@@ -106,8 +106,39 @@ export default function WizardFlow({ userProfile, updateProfile, serviceId, forc
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [safeIndex, showResults]);
 
+    const isQuestionAnswered = useCallback((q: WizardQuestion | undefined): boolean => {
+        if (!q) return false;
+        if (q.type === 'MULTI_CHECK') return true; // Optional by nature
+
+        // Custom logic for marital mapping
+        if (q.id === 'marital') {
+            const val = getGridValue(q);
+            return val !== undefined && val !== null && val !== '' && val !== 'false';
+        }
+
+        // specific_situation logic
+        if (q.id === 'specific_situation') {
+            const val = getGridValue(q);
+            return val !== undefined && val !== null && val !== '';
+        }
+
+        if (q.fields && q.fields.length > 0) {
+            for (const f of q.fields) {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const val = (userProfile[f.section] as any)?.[f.key];
+                if (val === undefined || val === null || val === '') {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }, [userProfile]);
+
     /* ─── Navigation ─── */
     const goNext = useCallback(() => {
+        if (!isQuestionAnswered(currentQuestion)) {
+            return;
+        }
         setAnimDir('forward');
         if (safeIndex >= totalQuestions - 1) {
             // Apply all derived fields via pure function
@@ -428,7 +459,11 @@ export default function WizardFlow({ userProfile, updateProfile, serviceId, forc
 
                     <button
                         onClick={goNext}
-                        className="px-8 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 hover:shadow-xl active:scale-95"
+                        disabled={!isQuestionAnswered(currentQuestion)}
+                        className={`px-8 py-3 font-bold rounded-xl transition-all shadow-lg ${isQuestionAnswered(currentQuestion)
+                            ? 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-200 hover:shadow-xl active:scale-[0.98]'
+                            : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
+                            }`}
                     >
                         {safeIndex >= totalQuestions - 1 ? 'Voir les Résultats →' : 'Suivant →'}
                     </button>
@@ -543,7 +578,7 @@ export default function WizardFlow({ userProfile, updateProfile, serviceId, forc
     /* ─── NUMBER: Big centered input ─── */
     function renderNumber(q: WizardQuestion) {
         const field = q.fields[0];
-        const val = getFieldValue(field) ?? 0;
+        const val = getFieldValue(field) ?? '';
 
         return (
             <div className="w-full max-w-xs mx-auto">
@@ -588,19 +623,19 @@ export default function WizardFlow({ userProfile, updateProfile, serviceId, forc
     /* ─── TOGGLE: Yes/No ─── */
     function renderToggle(q: WizardQuestion) {
         const field = q.fields[0];
-        const val = getFieldValue(field) ?? false;
+        const val = getFieldValue(field);
 
         return (
             <div className="flex gap-4 w-full max-w-sm mx-auto">
                 <button
                     onClick={() => { setFieldValue(field, true); if (q.autoAdvance) setTimeout(goNext, 300); }}
-                    className={`flex-1 py-5 rounded-2xl border-2 font-bold text-lg transition-all ${val ? 'bg-emerald-50 border-emerald-500 text-emerald-700 shadow-md' : 'bg-white border-slate-100 text-slate-400 hover:border-emerald-200'}`}
+                    className={`flex-1 py-5 rounded-2xl border-2 font-bold text-lg transition-all ${val === true ? 'bg-emerald-50 border-emerald-500 text-emerald-700 shadow-md' : 'bg-white border-slate-100 text-slate-400 hover:border-emerald-200'}`}
                 >
                     ✅ Oui
                 </button>
                 <button
                     onClick={() => { setFieldValue(field, false); if (q.autoAdvance) setTimeout(goNext, 300); }}
-                    className={`flex-1 py-5 rounded-2xl border-2 font-bold text-lg transition-all ${!val ? 'bg-rose-50 border-rose-400 text-rose-600 shadow-md' : 'bg-white border-slate-100 text-slate-400 hover:border-rose-200'}`}
+                    className={`flex-1 py-5 rounded-2xl border-2 font-bold text-lg transition-all ${val === false ? 'bg-rose-50 border-rose-400 text-rose-600 shadow-md' : 'bg-white border-slate-100 text-slate-400 hover:border-rose-200'}`}
                 >
                     ❌ Non
                 </button>
@@ -668,7 +703,7 @@ export default function WizardFlow({ userProfile, updateProfile, serviceId, forc
 
     /* ─── Shared: individual number field ─── */
     function renderNumberField(f: QuestionField) {
-        const val = getFieldValue(f) ?? 0;
+        const val = getFieldValue(f) ?? '';
         return (
             <div key={`${f.section}-${f.key}`}>
                 {f.label && <label className="block text-sm font-semibold text-slate-600 mb-2">{f.label}</label>}
