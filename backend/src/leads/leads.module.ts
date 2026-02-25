@@ -7,9 +7,10 @@ import { InvoicesModule } from '../invoices/invoices.module';
 import { EmailModule } from '../email/email.module';
 import { PaymentsModule } from '../payments/payments.module';
 import { PipelineAutomationModule } from '../pipeline-automation/pipeline-automation.module';
+import { DocumentsModule } from '../documents/documents.module';
 
 @Module({
-  imports: [PrismaModule, InvoicesModule, EmailModule, forwardRef(() => PaymentsModule), PipelineAutomationModule],
+  imports: [PrismaModule, InvoicesModule, EmailModule, forwardRef(() => PaymentsModule), PipelineAutomationModule, DocumentsModule],
   providers: [LeadsService],
   controllers: [LeadsController, PublicLeadsController],
   exports: [LeadsService]

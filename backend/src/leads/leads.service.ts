@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PipelineAutomationService } from '../pipeline-automation/pipeline-automation.service';
+import { DocumentsService } from '../documents/documents.service';
 import * as jwt from 'jsonwebtoken';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -18,6 +19,7 @@ export class LeadsService {
         private prisma: PrismaService,
         private notifications: NotificationsService,
         private pipelineAutomation: PipelineAutomationService,
+        private documentsService: DocumentsService,
     ) {
         if (!fs.existsSync(UPLOAD_DIR)) {
             fs.mkdirSync(UPLOAD_DIR, { recursive: true });
@@ -378,7 +380,7 @@ export class LeadsService {
 
     /**
      * Traite l'upload d'un document via magic link.
-     * Sauvegarde le fichier et met à jour la checklist du lead.
+     * Sauvegarde le fichier, lance l'OCR automatique, puis met à jour la checklist.
      */
     async handleDocumentUpload(
         leadId: string,
@@ -386,7 +388,7 @@ export class LeadsService {
         fileBuffer: Buffer,
         originalFilename: string,
         mimeType: string
-    ): Promise<{ success: boolean; message: string }> {
+    ): Promise<{ success: boolean; message: string; ocrResult?: any }> {
         // Vérifier que le lead existe
         const lead = await this.prisma.lead.findUnique({ where: { id: leadId } });
         if (!lead) {
@@ -402,6 +404,84 @@ export class LeadsService {
         const fileUrl = `/uploads/documents/${safeFilename}`;
         this.logger.log(`📎 Document uploaded: ${safeFilename} for Lead ${leadId} / Doc ${docId}`);
 
+        // ════════════════════════════════════════════════════════
+        // 🤖 AGENT OCR — Vérification automatique du document
+        // ════════════════════════════════════════════════════════
+        let ocrStatus: 'PENDING' | 'VALID' | 'REJECTED' = 'PENDING';
+        let ocrMessage = '';
+        let ocrData: any = null;
+        let ocrConfidence = 0;
+
+        try {
+            const multerFile = {
+                buffer: fileBuffer,
+                originalname: originalFilename,
+                mimetype: mimeType,
+            } as Express.Multer.File;
+
+            this.logger.log(`🤖 [OCR Agent] Analyse en cours: ${originalFilename}...`);
+            const analysis = await this.documentsService.analyze(multerFile);
+            ocrData = analysis.extractedData;
+            ocrConfidence = analysis.confidence;
+
+            if (analysis.status === 'VALID') {
+                // ── Vérification supplémentaire : date d'expiration ──
+                if (ocrData?.expiryDate) {
+                    const expiryDate = new Date(ocrData.expiryDate);
+                    if (expiryDate < new Date()) {
+                        ocrStatus = 'REJECTED';
+                        ocrMessage = `Document expiré le ${expiryDate.toLocaleDateString('fr-FR')}. Veuillez fournir un document en cours de validité.`;
+                        this.logger.warn(`🤖 [OCR Agent] ❌ EXPIRÉ: ${docId} — ${ocrMessage}`);
+                    } else {
+                        ocrStatus = 'VALID';
+                        ocrMessage = `Document valide (confiance: ${ocrConfidence}%).`;
+                        // ── Vérification nom du client ──
+                        if (ocrData?.lastName && lead.name) {
+                            const extractedName = (ocrData.lastName || '').toUpperCase();
+                            const leadName = lead.name.toUpperCase();
+                            const nameMatch = leadName.includes(extractedName) || extractedName.includes(leadName.split(' ').pop() || '');
+                            if (!nameMatch && ocrConfidence < 85) {
+                                // Doute — passer en PENDING pour vérif manuelle
+                                ocrStatus = 'PENDING';
+                                ocrMessage = `Vérification manuelle requise : le nom extrait (${ocrData.lastName}) ne correspond pas exactement au client (${lead.name}).`;
+                                this.logger.warn(`🤖 [OCR Agent] ⚠️ NOM MISMATCH: ${extractedName} vs ${leadName}`);
+                            }
+                        }
+                        if (ocrStatus === 'VALID') {
+                            this.logger.log(`🤖 [OCR Agent] ✅ AUTO-VALIDÉ: ${docId} (${ocrConfidence}%)`);
+                        }
+                    }
+                } else {
+                    // Pas de date d'expiration détectée — valider si confiance suffisante
+                    ocrStatus = ocrConfidence >= 70 ? 'VALID' : 'PENDING';
+                    ocrMessage = ocrConfidence >= 70
+                        ? `Document validé automatiquement (confiance: ${ocrConfidence}%).`
+                        : `Confiance insuffisante (${ocrConfidence}%). Vérification manuelle requise.`;
+                    this.logger.log(`🤖 [OCR Agent] ${ocrStatus === 'VALID' ? '✅' : '⏳'} ${docId}: ${ocrMessage}`);
+                }
+            } else if (analysis.status === 'REJECTED_BLURRY') {
+                ocrStatus = 'REJECTED';
+                ocrMessage = 'Document illisible ou trop flou. Veuillez reprendre la photo avec plus de lumière.';
+                this.logger.warn(`🤖 [OCR Agent] ❌ FLOU: ${docId}`);
+            } else if (analysis.status === 'REJECTED_EXPIRED') {
+                ocrStatus = 'REJECTED';
+                ocrMessage = 'Document expiré. Veuillez fournir un document en cours de validité.';
+                this.logger.warn(`🤖 [OCR Agent] ❌ EXPIRÉ: ${docId}`);
+            } else if (analysis.status === 'REJECTED_WRONG_TYPE') {
+                ocrStatus = 'REJECTED';
+                ocrMessage = 'Le document ne correspond pas au type demandé. Vérifiez le document attendu.';
+                this.logger.warn(`🤖 [OCR Agent] ❌ MAUVAIS TYPE: ${docId}`);
+            } else if (analysis.status === 'REJECTED_INCOMPLETE') {
+                ocrStatus = 'REJECTED';
+                ocrMessage = 'Document incomplet. Merci de capturer l\'intégralité du document.';
+                this.logger.warn(`🤖 [OCR Agent] ❌ INCOMPLET: ${docId}`);
+            }
+        } catch (ocrError: any) {
+            this.logger.warn(`🤖 [OCR Agent] ⚠️ Erreur OCR (fallback PENDING): ${ocrError.message}`);
+            ocrStatus = 'PENDING';
+            ocrMessage = 'Analyse automatique indisponible. Le document sera vérifié manuellement.';
+        }
+
         // Mettre à jour la checklist du lead
         const documents: any[] = JSON.parse(lead.documents || '[]');
 
@@ -409,17 +489,19 @@ export class LeadsService {
         const docEntry = {
             id: docId,
             docType: docId,
-            status: 'PENDING',
+            status: ocrStatus,
             fileUrl,
             originalFilename,
             mimeType,
             uploadedAt: new Date().toISOString(),
-            uploadMethod: 'MAGIC_LINK'
+            uploadMethod: 'MAGIC_LINK',
+            ocrConfidence,
+            ocrMessage,
+            ocrData,
         };
 
         if (existingDocIndex >= 0) {
-            // Remplacer le document existant (re-upload après rejet par exemple)
-            documents[existingDocIndex] = { ...documents[existingDocIndex], ...docEntry, status: 'PENDING' };
+            documents[existingDocIndex] = { ...documents[existingDocIndex], ...docEntry };
         } else {
             documents.push(docEntry);
         }
@@ -429,9 +511,79 @@ export class LeadsService {
             data: { documents: JSON.stringify(documents) }
         });
 
-        this.logger.log(`✅ Lead ${leadId}: Document ${docId} rattaché au dossier (${documents.length} docs total)`);
+        this.logger.log(`📋 Lead ${leadId}: Document ${docId} → ${ocrStatus} (${documents.length} docs total)`);
 
-        return { success: true, message: 'Document déposé avec succès' };
+        // ════════════════════════════════════════════════════════
+        // 📲 NOTIFICATIONS selon le résultat OCR
+        // ════════════════════════════════════════════════════════
+        if (ocrStatus === 'REJECTED') {
+            // Notifier le client du rejet avec la raison
+            const requiredDocs = lead.requiredDocs ? JSON.parse(lead.requiredDocs) : [];
+            const docLabel = requiredDocs.find((r: any) => r.id === docId)?.name || docId;
+            const reuploadUrl = this.generateDocumentUploadLink(leadId, docId);
+            await this.notifications.onDocumentRejected(lead, docLabel, ocrMessage, reuploadUrl);
+        } else if (ocrStatus === 'VALID') {
+            // Notifier la validation
+            const requiredDocs = lead.requiredDocs ? JSON.parse(lead.requiredDocs) : [];
+            const docLabel = requiredDocs.find((r: any) => r.id === docId)?.name || docId;
+            await this.notifications.onDocumentValidated(lead, docLabel);
+        }
+
+        // ════════════════════════════════════════════════════════
+        // 🔄 AUTO-ADVANCE : COLLECTING → REVIEW si tous les docs validés
+        // ════════════════════════════════════════════════════════
+        await this.checkAutoAdvance(leadId);
+
+        return {
+            success: ocrStatus !== 'REJECTED',
+            message: ocrStatus === 'REJECTED'
+                ? `Document refusé : ${ocrMessage}`
+                : ocrStatus === 'VALID'
+                    ? `Document validé automatiquement ! ${ocrMessage}`
+                    : `Document déposé. ${ocrMessage}`,
+            ocrResult: { status: ocrStatus, confidence: ocrConfidence, message: ocrMessage, extractedData: ocrData }
+        };
+    }
+
+    /**
+     * 🔄 Vérifie si tous les documents requis sont validés et avance automatiquement le Lead.
+     */
+    private async checkAutoAdvance(leadId: string): Promise<void> {
+        const lead = await this.prisma.lead.findUnique({ where: { id: leadId } });
+        if (!lead || lead.status !== 'COLLECTING') return;
+
+        const requiredDocs = lead.requiredDocs ? JSON.parse(lead.requiredDocs) : [];
+        const documents = lead.documents ? JSON.parse(lead.documents) : [];
+
+        if (requiredDocs.length === 0) return;
+
+        const mandatoryDocs = requiredDocs.filter((r: any) => r.required !== false);
+        const allMandatoryValid = mandatoryDocs.every((r: any) => {
+            const uploaded = documents.find((d: any) => d.id === r.id);
+            return uploaded && uploaded.status === 'VALID';
+        });
+
+        if (allMandatoryValid) {
+            this.logger.log(`🎉 Lead ${leadId}: Tous les documents obligatoires validés → AUTO-ADVANCE vers REVIEW`);
+            await this.updateStatus(leadId, 'REVIEW' as any);
+            await this.notifications.onAllDocumentsValidated(lead);
+        }
+    }
+
+    /**
+     * Génère un magic link d'upload pour un document spécifique.
+     */
+    private generateDocumentUploadLink(leadId: string, docId: string): string {
+        try {
+            const token = jwt.sign(
+                { leadId, docId, purpose: 'document_upload' },
+                JWT_SECRET,
+                { expiresIn: '30d' }
+            );
+            return `${FRONTEND_URL}/upload/${token}`;
+        } catch {
+            return '';
+        }
     }
 
     /**
