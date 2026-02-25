@@ -10,7 +10,7 @@
  * Fallback statique intégré si le backend ne répond pas.
  */
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
 // ═══════════════════════════════════════════════════
 // TYPES
@@ -159,6 +159,12 @@ const FALLBACK_PIPELINES: Record<string, WorkflowStage[]> = {
     // Qualification / Rappel
     demande_rappel: ['NEW', 'TO_CONTACT', 'QUALIFIED', 'ARCHIVED'],
     contact_simple: ['NEW', 'TO_CONTACT', 'QUALIFIED', 'ARCHIVED'],
+    // ── Pôles Frontend (IDs agrégés utilisés par le simulateur) ──
+    nat_accomp: ['NEW', 'PAID', 'COLLECTING', 'REVIEW', 'DRAFTING', 'SUBMITTED', 'INSTRUCTION', 'DECISION_WAIT', 'DONE'],
+    sejour_accomp: ['NEW', 'PAID', 'COLLECTING', 'REVIEW', 'HUNTING', 'BOOKED', 'ANTS_SUBMISSION', 'INSTRUCTION', 'DECISION_WAIT', 'DONE'],
+    langue_a2b1: ['NEW', 'PAID', 'COLLECTING', 'SCHEDULING', 'BOOKED', 'REVIEW', 'DONE'],
+    form_civique: ['NEW', 'PAID', 'COLLECTING', 'SCHEDULING', 'BOOKED', 'REVIEW', 'DONE'],
+    // Defaults
     _default: ['NEW', 'PAID', 'COLLECTING', 'REVIEW', 'HUNTING', 'BOOKED', 'ANTS_SUBMISSION', 'INSTRUCTION', 'DECISION_WAIT', 'DONE'],
     _all_production: ['NEW', 'PAID', 'COLLECTING', 'REVIEW', 'DRAFTING', 'SUBMITTED', 'DECISION_WAIT', 'DONE'],
 };

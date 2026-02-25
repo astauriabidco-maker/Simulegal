@@ -218,7 +218,7 @@ export class LeadsService {
                 paymentDate: new Date(),
                 paymentRef: data.reference,
                 invoiceNumber,
-                status: lead.status === 'NEW' ? 'COLLECTING' : lead.status
+                status: (lead.status === 'NEW' || lead.status === 'PAID') ? 'COLLECTING' : lead.status
             }
         });
 

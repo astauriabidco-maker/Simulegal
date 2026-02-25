@@ -10,20 +10,19 @@ import { ProspectStatus } from '@prisma/client';
  *
  * Gère les transitions automatiques du pipeline de qualification :
  *
- *   🟡 NEW → 🟣 CONTACTED → 🔵 QUALIFIED → 📅 MEETING_BOOKED → ✅ SIGNED
- *                                                  ↓
- *                                              🚫 NO_SHOW
- *                                                  ↓
- *                                              ⚫ LOST
+ *   🟡 NEW → 🟣 CONTACTED → 📅 MEETING_BOOKED → ✅ SIGNED
+ *                                       ↓
+ *                                   🚫 NO_SHOW
+ *                                       ↓
+ *                                   ⚫ LOST
  *
  * Règles d'automatisation :
  *   1. CallLog créé           → NEW → CONTACTED
- *   2. Score ≥ 60 + CP + Svc  → CONTACTED → QUALIFIED
- *   3. Appointment créé       → * → MEETING_BOOKED
- *   4. RDV passé + 2h         → MEETING_BOOKED → NO_SHOW  (CRON)
- *   5. Nouveau RDV après NS   → NO_SHOW → MEETING_BOOKED
- *   6. 3ème no-show           → NO_SHOW → LOST            (CRON)
- *   7. 30j sans contact       → * → LOST                  (CRON)
+ *   2. Appointment créé       → * → MEETING_BOOKED
+ *   3. RDV passé + 24h        → MEETING_BOOKED → NO_SHOW  (CRON)
+ *   4. Nouveau RDV après NS   → NO_SHOW → MEETING_BOOKED
+ *   5. 3ème no-show           → NO_SHOW → LOST            (CRON)
+ *   6. 30j sans contact       → * → LOST                  (CRON)
  */
 
 // ─── Transition Log ─────────────────────────────────────────
@@ -71,39 +70,18 @@ export class ProspectPipelineService {
         return prospect.status;
     }
 
-    // ═══════════════════════════════════════════════════════════
-    // RÈGLE 2 : Score ≥ 60 + CP + Service → CONTACTED → QUALIFIED
-    // ═══════════════════════════════════════════════════════════
+    // ===============================================================
+    // (REMOVED) : L'étape QUALIFIED a été supprimée du pipeline.
+    // La qualification se fait pendant l'appel (checklist cockpit).
+    // Le prospect reste en CONTACTED jusqu'à la fixation d'un RDV.
+    // ===============================================================
 
     /**
-     * Appelé après mise à jour d'un prospect (score, adresse, service).
-     * Si les critères de qualification sont remplis, passe en QUALIFIED.
+     * @deprecated L'étape QUALIFIED a été supprimée. Cette méthode est un no-op.
      */
     async checkQualification(prospectId: string): Promise<ProspectStatus | null> {
         const prospect = await this.prisma.prospect.findUnique({ where: { id: prospectId } });
-        if (!prospect) return null;
-
-        // Seuls CONTACTED ou NEW peuvent être auto-qualifiés
-        if (prospect.status !== 'CONTACTED' && prospect.status !== 'NEW') {
-            return prospect.status;
-        }
-
-        const isQualified =
-            prospect.score >= 60 &&
-            !!prospect.zipCode &&
-            !!prospect.interestServiceId;
-
-        if (isQualified) {
-            await this.transitionTo(
-                prospectId,
-                'QUALIFIED',
-                'AUTO_QUALIFICATION',
-                `Score ${prospect.score} ≥ 60, CP: ${prospect.zipCode}, Service: ${prospect.interestServiceId}`
-            );
-            return 'QUALIFIED';
-        }
-
-        return prospect.status;
+        return prospect?.status ?? null;
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -217,7 +195,7 @@ export class ProspectPipelineService {
 
         const staleProspects = await this.prisma.prospect.findMany({
             where: {
-                status: { in: ['NEW', 'CONTACTED', 'QUALIFIED'] },
+                status: { in: ['NEW', 'CONTACTED'] },
                 lastContactAt: { lt: thirtyDaysAgo },
             },
         });
@@ -225,7 +203,7 @@ export class ProspectPipelineService {
         // Also catch prospects who were never contacted
         const neverContactedStale = await this.prisma.prospect.findMany({
             where: {
-                status: { in: ['NEW', 'CONTACTED', 'QUALIFIED'] },
+                status: { in: ['NEW', 'CONTACTED'] },
                 lastContactAt: null,
                 createdAt: { lt: thirtyDaysAgo },
             },
@@ -246,9 +224,66 @@ export class ProspectPipelineService {
             inactive++;
         }
 
+        // ─── Règle : 5 appels sans réponse consécutifs → LOST ────
+        const tooManyNoAnswer = await this.prisma.prospect.findMany({
+            where: {
+                status: { in: ['NEW', 'CONTACTED'] },
+                noAnswerCount: { gte: 5 },
+            },
+        });
+
+        for (const prospect of tooManyNoAnswer) {
+            await this.transitionTo(
+                prospect.id,
+                'LOST',
+                'AUTO_ABANDON_NO_ANSWER',
+                `${prospect.noAnswerCount} appels sans réponse consécutifs → abandon automatique`
+            );
+            inactive++;
+        }
+
+        // ─── Règle : 3 demandes de rappel sans suite → LOST ─────
+        const tooManyCallbacks = await this.prisma.prospect.findMany({
+            where: {
+                status: { in: ['NEW', 'CONTACTED'] },
+                callbackCount: { gte: 3 },
+            },
+        });
+
+        for (const prospect of tooManyCallbacks) {
+            await this.transitionTo(
+                prospect.id,
+                'LOST',
+                'AUTO_ABANDON_CALLBACKS',
+                `${prospect.callbackCount} demandes de rappel sans suite → abandon automatique`
+            );
+            inactive++;
+        }
+
+        // ─── Règle : Rappel demandé il y a +7j sans action → LOST ─
+        const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        const staleCallbacks = await this.prisma.prospect.findMany({
+            where: {
+                status: { in: ['NEW', 'CONTACTED'] },
+                callbackRequestedAt: { lt: sevenDaysAgo },
+                lastCallOutcome: 'CALLBACK',
+            },
+        });
+
+        for (const prospect of staleCallbacks) {
+            const daysSinceCallback = Math.floor((now.getTime() - new Date(prospect.callbackRequestedAt!).getTime()) / (1000 * 60 * 60 * 24));
+            await this.transitionTo(
+                prospect.id,
+                'LOST',
+                'AUTO_ABANDON_STALE_CALLBACK',
+                `Rappel demandé il y a ${daysSinceCallback}j, aucune suite → abandon automatique`
+            );
+            inactive++;
+        }
+
         if (noShows + abandoned + inactive > 0) {
             this.logger.log(
-                `[CRON] Transitions auto: ${noShows} no-shows, ${abandoned} abandons (3x NS), ${inactive} inactifs (30j)`
+                `[CRON] Transitions auto: ${noShows} no-shows, ${abandoned} abandons (3x NS), ${inactive} inactifs/épuisés`
             );
         }
 
@@ -312,7 +347,7 @@ export class ProspectPipelineService {
      */
     private isValidTransition(from: ProspectStatus, to: ProspectStatus): boolean {
         const VALID_TRANSITIONS: Record<string, string[]> = {
-            'NEW': ['CONTACTED', 'QUALIFIED', 'MEETING_BOOKED', 'LOST'],
+            'NEW': ['CONTACTED', 'MEETING_BOOKED', 'LOST'],
             'CONTACTED': ['QUALIFIED', 'MEETING_BOOKED', 'LOST'],
             'QUALIFIED': ['MEETING_BOOKED', 'LOST'],
             'MEETING_BOOKED': ['SIGNED', 'NO_SHOW', 'LOST'],

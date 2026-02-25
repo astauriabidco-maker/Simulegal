@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { Prospect, ProspectStatus } from '@prisma/client';
 import { AssignmentService } from './assignment.service';
 import { ProspectPipelineService } from './prospect-pipeline.service';
+import { SERVICE_CATALOG, DOCUMENT_CATALOG } from '../config/services-pipeline.config';
 
 @Injectable()
 export class SalesService {
@@ -138,56 +139,269 @@ export class SalesService {
         const oldProspect = await this.prisma.prospect.findUnique({ where: { id } });
         if (!oldProspect) return null;
 
+        // ─── Sanitize: only pass valid Prospect scalar fields to Prisma ───
+        const ALLOWED_FIELDS = [
+            'firstName', 'lastName', 'phone', 'email',
+            'address', 'city', 'zipCode', 'country',
+            'source', 'campaignName', 'interestServiceId', 'score',
+            'agencyId', 'assignedToSalesId', 'status', 'convertedLeadId',
+            'lastContactAt',
+            'callAttempts', 'noAnswerCount', 'callbackCount',
+            'callbackRequestedAt', 'callbackScheduledAt', 'lastCallOutcome',
+            'noShowCount', 'qualifiedAt', 'stageEnteredAt', 'lostReason',
+            'appointment', // Json field
+            'eligibilityResult', // Json field — résultat de simulation
+        ];
+
+        const sanitizedData: any = {};
+        for (const key of ALLOWED_FIELDS) {
+            if (data[key] !== undefined) {
+                sanitizedData[key] = data[key];
+            }
+        }
+
+        // Convert date strings to Date objects for DateTime fields
+        const DATE_FIELDS = ['lastContactAt', 'callbackRequestedAt', 'callbackScheduledAt', 'qualifiedAt', 'stageEnteredAt'];
+        for (const field of DATE_FIELDS) {
+            if (sanitizedData[field] && typeof sanitizedData[field] === 'string') {
+                sanitizedData[field] = new Date(sanitizedData[field]);
+            }
+        }
+
+        // ─── Auto-track stage entry time on status change ───
+        if (sanitizedData.status && sanitizedData.status !== oldProspect.status) {
+            sanitizedData.stageEnteredAt = new Date();
+
+            // Track qualification date
+            if (sanitizedData.status === 'QUALIFIED') {
+                sanitizedData.qualifiedAt = new Date();
+            }
+
+            // Track NO_SHOW count and auto-LOST
+            if (sanitizedData.status === 'NO_SHOW') {
+                const newNoShowCount = (oldProspect.noShowCount || 0) + 1;
+                sanitizedData.noShowCount = newNoShowCount;
+                if (newNoShowCount >= 2) {
+                    sanitizedData.status = 'LOST';
+                    sanitizedData.lostReason = `${newNoShowCount} RDV non honorés`;
+                    console.log(`[PIPELINE] ⚠️ ${oldProspect.firstName} auto-LOST: ${newNoShowCount} no-shows`);
+                }
+            }
+
+            // Track lost reason
+            if (sanitizedData.status === 'LOST' && !sanitizedData.lostReason) {
+                sanitizedData.lostReason = data.lostReason || 'Manuel';
+            }
+        }
+
+        // ─── Dynamic score recalculation on interaction ───
+        if (sanitizedData.lastCallOutcome || sanitizedData.status) {
+            const newScore = this.recalculateScore(oldProspect, sanitizedData);
+            sanitizedData.score = newScore;
+        }
+
         const updatedProspect = await this.prisma.prospect.update({
             where: { id },
-            data,
+            data: sanitizedData,
+            include: { notes: true },
         });
 
-        // Trigger notification automations on manual status change
-        if (data.status && data.status !== oldProspect.status) {
-            await this.triggerAutomation(updatedProspect, data.status);
+        // Trigger notification automations on status change
+        if (sanitizedData.status && sanitizedData.status !== oldProspect.status) {
+            await this.triggerAutomation(updatedProspect, sanitizedData.status);
         }
 
         // ─── RÈGLE 2 : Auto-qualification check ───────────────
-        // Si score, adresse ou service viennent d'être mis à jour
-        if (data.score !== undefined || data.zipCode !== undefined || data.interestServiceId !== undefined) {
+        if (sanitizedData.score !== undefined || sanitizedData.zipCode !== undefined || sanitizedData.interestServiceId !== undefined) {
             await this.prospectPipeline.checkQualification(id);
         }
 
         // ─── RÈGLE 3 & 5 : Appointment booked ─────────────────
-        // Quand le statut passe à MEETING_BOOKED manuellement, on log la transition
-        if (data.status === 'MEETING_BOOKED' && oldProspect.status !== 'MEETING_BOOKED') {
+        if (sanitizedData.status === 'MEETING_BOOKED' && oldProspect.status !== 'MEETING_BOOKED') {
             await this.prospectPipeline.onAppointmentBooked(id, new Date().toISOString());
         }
 
         return updatedProspect;
     }
 
-    private calculateScore(prospect: any): number {
+    /**
+     * Fixer un rendez-vous en agence pour un prospect
+     * - Crée un SalesAppointment dans la DB
+     * - Crée aussi un Appointment (calendrier) pour qu'il apparaisse dans l'agenda
+     * - Met à jour le prospect (status + appointment JSON)
+     * - Retourne le prospect mis à jour
+     */
+    async bookAppointment(prospectId: string, appointmentData: {
+        date: string;
+        agencyId: string;
+        agencyName: string;
+        serviceId?: string;
+        confirmed?: boolean;
+        confirmationSentVia?: string;
+    }) {
+        const prospect = await this.prisma.prospect.findUnique({ where: { id: prospectId } });
+        if (!prospect) return null;
+
+        const startDate = new Date(appointmentData.date);
+        const endDate = new Date(startDate.getTime() + 60 * 60 * 1000); // +1h
+
+        // 1. Créer le SalesAppointment (suivi commercial)
+        const salesAppointment = await this.prisma.salesAppointment.create({
+            data: {
+                prospectId,
+                date: startDate,
+                agencyId: appointmentData.agencyId,
+                agencyName: appointmentData.agencyName,
+                serviceId: appointmentData.serviceId || prospect.interestServiceId,
+                status: 'SCHEDULED',
+                confirmationSent: appointmentData.confirmed || false,
+                confirmationSentVia: appointmentData.confirmationSentVia,
+            }
+        });
+
+        // 2. Créer aussi un Appointment dans le calendrier global (pour l'agenda)
+        let calendarAppointment = null;
+        try {
+            // Vérifier si l'agencyId existe dans la table Agency pour la relation
+            const agencyExists = await this.prisma.agency.findUnique({
+                where: { id: appointmentData.agencyId }
+            });
+
+            calendarAppointment = await this.prisma.appointment.create({
+                data: {
+                    start: startDate,
+                    end: endDate,
+                    type: 'PHYSICAL_AGENCY',
+                    status: 'SCHEDULED',
+                    leadName: `${prospect.firstName} ${prospect.lastName}`,
+                    leadEmail: prospect.email,
+                    prospectId: prospectId,
+                    ...(agencyExists ? { agencyId: appointmentData.agencyId } : {}),
+                    serviceId: appointmentData.serviceId || prospect.interestServiceId,
+                }
+            });
+            console.log(`[SalesService] 📆 Appointment calendrier créé: ${calendarAppointment.id}`);
+        } catch (calError) {
+            console.warn('[SalesService] ⚠️ Impossible de créer le RDV dans le calendrier:', calError);
+        }
+
+        // 3. Mettre à jour le prospect
+        const updatedProspect = await this.prisma.prospect.update({
+            where: { id: prospectId },
+            data: {
+                status: 'MEETING_BOOKED',
+                appointment: appointmentData as any,
+                lastContactAt: new Date(),
+            }
+        });
+
+        // 4. Trigger pipeline automation
+        await this.prospectPipeline.onAppointmentBooked(prospectId, appointmentData.date);
+
+        console.log(`[SalesService] 📅 RDV créé: ${salesAppointment.id} pour prospect ${prospectId} le ${appointmentData.date} à ${appointmentData.agencyName}`);
+
+        return {
+            prospect: updatedProspect,
+            appointment: salesAppointment,
+            calendarAppointmentId: calendarAppointment?.id,
+        };
+    }
+
+    /**
+     * Récupérer tous les RDV (pour le calendrier)
+     */
+    async getAppointments(filters?: { agencyId?: string; status?: string; dateFrom?: string; dateTo?: string }) {
+        const where: any = {};
+        if (filters?.agencyId) where.agencyId = filters.agencyId;
+        if (filters?.status) where.status = filters.status;
+        if (filters?.dateFrom || filters?.dateTo) {
+            where.date = {};
+            if (filters.dateFrom) where.date.gte = new Date(filters.dateFrom);
+            if (filters.dateTo) where.date.lte = new Date(filters.dateTo);
+        }
+
+        return this.prisma.salesAppointment.findMany({
+            where,
+            include: {
+                prospect: {
+                    select: {
+                        id: true,
+                        firstName: true,
+                        lastName: true,
+                        phone: true,
+                        email: true,
+                        interestServiceId: true,
+                    }
+                }
+            },
+            orderBy: { date: 'asc' },
+        });
+    }
+
+    /**
+     * Score dynamique — recalcule le score en fonction de l'état actuel et des interactions
+     */
+    private recalculateScore(prospect: any, updates: any): number {
         let score = 0;
 
-        // Source rules
-        if (prospect.source === 'GOOGLE_ADS') score += 30;
-        if (prospect.source === 'META_ADS') score += 20;
-        if (prospect.source === 'TIKTOK_ADS') score += 15;
+        // ─── Base : Source d'acquisition ───
+        const source = updates.source || prospect.source;
+        if (source === 'GOOGLE_ADS') score += 30;
+        else if (source === 'META_ADS') score += 20;
+        else if (source === 'TIKTOK_ADS') score += 15;
+        else if (source === 'REFERRAL') score += 25;
+        else if (source === 'WEBSITE') score += 10;
+        else score += 5;
 
-        // Info rules
-        if (prospect.email && prospect.email.length > 5) score += 10;
-        if (prospect.phone && prospect.phone.length > 8) score += 10;
+        // ─── Complétude du profil ───
+        const email = updates.email !== undefined ? updates.email : prospect.email;
+        const phone = updates.phone !== undefined ? updates.phone : prospect.phone;
+        const interestServiceId = updates.interestServiceId !== undefined ? updates.interestServiceId : prospect.interestServiceId;
+        const address = updates.address !== undefined ? updates.address : prospect.address;
+        const zipCode = updates.zipCode !== undefined ? updates.zipCode : prospect.zipCode;
 
-        // Interest rules
-        if (prospect.interestServiceId) score += 10;
+        if (email && email.length > 5) score += 5;
+        if (phone && phone.length > 8) score += 5;
+        if (interestServiceId) score += 10;
+        if (address) score += 5;
+        if (zipCode) score += 5;
 
-        return Math.min(score, 100);
+        // ─── Engagement (interactions positives) ───
+        const outcome = updates.lastCallOutcome || prospect.lastCallOutcome;
+        if (outcome === 'INTERESTED') score += 20;
+        else if (outcome === 'CALLBACK') score += 10;
+        else if (outcome === 'NO_ANSWER') score -= 5;
+        else if (outcome === 'NOT_INTERESTED') score -= 30;
+        else if (outcome === 'WRONG_NUMBER') score -= 40;
+
+        // ─── Progression pipeline ───
+        const status = updates.status || prospect.status;
+        if (status === 'CONTACTED') score += 5;
+        if (status === 'QUALIFIED') score += 15;
+        if (status === 'MEETING_BOOKED') score += 25;
+        if (status === 'NO_SHOW') score -= 10;
+        if (status === 'LOST') score -= 20;
+
+        // ─── Pénalités ───
+        const noAnswerCount = updates.noAnswerCount !== undefined ? updates.noAnswerCount : (prospect.noAnswerCount || 0);
+        score -= noAnswerCount * 3;
+
+        return Math.max(0, Math.min(100, score));
+    }
+
+    private calculateScore(prospect: any): number {
+        return this.recalculateScore(prospect, {});
     }
 
     private async triggerAutomation(prospect: Prospect, status: ProspectStatus) {
         console.log(`[BACKEND AUTOMATION] Trigger for ${prospect.firstName} -> ${status}`);
 
-        // Mocking automation calls
         switch (status) {
             case 'NEW':
                 console.log(`[SMS] 📤 To ${prospect.phone}: "Bonjour ${prospect.firstName}, merci de votre intérêt pour Simulegal. Un expert va vous rappeler ds les 2h."`);
+                break;
+            case 'QUALIFIED':
+                console.log(`[SMS] 📤 To ${prospect.phone}: "${prospect.firstName}, votre dossier a été pré-qualifié ! Un conseiller va vous proposer un RDV en agence."`);
                 break;
             case 'MEETING_BOOKED':
                 console.log(`[EMAIL] 📧 To ${prospect.email}: "Votre RDV Simulegal est confirmé."`);
@@ -198,6 +412,9 @@ export class SalesService {
             case 'SIGNED':
                 console.log(`[EMAIL] 📧 To ${prospect.email}: "Bienvenue chez Simulegal ! Votre dossier est ouvert."`);
                 break;
+            case 'LOST':
+                console.log(`[PIPELINE] 📋 ${prospect.firstName} ${prospect.lastName} marqué comme perdu.`);
+                break;
         }
     }
 
@@ -205,10 +422,111 @@ export class SalesService {
         return this.prisma.prospectNote.create({
             data: {
                 prospectId,
-                authorId,
+                authorId: authorId || 'system',
                 text,
             },
         });
+    }
+
+    /**
+     * Réactiver un prospect perdu — retour en CONTACTED
+     */
+    async reactivateProspect(id: string) {
+        const prospect = await this.prisma.prospect.findUnique({ where: { id } });
+        if (!prospect || prospect.status !== 'LOST') return null;
+
+        const updated = await this.prisma.prospect.update({
+            where: { id },
+            data: {
+                status: 'CONTACTED',
+                stageEnteredAt: new Date(),
+                noAnswerCount: 0,
+                callbackCount: 0,
+                lastCallOutcome: null,
+                lostReason: null,
+                score: this.recalculateScore({ ...prospect, status: 'CONTACTED', lastCallOutcome: null, noAnswerCount: 0 }, {}),
+            },
+            include: { notes: true },
+        });
+
+        // Add system note
+        await this.addNote(id, 'system', '♻️ Prospect réactivé — retour en file de prospection');
+
+        console.log(`[PIPELINE] ♻️ ${prospect.firstName} ${prospect.lastName} réactivé (était LOST: ${prospect.lostReason})`);
+        return updated;
+    }
+
+    /**
+     * Métriques de vélocité du pipeline
+     */
+    async getPipelineVelocity() {
+        const prospects = await this.prisma.prospect.findMany({
+            select: {
+                id: true, status: true, score: true,
+                createdAt: true, stageEnteredAt: true, qualifiedAt: true,
+                callAttempts: true, noShowCount: true, callbackScheduledAt: true,
+                lastCallOutcome: true, noAnswerCount: true, callbackCount: true,
+                firstName: true, lastName: true,
+            }
+        });
+
+        const now = new Date();
+        const statusCounts: Record<string, number> = {};
+        const avgTimeInStage: Record<string, number[]> = {};
+        let staleLeads = 0;
+        let overdueCallbacks = 0;
+
+        for (const p of prospects) {
+            // Count by status
+            statusCounts[p.status] = (statusCounts[p.status] || 0) + 1;
+
+            // Time in current stage (hours)
+            if (p.stageEnteredAt) {
+                const hoursInStage = (now.getTime() - new Date(p.stageEnteredAt).getTime()) / (1000 * 60 * 60);
+                if (!avgTimeInStage[p.status]) avgTimeInStage[p.status] = [];
+                avgTimeInStage[p.status].push(hoursInStage);
+
+                // Stale: in NEW for > 48h without action
+                if (p.status === 'NEW' && hoursInStage > 48 && p.callAttempts === 0) {
+                    staleLeads++;
+                }
+            }
+
+            // Overdue callbacks
+            if (p.callbackScheduledAt && new Date(p.callbackScheduledAt) < now && p.lastCallOutcome === 'CALLBACK') {
+                overdueCallbacks++;
+            }
+        }
+
+        // Calculate averages
+        const avgByStage: Record<string, number> = {};
+        for (const [status, times] of Object.entries(avgTimeInStage)) {
+            avgByStage[status] = Math.round(times.reduce((a, b) => a + b, 0) / times.length);
+        }
+
+        // Conversion rates
+        const total = prospects.length || 1;
+        const contacted = prospects.filter(p => !['NEW'].includes(p.status)).length;
+        const qualified = prospects.filter(p => !['NEW', 'CONTACTED'].includes(p.status)).length;
+        const meetingBooked = prospects.filter(p => ['MEETING_BOOKED', 'SIGNED'].includes(p.status)).length;
+        const signed = prospects.filter(p => p.status === 'SIGNED').length;
+
+        return {
+            statusCounts,
+            avgHoursInStage: avgByStage,
+            conversionRates: {
+                newToContacted: Math.round((contacted / total) * 100),
+                contactedToQualified: contacted ? Math.round((qualified / contacted) * 100) : 0,
+                qualifiedToMeeting: qualified ? Math.round((meetingBooked / qualified) * 100) : 0,
+                meetingToSigned: meetingBooked ? Math.round((signed / meetingBooked) * 100) : 0,
+                overall: Math.round((signed / total) * 100),
+            },
+            alerts: {
+                staleLeads,
+                overdueCallbacks,
+            },
+            totalProspects: total,
+        };
     }
 
     async importFromCSV(buffer: Buffer): Promise<number> {
@@ -274,8 +592,9 @@ export class SalesService {
         if (!prospect) return null;
 
         // Vérifier que le prospect peut être converti
-        if (prospect.status !== 'MEETING_BOOKED' && prospect.status !== 'NO_SHOW' && prospect.status !== 'SIGNED') {
-            throw new Error(`Impossible de convertir : statut actuel = ${prospect.status}. Le prospect doit avoir un RDV fixé.`);
+        const CONVERTIBLE_STATUSES = ['MEETING_BOOKED', 'QUALIFIED', 'NO_SHOW', 'SIGNED'];
+        if (!CONVERTIBLE_STATUSES.includes(prospect.status)) {
+            throw new Error(`Impossible de convertir : statut actuel = ${prospect.status}. Le prospect doit au minimum être qualifié.`);
         }
 
         // Déjà converti ?
@@ -285,6 +604,22 @@ export class SalesService {
 
         const resolvedServiceId = serviceId || prospect.interestServiceId || 'consultation_juridique';
         const leadId = `LEAD-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+
+        // Résoudre le nom lisible et les documents requis depuis SERVICE_CATALOG
+        const catalogEntry = SERVICE_CATALOG.find(s => s.id === resolvedServiceId);
+        const resolvedServiceName = catalogEntry?.name || resolvedServiceId;
+
+        // Construire la checklist de documents requis
+        const requiredDocsList = (catalogEntry?.requiredDocs || []).map(rd => {
+            const docInfo = DOCUMENT_CATALOG[rd.docId];
+            return {
+                id: rd.docId,
+                name: docInfo?.name || rd.docId,
+                description: docInfo?.description || '',
+                category: docInfo?.category || 'OTHER',
+                required: rd.required,
+            };
+        });
 
         // Préparer les données enrichies depuis le prospect
         const prospectData = {
@@ -300,7 +635,7 @@ export class SalesService {
             prospectId: prospect.id,
         };
 
-        // Créer le Lead dans le CRM
+        // Créer le Lead dans le CRM avec status PAID (paiement déjà confirmé)
         const lead = await this.prisma.lead.create({
             data: {
                 id: leadId,
@@ -308,10 +643,11 @@ export class SalesService {
                 email: prospect.email || `${prospect.phone}@prospect.simulegal.fr`,
                 phone: prospect.phone,
                 serviceId: resolvedServiceId,
-                serviceName: resolvedServiceId,
-                status: 'NEW',
+                serviceName: resolvedServiceName,
+                status: 'PAID',
                 originAgencyId: prospect.agencyId,
                 documents: '[]',
+                requiredDocs: JSON.stringify(requiredDocsList),
                 data: JSON.stringify(prospectData),
             },
         });
