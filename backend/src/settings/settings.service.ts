@@ -175,20 +175,54 @@ export class SettingsService implements OnModuleInit {
 
     /**
      * Met à jour le prix d'un ou plusieurs services.
-     * Merge avec les prix existants.
+     * Merge avec les prix existants + enregistre l'historique (audit trail).
      */
     async updateServicePricing(pricing: Record<string, any>): Promise<Record<string, any>> {
         const current = await this.getServicePricing();
+        const history = await this.getServicePricingHistory();
 
         // Merge : on garde les anciens + on écrase avec les nouveaux
         const merged = { ...current };
+        const now = new Date().toISOString();
+
         for (const [serviceId, data] of Object.entries(pricing)) {
-            merged[serviceId] = { ...(current[serviceId] || {}), ...data, updatedAt: new Date().toISOString() };
+            const prev = current[serviceId] || {};
+            const changeTypes: string[] = [];
+
+            // Détecter ce qui a changé
+            if (data.price !== undefined && data.price !== prev.price) changeTypes.push('PRICE');
+            if (data.promoPrice !== undefined && data.promoPrice !== prev.promoPrice) changeTypes.push('PROMO');
+            if (data.promoUntil !== undefined && data.promoUntil !== prev.promoUntil) changeTypes.push('PROMO_DATE');
+            if (data.notes !== undefined && data.notes !== prev.notes) changeTypes.push('NOTES');
+
+            // Enregistrer dans l'historique si quelque chose a changé
+            if (changeTypes.length > 0) {
+                history.unshift({
+                    serviceId,
+                    timestamp: now,
+                    changeTypes,
+                    previousPrice: prev.price || null,
+                    newPrice: data.price ?? prev.price ?? null,
+                    previousPromoPrice: prev.promoPrice || null,
+                    newPromoPrice: data.promoPrice ?? prev.promoPrice ?? null,
+                    previousPromoUntil: prev.promoUntil || null,
+                    newPromoUntil: data.promoUntil ?? prev.promoUntil ?? null,
+                    notes: data.notes || prev.notes || '',
+                });
+            }
+
+            merged[serviceId] = { ...prev, ...data, updatedAt: now };
         }
+
+        // Limiter l'historique à 500 entrées
+        const trimmedHistory = history.slice(0, 500);
 
         await this.prisma.systemSettings.update({
             where: { id: 'GLOBAL' },
-            data: { servicePricing: JSON.stringify(merged) }
+            data: {
+                servicePricing: JSON.stringify(merged),
+                servicePricingHistory: JSON.stringify(trimmedHistory),
+            }
         });
 
         console.log(`[Settings] 💰 Service pricing updated:`, Object.keys(pricing).join(', '));
@@ -196,15 +230,50 @@ export class SettingsService implements OnModuleInit {
     }
 
     /**
+     * Retourne l'historique des modifications de prix (audit trail).
+     */
+    async getServicePricingHistory(): Promise<any[]> {
+        const settings = await this.prisma.systemSettings.findUnique({ where: { id: 'GLOBAL' } });
+        if (!settings) return [];
+        try {
+            return JSON.parse((settings as any).servicePricingHistory || '[]');
+        } catch {
+            return [];
+        }
+    }
+
+    /**
      * Supprime l'override de prix d'un service (revient au prix par défaut du code)
+     * Enregistre l'action dans l'historique.
      */
     async resetServicePrice(serviceId: string): Promise<Record<string, any>> {
         const current = await this.getServicePricing();
+        const history = await this.getServicePricingHistory();
+        const prev = current[serviceId];
+
+        if (prev) {
+            history.unshift({
+                serviceId,
+                timestamp: new Date().toISOString(),
+                changeTypes: ['RESET'],
+                previousPrice: prev.price || null,
+                newPrice: null,
+                previousPromoPrice: prev.promoPrice || null,
+                newPromoPrice: null,
+                previousPromoUntil: prev.promoUntil || null,
+                newPromoUntil: null,
+                notes: 'Remise au prix par défaut',
+            });
+        }
+
         delete current[serviceId];
 
         await this.prisma.systemSettings.update({
             where: { id: 'GLOBAL' },
-            data: { servicePricing: JSON.stringify(current) }
+            data: {
+                servicePricing: JSON.stringify(current),
+                servicePricingHistory: JSON.stringify(history.slice(0, 500)),
+            }
         });
 
         console.log(`[Settings] 💰 Service price reset to default:`, serviceId);

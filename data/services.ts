@@ -10,7 +10,8 @@ export interface Service {
     isSimulatable: boolean;
     iconName: string;
     badge?: string;
-    price?: number; // Prix indicatif en centimes
+    // ⚠️ Le champ `price` a été supprimé. Les prix sont gérés exclusivement
+    // via le backend : Paramètres → Tarifs Services (/admin/settings?tab=SERVICE_PRICING)
 }
 
 export const SERVICES_CATALOG: Service[] = [
@@ -24,7 +25,6 @@ export const SERVICES_CATALOG: Service[] = [
         isSimulatable: true,
         iconName: 'Flag',
         badge: 'SIMUL',
-        price: 49000 // 490€
     },
     {
         id: 'sejour_accomp',
@@ -35,7 +35,6 @@ export const SERVICES_CATALOG: Service[] = [
         isSimulatable: true,
         iconName: 'FileText',
         badge: 'SIMUL',
-        price: 35000 // 350€
     },
     {
         id: 'regroupement_familial',
@@ -46,7 +45,6 @@ export const SERVICES_CATALOG: Service[] = [
         isSimulatable: true,
         iconName: 'Users',
         badge: 'SIMUL',
-        price: 39000 // 390€
     },
 
     // PÔLE EXPERTISE (Sans Simulation ou Partielle)
@@ -59,7 +57,6 @@ export const SERVICES_CATALOG: Service[] = [
         isSimulatable: true,
         iconName: 'Car',
         badge: 'SIMUL',
-        price: 15000 // 150€
     },
     {
         id: 'rdv_juriste',
@@ -70,7 +67,6 @@ export const SERVICES_CATALOG: Service[] = [
         isSimulatable: true,
         iconName: 'Gavel',
         badge: 'SIMUL',
-        price: 8000 // 80€
     },
     {
         id: 'rdv_prefecture',
@@ -81,7 +77,6 @@ export const SERVICES_CATALOG: Service[] = [
         isSimulatable: true,
         iconName: 'Calendar',
         badge: 'SIMUL',
-        price: 5000 // 50€
     },
 
     // PÔLE INTÉGRATION
@@ -94,7 +89,6 @@ export const SERVICES_CATALOG: Service[] = [
         isSimulatable: true,
         iconName: 'Languages',
         badge: 'SIMUL',
-        price: 25000 // 250€
     },
     {
         id: 'form_civique',
@@ -105,7 +99,6 @@ export const SERVICES_CATALOG: Service[] = [
         isSimulatable: true,
         iconName: 'GraduationCap',
         badge: 'SIMUL',
-        price: 12000 // 120€
     },
     {
         id: 'rappel_echeances',
@@ -116,6 +109,5 @@ export const SERVICES_CATALOG: Service[] = [
         isSimulatable: true,
         iconName: 'Phone',
         badge: 'GRATUIT',
-        price: 0
     }
 ];

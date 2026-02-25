@@ -67,7 +67,7 @@ export default function LandingPage({ onStartSimulator }: LandingPageProps) {
     const [blogArticles, setBlogArticles] = useState<any[]>([]);
 
     useEffect(() => {
-        const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+        const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
         fetch(`${API}/public/blog?limit=3`)
             .then(r => r.ok ? r.json() : { articles: [] })
             .then(data => setBlogArticles(data.articles || []))

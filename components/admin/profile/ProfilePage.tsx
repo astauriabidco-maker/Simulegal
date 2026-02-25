@@ -13,7 +13,7 @@ import { PERMISSION_LABELS, PERMISSION_GROUPS } from '../../../config/Permission
 import type { PermissionKey } from '../../../config/PermissionRegistry';
 import type { UserRole } from '../../../config/Permissions';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
 interface UserProfile {
     id: string;

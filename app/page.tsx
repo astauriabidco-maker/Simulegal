@@ -45,14 +45,17 @@ export default function Home() {
       window.kioskPartnerId = storedRef;
     }
 
-    const incomingProspectId = urlParams.get('prospectId');
-    const incomingServiceId = urlParams.get('serviceId');
-    if (incomingProspectId && incomingServiceId) {
+    const incomingProspectId = urlParams.get('prospectId') || urlParams.get('prospect');
+    const incomingServiceId = urlParams.get('serviceId') || urlParams.get('service');
+    const autoSimulator = urlParams.get('simulator');
+    if (incomingProspectId) {
       setProspectId(incomingProspectId);
-      setSelectedService(incomingServiceId);
+      if (incomingServiceId) setSelectedService(incomingServiceId);
       setShowSimulator(true);
-      // We could also try to prefill the profile from the CRM if connected to a real backend,
-      // but launching it pre-filled conceptually via URL indicates the link works as intended!
+    } else if (autoSimulator === 'true') {
+      // Lancé depuis l'agenda (bouton "Lancer le Simulateur")
+      if (incomingServiceId) setSelectedService(incomingServiceId);
+      setShowSimulator(true);
     }
   }, []);
 

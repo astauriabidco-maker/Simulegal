@@ -21,7 +21,7 @@ export interface KioskDevice {
     createdAt: string;
 }
 
-const API_URL = 'http://localhost:5000/devices';
+const API_URL = 'http://localhost:4000/devices';
 
 export const DeviceStore = {
     /**

@@ -2,7 +2,7 @@ import { AuthStore } from './authStore';
 import { LeadScoring } from './LeadScoring';
 import { MarketingAutomation } from './MarketingAutomation';
 
-export type ProspectSource = 'MANUAL' | 'CSV_IMPORT' | 'META_ADS' | 'GOOGLE_ADS' | 'TIKTOK_ADS' | 'PARTNER_API' | 'WEBSITE' | 'WEBHOOK';
+export type ProspectSource = 'MANUAL' | 'CSV_IMPORT' | 'META_ADS' | 'GOOGLE_ADS' | 'TIKTOK_ADS' | 'PARTNER_API' | 'WEBSITE' | 'WEBHOOK' | 'REFERRAL' | 'NETWORKING' | 'PHONE';
 export type ProspectStatus = 'NEW' | 'CONTACTED' | 'QUALIFIED' | 'MEETING_BOOKED' | 'SIGNED' | 'NO_SHOW' | 'LOST';
 
 export interface ProspectNote {
@@ -61,6 +61,20 @@ export interface Prospect {
     // Résultat simulateur (rempli lors du RDV en agence)
     eligibilityResult?: EligibilityResult;
 
+    // Suivi des tentatives d'appel
+    callAttempts: number;       // Nombre total de tentatives d'appel
+    noAnswerCount: number;      // Compteur spécifique "pas de réponse"
+    callbackCount: number;      // Compteur de demandes "rappeler plus tard"
+    callbackRequestedAt?: string; // Dernière date de demande de rappel (ISO)
+    callbackScheduledAt?: string; // Date+heure du prochain rappel programmé
+    lastCallOutcome?: string;   // Dernier résultat d'appel
+
+    // Pipeline tracking
+    noShowCount: number;        // Nombre de RDV non honorés
+    qualifiedAt?: string;       // Date de qualification
+    stageEnteredAt?: string;    // Date d'entrée dans l'étape actuelle
+    lostReason?: string;        // Raison de la perte
+
     // Historique
     notes: ProspectNote[];
     createdAt: string;
@@ -82,6 +96,10 @@ let prospectsDB: Prospect[] = [
         score: 75,
         agencyId: 'HQ-001',
         status: 'NEW',
+        callAttempts: 0,
+        noAnswerCount: 0,
+        callbackCount: 0,
+        noShowCount: 0,
         notes: [],
         createdAt: new Date(Date.now() - 86400000).toISOString() // Hier
     },
@@ -97,12 +115,16 @@ let prospectsDB: Prospect[] = [
         score: 40,
         agencyId: 'OWN-001',
         status: 'NEW',
+        callAttempts: 0,
+        noAnswerCount: 0,
+        callbackCount: 0,
+        noShowCount: 0,
         notes: [],
         createdAt: new Date().toISOString()
     }
 ];
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
 export const SalesStore = {
     /**
@@ -409,33 +431,33 @@ export const SalesStore = {
         sendConfirmation: boolean = true
     ): Promise<Prospect | null> => {
         try {
-            // 1. Update prospect with appointment info + status
-            const updated = await SalesStore.updateProspect(prospectId, {
-                status: 'MEETING_BOOKED',
-                appointment
-            } as any);
+            // Appeler le endpoint dédié qui crée un SalesAppointment + met à jour le prospect
+            const response = await fetch(`${API_URL}/sales/prospects/${prospectId}/book-appointment`, {
+                method: 'POST',
+                headers: SalesStore.getHeaders(),
+                body: JSON.stringify({
+                    date: appointment.date,
+                    agencyId: appointment.agencyId,
+                    agencyName: appointment.agencyName,
+                    serviceId: appointment.serviceId,
+                    confirmed: sendConfirmation && appointment.confirmed,
+                    confirmationSentVia: appointment.confirmationSentVia,
+                })
+            });
 
-            // 2. Send confirmation SMS/WhatsApp if requested
-            if (sendConfirmation && updated) {
-                try {
-                    await fetch(`${API_URL}/notifications/send-appointment-confirmation`, {
-                        method: 'POST',
-                        headers: SalesStore.getHeaders(),
-                        body: JSON.stringify({
-                            prospectId,
-                            prospectPhone: updated.phone,
-                            prospectFirstName: updated.firstName,
-                            appointment,
-                            channel: appointment.confirmationSentVia || 'SMS'
-                        })
-                    });
-                } catch (notifError) {
-                    console.warn('[SalesStore] Confirmation notification failed (non-blocking):', notifError);
-                }
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.message || `HTTP ${response.status}`);
             }
 
-            console.log(`[SalesStore] 📅 RDV fixé pour ${prospectId} le ${appointment.date} à ${appointment.agencyName}`);
-            return updated;
+            const result = await response.json();
+
+            if (!result.success) {
+                throw new Error(result.error || 'Booking failed');
+            }
+
+            console.log(`[SalesStore] 📅 RDV créé pour ${prospectId} le ${appointment.date} à ${appointment.agencyName}`);
+            return result.prospect;
         } catch (error) {
             console.error('[SalesStore] Error booking appointment:', error);
             return null;
@@ -482,5 +504,39 @@ export const SalesStore = {
             console.error('[SalesStore] ❌ Erreur conversion:', error);
             return null;
         }
-    }
+    },
+
+    /**
+     * Réactiver un prospect perdu
+     */
+    reactivateProspect: async (id: string): Promise<Prospect | null> => {
+        try {
+            const response = await fetch(`${API_URL}/sales/prospects/${id}/reactivate`, {
+                method: 'POST',
+                headers: SalesStore.getHeaders(),
+            });
+            if (!response.ok) throw new Error('Failed to reactivate');
+            const data = await response.json();
+            return data.prospect || null;
+        } catch (error) {
+            console.error('[SalesStore] Error reactivating prospect:', error);
+            return null;
+        }
+    },
+
+    /**
+     * Métriques de vélocité du pipeline
+     */
+    getPipelineVelocity: async (): Promise<any> => {
+        try {
+            const response = await fetch(`${API_URL}/sales/pipeline/velocity`, {
+                headers: SalesStore.getHeaders(),
+            });
+            if (!response.ok) throw new Error('Failed to fetch velocity');
+            return await response.json();
+        } catch (error) {
+            console.error('[SalesStore] Error fetching velocity:', error);
+            return null;
+        }
+    },
 };

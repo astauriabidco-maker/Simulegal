@@ -19,8 +19,8 @@ export interface VeilleNote {
 
 const STORAGE_KEY = 'v2_veille_juridique';
 const API_URL = typeof window !== 'undefined'
-    ? (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000')
-    : 'http://localhost:5000';
+    ? (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000')
+    : 'http://localhost:4000';
 
 const SEED_DATA: VeilleNote[] = [
     {

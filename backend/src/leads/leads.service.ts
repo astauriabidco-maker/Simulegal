@@ -269,14 +269,30 @@ export class LeadsService {
         return this.mapLead(lead);
     }
 
-    async addNote(leadId: string, data: { content: string, author: string }) {
-        return this.prisma.leadNote.create({
+    async addNote(leadId: string, data: { content: string, author: string, authorName?: string }) {
+        const note = await this.prisma.leadNote.create({
             data: {
                 content: data.content,
-                author: data.author,
+                author: data.authorName ? `${data.author} (${data.authorName})` : data.author,
                 leadId
             }
         });
+
+        // 🤖 Analyser les messages provenant de l'Espace Client
+        // Note: Sur le front de démo, l'espace client envoie souvent avec author='AGENCY' par raccourci technique
+        if (data.author === 'AGENCY' || data.author === 'CLIENT') {
+            const lead = await this.prisma.lead.findUnique({ where: { id: leadId } });
+            if (lead) {
+                this.eventEmitter.emit('client.message.received', {
+                    leadId: lead.id,
+                    message: data.content,
+                    senderName: lead.name,
+                    source: 'PORTAL'
+                });
+            }
+        }
+
+        return note;
     }
 
     async create(data: any) {

@@ -26,7 +26,7 @@ export const EligibilityStore = {
      */
     syncWithBackend: async () => {
         if (typeof window === 'undefined') return;
-        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
         try {
             // 1. Thresholds
@@ -154,7 +154,7 @@ export const EligibilityStore = {
      * Evalue l'éligibilité via le Backend
      */
     evaluateEligibility: async (userProfile: any, category: string): Promise<ProcedureRule[]> => {
-        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
         try {
             const res = await fetch(`${API_URL}/eligibility/evaluate/${category}`, {
                 method: 'POST',
@@ -178,7 +178,7 @@ export const EligibilityStore = {
      * Sauvegarde une règle via le backend (avec audit trail)
      */
     saveRuleToBackend: async (category: string, ruleId: string, conditions: any, changedBy: string, changeDetails?: string) => {
-        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
         try {
             const res = await fetch(`${API_URL}/eligibility/rules/${category}/${ruleId}`, {
                 method: 'PUT',
@@ -199,7 +199,7 @@ export const EligibilityStore = {
      * Récupère l'audit log des modifications
      */
     fetchAuditLog: async (limit = 50): Promise<any[]> => {
-        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
         try {
             const res = await fetch(`${API_URL}/eligibility/audit-log?limit=${limit}`);
             if (res.ok) {
@@ -215,7 +215,7 @@ export const EligibilityStore = {
      * Récupère l'historique d'une règle spécifique
      */
     fetchRuleHistory: async (category: string, ruleId: string): Promise<any[]> => {
-        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
         try {
             const res = await fetch(`${API_URL}/eligibility/audit-log/${category}/${ruleId}`);
             if (res.ok) {

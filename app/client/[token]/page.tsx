@@ -7,7 +7,7 @@ import {
     Upload, Camera, FileText, ChevronDown, ChevronUp, ArrowUpCircle
 } from 'lucide-react';
 
-const API_URL = 'http://localhost:5000';
+const API_URL = 'http://localhost:4000';
 
 interface ChecklistItem {
     id: string;

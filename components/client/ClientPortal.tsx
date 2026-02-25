@@ -225,6 +225,21 @@ export default function ClientPortal({ leadId }: ClientPortalProps) {
                         </div>
                         <span className="text-sm font-bold">{progressPercent}%</span>
                     </div>
+
+                    {/* Facture Download */}
+                    {lead.amountPaid > 0 && (
+                        <div className="mt-4 pt-4 border-t border-white/10">
+                            <a
+                                href={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3005'}/payments/${lead.id}/invoice`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-2 px-3 py-2 bg-white/20 hover:bg-white/30 rounded-xl text-sm font-medium transition-colors"
+                            >
+                                <FileText size={16} />
+                                Télécharger ma facture
+                            </a>
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -421,12 +436,15 @@ export default function ClientPortal({ leadId }: ClientPortalProps) {
                             {lead.notes && lead.notes.length > 0 ? (
                                 lead.notes.map((note, i) => (
                                     <div key={i} className={`flex flex-col ${note.author === 'AGENCY' ? 'items-end' : 'items-start'}`}>
-                                        <div className={`max-w-[80%] p-4 rounded-2xl text-sm ${note.author === 'AGENCY' ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-slate-100 text-slate-800 rounded-tl-none'
+                                        <div className={`max-w-[80%] p-4 rounded-2xl text-sm ${note.author === 'AGENCY' ? 'bg-indigo-600 text-white rounded-tr-none' :
+                                                note.content.includes('🤖') ? 'bg-indigo-50 border border-indigo-100 text-slate-800 rounded-tl-none font-medium shadow-sm' :
+                                                    'bg-slate-100 text-slate-800 rounded-tl-none'
                                             }`}>
-                                            {note.content}
+                                            {note.content.split('\n').map((line, k) => <React.Fragment key={k}>{line}<br /></React.Fragment>)}
                                         </div>
-                                        <span className="text-[10px] text-slate-400 mt-1 font-bold uppercase tracking-widest">
-                                            {note.authorName || (note.author === 'HQ' ? 'Expert Juridique' : 'Moi')} • {new Date(note.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                        <span className="text-[10px] text-slate-400 mt-1 font-bold uppercase tracking-widest flex items-center gap-1">
+                                            {note.content.includes('🤖') ? 'L\'Équipe IA Support' : (note.authorName || (note.author === 'HQ' ? 'Expert Juridique' : 'Moi'))}
+                                            • {new Date(note.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                         </span>
                                     </div>
                                 ))

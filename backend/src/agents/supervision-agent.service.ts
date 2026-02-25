@@ -53,6 +53,60 @@ export class SupervisionAgentService {
     }
 
     /**
+     * Gère les messages envoyés depuis le l'Espace Client (Portail Web)
+     */
+    @OnEvent('client.message.received', { async: true })
+    async handleClientPortalMessage(payload: { leadId: string, message: string, senderName: string, source: string }) {
+        this.logger.log(`🤖 [Supervision Agent] Nouveau message depuis l'Espace Client lu: "${payload.message.slice(0, 30)}..."`);
+
+        const analysis = await this.ollamaText.analyzeCustomerMessage(payload.message, "Espace client en ligne. Message très lié au suivi de dossier juridique.");
+        if (!analysis) return;
+
+        // Si le message est posé comme une question simple, on peut faire répondre le bot via la messagerie
+        // Ou générer un Whisper Box au juriste. Dans ce cas-ci, l'AI Agent QA va répondre directement au client dans la boîte de dialogue front-end !
+        if (analysis.actionable) {
+            // Demander à OllamaTexService de générer une réponse (fonction réutilisée ou nouvelle)
+            const prompt = `Tu es l'assistant juridique virtuel "SimuLégal IA". 
+Ton client ${payload.senderName} vient de t'envoyer ce message sur son espace de suivi de dossier en ligne: "${payload.message}".
+Rédige une réponse très courte (max 3 phrases), rassurante, en expliquant que nos équipes (humaines) s'en occupent et que l'Agent IA a bien qualifié sa demande.`;
+
+            try {
+                // Appel LLM Pur (sans structure JSON stricte) pour faire parler le chatbot avec le client
+                const response = await fetch(`${this.ollamaText['ollamaUrl']}/api/generate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        model: this.ollamaText['model'],
+                        prompt: prompt,
+                        stream: false,
+                        options: { temperature: 0.5, num_predict: 200 }
+                    }),
+                    signal: AbortSignal.timeout(15000)
+                });
+
+                if (response.ok) {
+                    const result: any = await response.json();
+                    if (result.response) {
+                        const botMessage = result.response.trim();
+
+                        // Injecter la réponse comme note (Affichée avec design 'Chatbot' sur le front)
+                        await this.prisma.leadNote.create({
+                            data: {
+                                content: `🤖 **SimuLégal Assistant** : \n\n${botMessage}`,
+                                author: 'HQ (Agent IA)', // Astuce: le Front réagira au 🤖 ou appellera ça "Agent"
+                                leadId: payload.leadId,
+                            }
+                        });
+                        this.logger.log(`🤖 [Chatbot Espace Client] Réponse auto envoyée à ${payload.senderName}`);
+                    }
+                }
+            } catch (error) {
+                this.logger.debug(`🤖 [Chatbot Espace Client] LLM injoignable pour la réponse auto.`);
+            }
+        }
+    }
+
+    /**
      * Agent réveillé par l'événement de validation d'un nouveau document
      * @param payload 
      */

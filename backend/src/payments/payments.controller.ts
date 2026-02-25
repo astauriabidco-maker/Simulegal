@@ -1,11 +1,79 @@
-import { Controller, Post, Body, Headers, Request as Req, BadRequestException } from '@nestjs/common';
+import { Controller, Post, Get, Body, Headers, Param, Request as Req, BadRequestException, Res, UseGuards } from '@nestjs/common';
 import type { RawBodyRequest } from '@nestjs/common';
-import type { Request } from 'express';
+import type { Request, Response } from 'express';
 import { PaymentsService } from './payments.service';
+import { InvoicePdfService } from './invoice-pdf.service';
+import { SettingsService } from '../settings/settings.service';
+import { SERVICE_CATALOG } from '../config/services-pipeline.config';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @Controller('payments')
 export class PaymentsController {
-    constructor(private readonly paymentsService: PaymentsService) { }
+    constructor(
+        private readonly paymentsService: PaymentsService,
+        private readonly invoicePdfService: InvoicePdfService,
+        private readonly settingsService: SettingsService,
+    ) { }
+
+    /**
+     * GET /payments/resolve-price/:serviceId
+     * Retourne le prix officiel résolu pour un service (promo > override > catalogue > mapping frontend > fallback)
+     */
+    @Get('resolve-price/:serviceId')
+    async resolvePrice(@Param('serviceId') serviceId: string) {
+        const overrides = await this.settingsService.getServicePricing();
+        const catalogEntry = SERVICE_CATALOG.find(s => s.id === serviceId);
+
+        // Mapping des IDs frontend (pôles de service)
+        const FRONTEND_MAP: Record<string, { defaultPrice: number; label: string }> = {
+            'nat_accomp': { defaultPrice: 49000, label: 'Accompagnement Nationalité' },
+            'sejour_accomp': { defaultPrice: 35000, label: 'Accompagnement Titre Séjour' },
+            'regroupement_familial': { defaultPrice: 39000, label: 'Regroupement Familial' },
+            'permis_conduire': { defaultPrice: 15000, label: 'Changement Permis Conduire' },
+            'rdv_juriste': { defaultPrice: 8000, label: 'Rendez-vous Juriste' },
+            'rdv_prefecture': { defaultPrice: 5000, label: 'Rendez-vous Préfecture' },
+            'langue_a2b1': { defaultPrice: 25000, label: 'Cours de langues A2/B1' },
+            'form_civique': { defaultPrice: 12000, label: 'Formation Civique' },
+            'rappel_echeances': { defaultPrice: 0, label: 'Être Rappelé (gratuit)' },
+        };
+
+        const frontendEntry = FRONTEND_MAP[serviceId];
+        const basePriceCents = catalogEntry?.basePrice || frontendEntry?.defaultPrice || 0;
+        const label = catalogEntry?.name || frontendEntry?.label || serviceId;
+
+        const override = overrides[serviceId];
+        let priceCents = basePriceCents;
+        let source = catalogEntry ? 'CATALOG_DEFAULT' : (frontendEntry ? 'FRONTEND_MAP' : 'UNKNOWN');
+        let promoActive = false;
+
+        if (override) {
+            if (override.promoPrice && override.promoUntil && new Date(override.promoUntil) > new Date()) {
+                priceCents = override.promoPrice;
+                source = 'PROMO';
+                promoActive = true;
+            } else if (override.price) {
+                priceCents = override.price;
+                source = 'ADMIN_OVERRIDE';
+            }
+        }
+
+        if (priceCents === 0 && !catalogEntry && !frontendEntry) {
+            priceCents = 10000;
+            source = 'FALLBACK';
+        }
+
+        return {
+            serviceId,
+            serviceName: label,
+            priceCents,
+            priceEuros: priceCents / 100,
+            pricePer3: Math.ceil(priceCents / 3) / 100,
+            source,
+            promoActive,
+            promoUntil: promoActive ? override?.promoUntil : null,
+            defaultPriceCents: basePriceCents,
+        };
+    }
 
     @Post('create-session')
     async createSession(@Body() data: { leadId: string, successUrl: string, cancelUrl: string }) {
@@ -57,4 +125,26 @@ export class PaymentsController {
 
         return this.paymentsService.handleWebhook(signature, payload);
     }
+
+    /**
+     * Exporte la facture d'un lead au format PDF
+     */
+    @Get(':leadId/invoice')
+    // @UseGuards(JwtAuthGuard) // Protection optionnelle en fonction du contexte
+    async downloadInvoice(@Param('leadId') leadId: string, @Res() res: Response) {
+        try {
+            const pdfBuffer = await this.invoicePdfService.generateInvoicePdf(leadId);
+
+            res.set({
+                'Content-Type': 'application/pdf',
+                'Content-Disposition': `attachment; filename="facture-${leadId.substring(0, 6)}.pdf"`,
+                'Content-Length': pdfBuffer.length,
+            });
+
+            res.end(pdfBuffer);
+        } catch (error: any) {
+            res.status(404).json({ message: error.message || 'Invoice generation failed' });
+        }
+    }
 }
+

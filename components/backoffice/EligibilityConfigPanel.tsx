@@ -368,7 +368,7 @@ export default function EligibilityConfigPanel() {
     const [diagnosticData, setDiagnosticData] = useState<any>(null);
     const [diagnosticLoading, setDiagnosticLoading] = useState(false);
 
-    const API_BASE = typeof window !== 'undefined' ? (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000') : 'http://localhost:5000';
+    const API_BASE = typeof window !== 'undefined' ? (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') : 'http://localhost:4000';
 
     // Helper: extract .value from versioned threshold or return raw number
     const tv = (val: any): number => {
@@ -418,7 +418,7 @@ export default function EligibilityConfigPanel() {
     const handleSaveThresholds = async () => {
         EligibilityStore.updateThresholds(thresholds);
         // Persist to backend with audit trail
-        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
         try {
             await fetch(`${API_URL}/eligibility/thresholds`, {
                 method: 'PUT',

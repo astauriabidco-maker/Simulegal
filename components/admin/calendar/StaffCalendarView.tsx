@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { Calendar as CalendarIcon, Clock, User, MapPin, Video, Monitor, ChevronLeft, ChevronRight, Filter, CheckCircle2 } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Calendar as CalendarIcon, Clock, User, MapPin, Video, Monitor, ChevronLeft, ChevronRight, Filter, CheckCircle2, Phone, MessageSquare, Send, ExternalLink, Zap, Copy, Check, Edit3, PhoneCall, PhoneOff, Mic, MicOff } from 'lucide-react';
 import { CalendarStore, Appointment } from '../../../services/CalendarStore';
 import { AgencyStore } from '../../../services/AgencyStore';
 import { format, startOfWeek, endOfWeek, addWeeks, subWeeks, eachDayOfInterval, isSameDay, isToday, addMinutes, startOfDay, endOfDay, isAfter, isBefore, addDays } from 'date-fns';
@@ -9,6 +9,8 @@ import { fr } from 'date-fns/locale';
 import { CRM, Lead } from '../../../services/crmStore';
 import { ServiceConfigStore } from '../../../services/ServiceConfigStore';
 import { UserStore } from '../../../services/UserStore';
+import { WhatsAppWidget } from '../../backoffice/WhatsAppWidget';
+import { SERVICES_CATALOG } from '../../../data/services';
 
 interface StaffCalendarViewProps {
     currentUserRole: 'HQ_ADMIN' | 'AGENCY_MANAGER' | 'CASE_WORKER';
@@ -28,6 +30,81 @@ export default function StaffCalendarView({ currentUserRole, currentUserAgencyId
     const [filterAgencyId, setFilterAgencyId] = useState<string>('ALL');
     const [agencies, setAgencies] = useState<any[]>([]);
     const [specialFilters, setSpecialFilters] = useState<string[]>([]); // 'MISSING_DOCS' | 'UNCONFIRMED' | 'CONFLICTS'
+
+    // Toast & Quick Actions
+    const [toastMessage, setToastMessage] = useState('');
+    const [showQuickMessage, setShowQuickMessage] = useState(false);
+    const [quickMessageText, setQuickMessageText] = useState('');
+    const [quickMessageChannel, setQuickMessageChannel] = useState<'sms' | 'whatsapp' | 'email'>('whatsapp');
+
+    // Panels inside RDV modal
+    const [activePanel, setActivePanel] = useState<'none' | 'call' | 'whatsapp' | 'message'>('none');
+    const [isInCall, setIsInCall] = useState(false);
+    const [callDuration, setCallDuration] = useState(0);
+    const [callNote, setCallNote] = useState('');
+    const [isMuted, setIsMuted] = useState(false);
+
+    // Editable fields
+    const [editingService, setEditingService] = useState(false);
+    const [editingStaff, setEditingStaff] = useState(false);
+    const [editServiceId, setEditServiceId] = useState('');
+    const [editStaffId, setEditStaffId] = useState('');
+    const [isSavingField, setIsSavingField] = useState(false);
+
+    const showToast = useCallback((msg: string) => {
+        setToastMessage(msg);
+        setTimeout(() => setToastMessage(''), 2500);
+    }, []);
+
+    const copyToClipboard = useCallback((text: string, label: string) => {
+        navigator.clipboard.writeText(text).then(() => {
+            showToast(`✅ ${label} copié !`);
+        }).catch(() => {
+            showToast(`📋 ${text}`);
+        });
+    }, [showToast]);
+
+    // Call timer
+    useEffect(() => {
+        let timer: NodeJS.Timeout;
+        if (isInCall) {
+            timer = setInterval(() => setCallDuration(d => d + 1), 1000);
+        }
+        return () => clearInterval(timer);
+    }, [isInCall]);
+
+    const formatCallDuration = (s: number) => {
+        const m = Math.floor(s / 60);
+        const sec = s % 60;
+        return `${m.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
+    };
+
+    const handleStartCall = () => {
+        setIsInCall(true);
+        setCallDuration(0);
+        setCallNote('');
+    };
+
+    const handleEndCall = () => {
+        setIsInCall(false);
+        showToast(`📞 Appel terminé (${formatCallDuration(callDuration)})`);
+    };
+
+    const handleSaveField = async (appointmentId: string, field: 'serviceId' | 'hostUserId', value: string) => {
+        setIsSavingField(true);
+        try {
+            await CalendarStore.updateAppointment(appointmentId, { [field]: value });
+            // Refresh appointments
+            const data = await CalendarStore.getAllAppointments();
+            setAppointments(data);
+            showToast(`✅ ${field === 'serviceId' ? 'Service' : 'Intervenant'} mis à jour`);
+            setEditingService(false);
+            setEditingStaff(false);
+        } catch {
+            showToast('❌ Erreur de mise à jour');
+        }
+        setIsSavingField(false);
+    };
 
     // Manual Booking
     const [slotToBook, setSlotToBook] = useState<Date | null>(null);
@@ -511,6 +588,9 @@ export default function StaffCalendarView({ currentUserRole, currentUserAgencyId
                                                             setSelectedAppointment(apt);
                                                             setIsCancelling(false);
                                                             setCancellationReason('');
+                                                            setActivePanel('none');
+                                                            setEditingService(false);
+                                                            setEditingStaff(false);
                                                         }}
                                                         className={`
                                                             absolute left-1 right-1 rounded-lg px-2 py-1 text-left text-xs transition-all hover:scale-[1.02] hover:z-20 shadow-sm border-l-4 cursor-grab active:cursor-grabbing
@@ -546,107 +626,378 @@ export default function StaffCalendarView({ currentUserRole, currentUserAgencyId
                 </div>
             </div>
 
-            {/* Modal Detail */}
-            {selectedAppointment && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm shadow-2xl">
-                    <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-sm w-full animate-in zoom-in-95">
-                        <div className="flex justify-between items-start mb-6">
-                            <div>
-                                <h3 className="text-xl font-black text-slate-900">Détails du Rendez-vous</h3>
-                                <p className="text-sm text-slate-500 font-bold">{selectedAppointment.type === 'VISIO_JURISTE' ? 'Visio-Conférence Experte' : 'Rendez-vous Agence'}</p>
-                            </div>
-                            <button onClick={() => setSelectedAppointment(null)} className="p-2 hover:bg-slate-100 rounded-full text-slate-400 hover:rotate-90 transition-all">
-                                <span className="sr-only">Fermer</span>
-                                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                            </button>
-                        </div>
+            {/* Modal Detail — Fiche RDV Enrichie */}
+            {selectedAppointment && (() => {
+                const apt = selectedAppointment as any;
+                const prospect = apt.prospect;
+                const lead = apt.lead;
+                const agency = apt.agency;
+                const contactName = apt.leadName || 'Inconnu';
+                const contactEmail = apt.leadEmail || prospect?.email || lead?.email || '';
+                const contactPhone = prospect?.phone || lead?.phone || '';
+                const contactId = apt.leadId || apt.prospectId || '';
+                const serviceId = apt.serviceId || prospect?.interestServiceId || lead?.serviceId || '';
+                const serviceMeta = serviceId ? ServiceConfigStore.getServiceMetadata(serviceId) : null;
+                const isVisio = apt.type === 'VISIO_JURISTE';
+                const startDate = new Date(apt.start);
+                const endDate = new Date(apt.end);
+                const now = new Date();
+                const diffMs = startDate.getTime() - now.getTime();
+                const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+                const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+                const isUpcoming = diffMs > 0;
+                const isPast = diffMs < 0;
+                const isToday2 = diffDays === 0 && isUpcoming;
 
-                        <div className="space-y-4 mb-8">
-                            <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                                <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm text-slate-900 font-black text-lg">
-                                    {selectedAppointment.leadName.charAt(0)}
-                                </div>
-                                <div>
-                                    <p className="font-bold text-slate-900">{selectedAppointment.leadName}</p>
-                                    <p className="text-xs text-slate-400 font-medium">Client #SL-{selectedAppointment.leadId.substring(0, 4)}</p>
+                return (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm" onClick={() => setSelectedAppointment(null)}>
+                        <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full animate-in zoom-in-95 overflow-hidden" onClick={(e) => e.stopPropagation()}>
+
+                            {/* Header gradient */}
+                            <div className={`px-6 py-5 ${isVisio ? 'bg-gradient-to-r from-indigo-600 to-purple-600' : 'bg-gradient-to-r from-emerald-600 to-teal-600'}`}>
+                                <div className="flex justify-between items-start">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center text-white font-black text-xl">
+                                            {contactName.charAt(0)}
+                                        </div>
+                                        <div>
+                                            <h3 className="text-lg font-black text-white">{contactName}</h3>
+                                            <div className="flex items-center gap-2 mt-1">
+                                                <span className="text-white/70 text-xs font-medium">#{contactId.substring(0, 8)}</span>
+                                                <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${apt.status === 'SCHEDULED' ? 'bg-white/20 text-white' :
+                                                    apt.status === 'COMPLETED' ? 'bg-emerald-400/30 text-emerald-100' :
+                                                        apt.status === 'CANCELLED' ? 'bg-rose-400/30 text-rose-100' :
+                                                            'bg-amber-400/30 text-amber-100'
+                                                    }`}>
+                                                    {apt.status === 'SCHEDULED' ? '📅 Programmé' :
+                                                        apt.status === 'COMPLETED' ? '✅ Terminé' :
+                                                            apt.status === 'CANCELLED' ? '❌ Annulé' : '⚠️ No-Show'}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button onClick={() => setSelectedAppointment(null)} className="p-2 hover:bg-white/10 rounded-full text-white/60 hover:text-white transition-all">
+                                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                                    </button>
                                 </div>
                             </div>
 
-                            {selectedAppointment.dossierStatus && (
-                                <div className={`p-4 rounded-2xl border flex items-center justify-between ${selectedAppointment.dossierStatus === 'COMPLETE' ? 'bg-emerald-50 border-emerald-100 text-emerald-700' :
-                                    selectedAppointment.dossierStatus === 'PARTIAL' ? 'bg-orange-50 border-orange-100 text-orange-700' :
-                                        'bg-rose-50 border-rose-100 text-rose-700'
-                                    }`}>
-                                    <div className="flex items-center gap-2">
-                                        <CheckCircle2 size={16} />
-                                        <span className="text-xs font-black uppercase tracking-wider">
-                                            Dossier {selectedAppointment.dossierStatus === 'COMPLETE' ? 'Complet' :
-                                                selectedAppointment.dossierStatus === 'PARTIAL' ? 'Incomplet' : 'Vide'}
+                            <div className="p-6 space-y-5 max-h-[65vh] overflow-y-auto">
+
+                                {/* Countdown / Info Box */}
+                                {isUpcoming && apt.status === 'SCHEDULED' && (
+                                    <div className={`p-3 rounded-xl border text-center ${isToday2 ? 'bg-amber-50 border-amber-200' : 'bg-indigo-50 border-indigo-100'
+                                        }`}>
+                                        <span className={`text-xs font-black uppercase tracking-wider ${isToday2 ? 'text-amber-600' : 'text-indigo-500'}`}>
+                                            {isToday2 ? `⏰ Dans ${diffHours}h` :
+                                                diffDays === 1 ? '📅 Demain' :
+                                                    `📅 Dans ${diffDays} jours`}
                                         </span>
                                     </div>
-                                    <span className="text-[10px] font-bold">
-                                        {selectedAppointment.missingDocsCount === 0 ? '✓ Prêt pour RDV' : `${selectedAppointment.missingDocsCount} pièces manquantes`}
-                                    </span>
-                                </div>
-                            )}
-
-                            <div className="space-y-3">
-                                <div className="flex items-center gap-3 text-slate-600 border-b border-slate-50 pb-2">
-                                    <Clock size={16} className="text-indigo-500" />
-                                    <div className="text-xs font-bold leading-tight">
-                                        <p>{format(new Date(selectedAppointment.start), 'EEEE d MMMM', { locale: fr })}</p>
-                                        <p className="text-slate-400">{format(new Date(selectedAppointment.start), 'HH:mm')} - {format(new Date(selectedAppointment.end), 'HH:mm')}</p>
-                                    </div>
-                                </div>
-
-                                {selectedAppointment.hostUser && (
-                                    <div className="flex items-center gap-3 text-slate-600">
-                                        <User size={16} className="text-indigo-500" />
-                                        <span className="text-xs font-bold truncate">Juriste: {(selectedAppointment.hostUser as any).name}</span>
+                                )}
+                                {isPast && apt.status === 'SCHEDULED' && (
+                                    <div className="p-3 rounded-xl border bg-rose-50 border-rose-200 text-center">
+                                        <span className="text-xs font-black uppercase tracking-wider text-rose-500">⚠️ RDV passé — Mettre à jour le statut</span>
                                     </div>
                                 )}
 
-                                {selectedAppointment.type === 'VISIO_JURISTE' && selectedAppointment.meetingLink && (
-                                    <a href={selectedAppointment.meetingLink} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 text-indigo-600 hover:text-indigo-700 transition-colors p-3 bg-indigo-50 rounded-xl border border-indigo-100">
-                                        <Monitor size={18} />
-                                        <span className="text-xs font-black">Rejoindre la visio (Meet)</span>
-                                    </a>
+                                {/* Date & Heure */}
+                                <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${isVisio ? 'bg-indigo-100 text-indigo-600' : 'bg-emerald-100 text-emerald-600'}`}>
+                                        <CalendarIcon size={22} />
+                                    </div>
+                                    <div className="flex-1">
+                                        <p className="text-sm font-black text-slate-900 capitalize">{format(startDate, 'EEEE d MMMM yyyy', { locale: fr })}</p>
+                                        <p className="text-xs text-slate-500 font-bold">{format(startDate, 'HH:mm')} — {format(endDate, 'HH:mm')} ({Math.round((endDate.getTime() - startDate.getTime()) / (1000 * 60))} min)</p>
+                                    </div>
+                                    <div className={`px-3 py-1.5 rounded-xl text-xs font-black ${isVisio ? 'bg-indigo-100 text-indigo-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                                        {isVisio ? '🎥 Visio' : '🏢 Agence'}
+                                    </div>
+                                </div>
+
+                                {/* Contact & Coordonnées */}
+                                <div className="space-y-2">
+                                    <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">Coordonnées</h4>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {contactPhone && (
+                                            <a href={`tel:${contactPhone}`} className="flex items-center gap-2 p-3 bg-slate-50 rounded-xl border border-slate-100 hover:bg-indigo-50 hover:border-indigo-200 transition-all group">
+                                                <Phone size={14} className="text-slate-400 group-hover:text-indigo-500" />
+                                                <span className="text-xs font-bold text-slate-700 truncate">{contactPhone}</span>
+                                            </a>
+                                        )}
+                                        {contactEmail && (
+                                            <a href={`mailto:${contactEmail}`} className="flex items-center gap-2 p-3 bg-slate-50 rounded-xl border border-slate-100 hover:bg-indigo-50 hover:border-indigo-200 transition-all group">
+                                                <Send size={14} className="text-slate-400 group-hover:text-indigo-500" />
+                                                <span className="text-xs font-bold text-slate-700 truncate">{contactEmail}</span>
+                                            </a>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Lieu / Juriste — ÉDITABLE */}
+                                <div className="space-y-2">
+                                    <div className="flex items-center justify-between px-1">
+                                        <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Lieu & Intervenant</h4>
+                                    </div>
+                                    <div className="space-y-2">
+                                        {isVisio && apt.meetingLink && (
+                                            <a href={apt.meetingLink} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-3 bg-indigo-50 rounded-xl border border-indigo-100 hover:bg-indigo-100 transition-all group">
+                                                <Monitor size={16} className="text-indigo-500" />
+                                                <span className="text-xs font-black text-indigo-700 flex-1">Rejoindre la visio (Meet)</span>
+                                                <ExternalLink size={12} className="text-indigo-400" />
+                                            </a>
+                                        )}
+                                        {!isVisio && (
+                                            <div className="flex items-center gap-3 p-3 bg-emerald-50 rounded-xl border border-emerald-100">
+                                                <MapPin size={16} className="text-emerald-500" />
+                                                <div className="flex-1">
+                                                    <p className="text-xs font-black text-emerald-800">{agency?.name || apt.agencyId || 'Agence non spécifiée'}</p>
+                                                    {agency?.contactEmail && <p className="text-[10px] text-emerald-600">{agency.contactEmail}</p>}
+                                                </div>
+                                            </div>
+                                        )}
+                                        {/* Intervenant — éditable */}
+                                        {editingStaff ? (
+                                            <div className="flex items-center gap-2 p-2 bg-amber-50 rounded-xl border border-amber-200">
+                                                <User size={14} className="text-amber-500" />
+                                                <select
+                                                    className="flex-1 text-xs font-bold bg-transparent border-none outline-none"
+                                                    value={editStaffId}
+                                                    onChange={(e) => setEditStaffId(e.target.value)}
+                                                >
+                                                    <option value="">— Non assigné —</option>
+                                                    {allStaff.map((s: any) => (
+                                                        <option key={s.id} value={s.id}>{s.name} ({s.role})</option>
+                                                    ))}
+                                                </select>
+                                                <button disabled={isSavingField} onClick={() => handleSaveField(apt.id, 'hostUserId', editStaffId)} className="px-2 py-1 bg-amber-500 text-white rounded-lg text-[10px] font-black hover:bg-amber-600 disabled:opacity-50">
+                                                    {isSavingField ? '...' : '✓'}
+                                                </button>
+                                                <button onClick={() => setEditingStaff(false)} className="text-slate-400 hover:text-slate-600 text-xs">✕</button>
+                                            </div>
+                                        ) : (
+                                            <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100 group">
+                                                <User size={16} className="text-indigo-500" />
+                                                <span className="text-xs font-bold text-slate-700 flex-1">
+                                                    {apt.hostUser ? `Juriste : ${(apt.hostUser as any).name}` : '— Non assigné —'}
+                                                </span>
+                                                <button onClick={() => { setEditingStaff(true); setEditStaffId(apt.hostUserId || ''); }} className="p-1 opacity-0 group-hover:opacity-100 hover:bg-slate-200 rounded-lg transition-all">
+                                                    <Edit3 size={12} className="text-slate-400" />
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Service — ÉDITABLE */}
+                                <div className="space-y-2">
+                                    <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">Service</h4>
+                                    {editingService ? (
+                                        <div className="flex items-center gap-2 p-2 bg-purple-50 rounded-xl border border-purple-200">
+                                            <Zap size={14} className="text-purple-500" />
+                                            <select
+                                                className="flex-1 text-xs font-bold bg-transparent border-none outline-none"
+                                                value={editServiceId}
+                                                onChange={(e) => setEditServiceId(e.target.value)}
+                                            >
+                                                <option value="">— Choisir un service —</option>
+                                                {SERVICES_CATALOG.map(s => (
+                                                    <option key={s.id} value={s.id}>{s.title}</option>
+                                                ))}
+                                            </select>
+                                            <button disabled={isSavingField} onClick={() => handleSaveField(apt.id, 'serviceId', editServiceId)} className="px-2 py-1 bg-purple-500 text-white rounded-lg text-[10px] font-black hover:bg-purple-600 disabled:opacity-50">
+                                                {isSavingField ? '...' : '✓'}
+                                            </button>
+                                            <button onClick={() => setEditingService(false)} className="text-slate-400 hover:text-slate-600 text-xs">✕</button>
+                                        </div>
+                                    ) : (
+                                        <div className="flex items-center gap-3 p-3 bg-purple-50 rounded-xl border border-purple-100 group">
+                                            <Zap size={16} className="text-purple-500" />
+                                            <div className="flex-1">
+                                                <p className="text-xs font-black text-purple-800">{serviceMeta?.name || serviceId || 'Non défini'}</p>
+                                                {serviceMeta?.category && <p className="text-[10px] text-purple-600">{serviceMeta.category}</p>}
+                                            </div>
+                                            <button onClick={() => { setEditingService(true); setEditServiceId(serviceId); }} className="p-1 opacity-0 group-hover:opacity-100 hover:bg-purple-200 rounded-lg transition-all">
+                                                <Edit3 size={12} className="text-purple-400" />
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Dossier Status */}
+                                {apt.dossierStatus && apt.dossierStatus !== 'EMPTY' && (
+                                    <div className={`p-4 rounded-2xl border flex items-center justify-between ${apt.dossierStatus === 'COMPLETE' ? 'bg-emerald-50 border-emerald-100 text-emerald-700' :
+                                        apt.dossierStatus === 'PARTIAL' ? 'bg-orange-50 border-orange-100 text-orange-700' :
+                                            'bg-rose-50 border-rose-100 text-rose-700'
+                                        }`}>
+                                        <div className="flex items-center gap-2">
+                                            <CheckCircle2 size={16} />
+                                            <span className="text-xs font-black uppercase tracking-wider">
+                                                Dossier {apt.dossierStatus === 'COMPLETE' ? 'Complet ✓' :
+                                                    apt.dossierStatus === 'PARTIAL' ? 'Incomplet' : 'Vide'}
+                                            </span>
+                                        </div>
+                                        {apt.missingDocsCount > 0 && (
+                                            <span className="text-[10px] font-bold">{apt.missingDocsCount} pièces manquantes</span>
+                                        )}
+                                    </div>
                                 )}
-                                {selectedAppointment.type === 'PHYSICAL_AGENCY' && (
-                                    <div className="flex items-center gap-3 text-slate-600">
-                                        <MapPin size={18} className="text-emerald-500" />
-                                        <span className="text-xs font-bold">Agence Physique</span>
+
+                                {/* ═══ ACTIONS RAPIDES ═══ */}
+                                <div className="space-y-2">
+                                    <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">Actions rapides</h4>
+                                    <div className="grid grid-cols-4 gap-2">
+                                        {/* Appeler */}
+                                        {contactPhone && (
+                                            <button
+                                                onClick={() => setActivePanel(activePanel === 'call' ? 'none' : 'call')}
+                                                className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all cursor-pointer ${activePanel === 'call' ? 'bg-blue-100 border-blue-300 ring-2 ring-blue-200' : 'bg-blue-50 border-blue-100 hover:bg-blue-100'}`}
+                                            >
+                                                <PhoneCall size={16} className="text-blue-500" />
+                                                <span className="text-[10px] font-black text-blue-700">Appeler</span>
+                                            </button>
+                                        )}
+                                        {/* WhatsApp */}
+                                        {contactPhone && (
+                                            <button
+                                                onClick={() => setActivePanel(activePanel === 'whatsapp' ? 'none' : 'whatsapp')}
+                                                className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all cursor-pointer ${activePanel === 'whatsapp' ? 'bg-emerald-100 border-emerald-300 ring-2 ring-emerald-200' : 'bg-emerald-50 border-emerald-100 hover:bg-emerald-100'}`}
+                                            >
+                                                <svg viewBox="0 0 24 24" className="w-4 h-4 text-emerald-500 fill-current"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" /><path d="M12 0C5.373 0 0 5.373 0 12c0 2.625.846 5.059 2.284 7.034L.789 23.492a.5.5 0 00.612.612l4.458-1.495A11.937 11.937 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-2.335 0-4.512-.745-6.29-2.013l-.44-.334-2.633.883.883-2.633-.334-.44A9.957 9.957 0 012 12C2 6.486 6.486 2 12 2s10 4.486 10 10-4.486 10-10 10z" /></svg>
+                                                <span className="text-[10px] font-black text-emerald-700">WhatsApp</span>
+                                            </button>
+                                        )}
+                                        {/* Email */}
+                                        {contactEmail && (
+                                            <button onClick={() => copyToClipboard(contactEmail, 'Email')} className="flex flex-col items-center gap-1.5 p-3 bg-violet-50 rounded-xl border border-violet-100 hover:bg-violet-100 transition-all cursor-pointer">
+                                                <Send size={16} className="text-violet-500" />
+                                                <span className="text-[10px] font-black text-violet-700">Email</span>
+                                            </button>
+                                        )}
+                                        {/* Simulateur */}
+                                        <button
+                                            onClick={() => {
+                                                const simUrl = `/?service=${serviceId || 'naturalisation'}${apt.prospectId ? `&prospect=${apt.prospectId}` : ''}&simulator=true`;
+                                                window.open(simUrl, '_blank');
+                                                showToast('🚀 Simulateur ouvert');
+                                            }}
+                                            className="flex flex-col items-center gap-1.5 p-3 bg-gradient-to-b from-indigo-50 to-purple-50 rounded-xl border border-indigo-100 hover:from-indigo-100 hover:to-purple-100 transition-all cursor-pointer"
+                                        >
+                                            <Zap size={16} className="text-indigo-500" />
+                                            <span className="text-[10px] font-black text-indigo-700">Simulateur</span>
+                                        </button>
+                                    </div>
+
+                                    {/* ════ PANEL: MINI COCKPIT D'APPEL ════ */}
+                                    {activePanel === 'call' && contactPhone && (
+                                        <div className="p-4 bg-gradient-to-b from-blue-50 to-slate-50 rounded-2xl border border-blue-200 space-y-3 animate-in slide-in-from-top-2">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <div className={`w-3 h-3 rounded-full ${isInCall ? 'bg-red-500 animate-pulse' : 'bg-blue-400'}`} />
+                                                    <span className="text-xs font-black text-slate-700">{isInCall ? `En cours — ${formatCallDuration(callDuration)}` : contactPhone}</span>
+                                                </div>
+                                                <span className="text-[10px] font-bold text-slate-400">RDV: {format(startDate, 'd MMM HH:mm', { locale: fr })}</span>
+                                            </div>
+                                            {/* Call Controls */}
+                                            <div className="flex items-center justify-center gap-4">
+                                                {!isInCall ? (
+                                                    <button onClick={handleStartCall} className="w-14 h-14 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center shadow-lg hover:shadow-xl transition-all active:scale-95">
+                                                        <PhoneCall size={22} />
+                                                    </button>
+                                                ) : (
+                                                    <>
+                                                        <button onClick={() => setIsMuted(!isMuted)} className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${isMuted ? 'bg-amber-100 text-amber-600' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>
+                                                            {isMuted ? <MicOff size={16} /> : <Mic size={16} />}
+                                                        </button>
+                                                        <button onClick={handleEndCall} className="w-14 h-14 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-lg hover:shadow-xl transition-all active:scale-95">
+                                                            <PhoneOff size={22} />
+                                                        </button>
+                                                        <button onClick={() => copyToClipboard(contactPhone, 'Numéro')} className="w-10 h-10 bg-slate-100 text-slate-500 hover:bg-slate-200 rounded-full flex items-center justify-center transition-all">
+                                                            <Copy size={14} />
+                                                        </button>
+                                                    </>
+                                                )}
+                                            </div>
+                                            {/* Call Note */}
+                                            <textarea
+                                                className="w-full p-2.5 rounded-xl border border-blue-100 text-xs focus:ring-2 focus:ring-blue-400 outline-none resize-none bg-white"
+                                                placeholder="Notes d'appel..."
+                                                rows={2}
+                                                value={callNote}
+                                                onChange={(e) => setCallNote(e.target.value)}
+                                            />
+                                            {callNote.trim() && (
+                                                <button onClick={() => { showToast('💾 Note sauvegardée'); setActivePanel('none'); }} className="w-full py-2 bg-blue-500 text-white rounded-xl text-xs font-black hover:bg-blue-600 transition-all">
+                                                    💾 Sauvegarder la note
+                                                </button>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {/* ════ PANEL: HUB WHATSAPP ════ */}
+                                    {activePanel === 'whatsapp' && contactPhone && (
+                                        <div className="rounded-2xl overflow-hidden border border-emerald-200 animate-in slide-in-from-top-2">
+                                            <WhatsAppWidget
+                                                contactId={contactId}
+                                                contactType={apt.leadId ? 'LEAD' : 'PROSPECT'}
+                                                contactName={contactName}
+                                                contactPhone={contactPhone}
+                                            />
+                                        </div>
+                                    )}
+
+                                    {/* Ouvrir le dossier */}
+                                    {(apt.leadId || apt.prospectId) && (
+                                        <button
+                                            onClick={() => {
+                                                setSelectedAppointment(null);
+                                                if (apt.leadId) {
+                                                    window.location.href = `/admin/dossiers?leadId=${apt.leadId}`;
+                                                } else if (apt.prospectId) {
+                                                    window.location.href = `/admin/sales`;
+                                                }
+                                            }}
+                                            className="w-full flex items-center justify-center gap-2 p-3 bg-slate-100 rounded-xl text-slate-700 hover:bg-slate-200 transition-all"
+                                        >
+                                            <ExternalLink size={14} />
+                                            <span className="text-xs font-bold">{apt.leadId ? 'Ouvrir le dossier client' : 'Voir le Pipeline Ventes'}</span>
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Footer Actions */}
+                            <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50">
+                                {isCancelling ? (
+                                    <div className="space-y-3">
+                                        <label className="text-xs font-black uppercase text-rose-500 block">Motif d'annulation</label>
+                                        <textarea
+                                            className="w-full p-3 rounded-xl border border-rose-200 text-sm focus:ring-2 focus:ring-rose-500 outline-none"
+                                            placeholder="Expliquez pourquoi..."
+                                            rows={2}
+                                            value={cancellationReason}
+                                            onChange={(e) => setCancellationReason(e.target.value)}
+                                        />
+                                        <div className="flex gap-2">
+                                            <button onClick={() => setIsCancelling(false)} className="px-4 py-2 text-rose-400 font-bold hover:bg-rose-100 rounded-lg text-xs">Retour</button>
+                                            <button onClick={handleCancelAppointment} className="flex-1 px-4 py-2 bg-rose-500 text-white font-bold rounded-lg text-xs shadow-md hover:bg-rose-600 transition-colors">Confirmer l'annulation</button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="flex gap-3">
+                                        <button onClick={() => setIsCancelling(true)} className="flex-1 py-3 text-rose-500 font-bold hover:bg-rose-50 rounded-xl transition-colors text-sm">
+                                            Annuler le RDV
+                                        </button>
+                                        <button onClick={() => setSelectedAppointment(null)} className="flex-1 bg-slate-900 text-white py-3 rounded-xl font-black shadow-lg hover:bg-slate-800 transition-all text-sm">
+                                            Fermer
+                                        </button>
                                     </div>
                                 )}
                             </div>
                         </div>
-
-                        {isCancelling ? (
-                            <div className="mt-6 p-4 bg-rose-50 rounded-2xl border border-rose-100 animate-in slide-in-from-top-2">
-                                <label className="text-xs font-black uppercase text-rose-500 mb-2 block">Motif d'annulation</label>
-                                <textarea
-                                    className="w-full p-3 rounded-xl border border-rose-200 text-sm focus:ring-2 focus:ring-rose-500 outline-none mb-3"
-                                    placeholder="Expliquez pourquoi..."
-                                    rows={3}
-                                    value={cancellationReason}
-                                    onChange={(e) => setCancellationReason(e.target.value)}
-                                />
-                                <div className="flex gap-2">
-                                    <button onClick={() => setIsCancelling(false)} className="px-4 py-2 text-rose-400 font-bold hover:bg-rose-100 rounded-lg text-xs">Retour</button>
-                                    <button onClick={handleCancelAppointment} className="flex-1 px-4 py-2 bg-rose-500 text-white font-bold rounded-lg text-xs shadow-md hover:bg-rose-600 transition-colors">Confirmer l'annulation</button>
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="flex gap-3 mt-8">
-                                <button onClick={() => setIsCancelling(true)} className="flex-1 py-3 text-rose-500 font-bold hover:bg-rose-50 rounded-xl transition-colors">Annuler le RDV</button>
-                                <button onClick={() => setSelectedAppointment(null)} className="flex-1 bg-slate-900 text-white py-3 rounded-xl font-black shadow-lg hover:bg-slate-800 transition-all">
-                                    Fermer
-                                </button>
-                            </div>
-                        )}
                     </div>
-                </div>
-            )}
+                );
+            })()}
 
             {/* Absence Detail Modal */}
             {selectedAbsence && (
@@ -832,6 +1183,15 @@ export default function StaffCalendarView({ currentUserRole, currentUserAgencyId
                                 {loading ? 'Traitement...' : modalMode === 'BOOKING' ? 'Confirmer la Réservation' : 'Bloquer le Créneau'}
                             </button>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Toast notification */}
+            {toastMessage && (
+                <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] animate-in fade-in slide-in-from-bottom-4">
+                    <div className="bg-slate-900 text-white px-6 py-3 rounded-2xl shadow-2xl font-bold text-sm flex items-center gap-2">
+                        {toastMessage}
                     </div>
                 </div>
             )}

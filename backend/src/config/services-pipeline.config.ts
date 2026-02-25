@@ -125,7 +125,7 @@ export const PIPELINE_TEMPLATES: Record<string, PipelineStage[]> = {
     QUALIFICATION: [
         { key: 'NEW', label: 'Nouveau', color: '#6366f1' },
         { key: 'TO_CONTACT', label: 'À rappeler', color: '#f59e0b', description: 'File d\'attente du siège' },
-        { key: 'QUALIFIED', label: 'Qualifié', color: '#22c55e', description: 'Information donnée ou dossier ouvert' },
+        { key: 'CONTACTED', label: 'Contacté', color: '#22c55e', description: 'Information donnée ou dossier ouvert' },
         { key: 'ARCHIVED', label: 'Sans suite', color: '#94a3b8', description: 'Injoignable ou non éligible' },
     ],
 };

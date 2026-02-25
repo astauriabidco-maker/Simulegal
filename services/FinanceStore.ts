@@ -23,7 +23,7 @@ const PAYOUTS_KEY = 'finance_payouts';
 
 import { AuthStore } from './authStore';
 
-const API_URL = 'http://localhost:5000/finance';
+const API_URL = 'http://localhost:4000/finance';
 
 const getHeaders = () => {
     const token = AuthStore.getToken();

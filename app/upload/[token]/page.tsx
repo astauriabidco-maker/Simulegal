@@ -15,7 +15,7 @@ interface TokenInfo {
     existingStatus: string | null;
 }
 
-const API_URL = 'http://localhost:5000';
+const API_URL = 'http://localhost:4000';
 
 export default function UploadPage() {
     const params = useParams();

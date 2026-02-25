@@ -31,7 +31,7 @@ export class NotificationsController {
         channel: 'SMS' | 'WHATSAPP'
     }) {
         const baseUrl = this.configService.get<string>('FRONTEND_URL') || 'https://app.simulegal.fr';
-        const link = `${baseUrl}/simulation?ref=${data.prospectId}`;
+        const link = `${baseUrl}/?prospectId=${data.prospectId}`;
 
         const message = `Bonjour ${data.prospectFirstName}, voici votre lien de simulation personnalisé SimuLegal :\n${link}\n\nCe lien est valable 48h.`;
 

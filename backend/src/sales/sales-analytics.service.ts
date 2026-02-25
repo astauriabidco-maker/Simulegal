@@ -60,14 +60,13 @@ export class SalesAnalyticsService {
 
     private estimatePipelineValue(groupedStatus: any[]): number {
         // Simple estimation: 1 Client = 1500€ (avg basket)
-        // Probabilities: NEW (5%), CONTACTED (10%), QUALIFIED (25%), MEETING (40%), SIGNED (100%)
+        // Probabilities: NEW (5%), CONTACTED (15%), MEETING (40%), SIGNED (100%)
         let total = 0;
         groupedStatus.forEach(group => {
             const count = group._count.status;
             switch (group.status) {
                 case 'NEW': total += count * 1500 * 0.05; break;
-                case 'CONTACTED': total += count * 1500 * 0.10; break;
-                case 'QUALIFIED': total += count * 1500 * 0.25; break;
+                case 'CONTACTED': total += count * 1500 * 0.15; break;
                 case 'MEETING_BOOKED': total += count * 1500 * 0.40; break;
                 case 'SIGNED': total += count * 1500 * 1.0; break;
                 case 'NO_SHOW': total += count * 1500 * 0.15; break;

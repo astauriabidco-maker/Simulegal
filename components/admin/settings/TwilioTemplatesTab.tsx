@@ -56,7 +56,7 @@ export default function TwilioTemplatesTab() {
     const [showBody, setShowBody] = useState<Record<string, boolean>>({});
     const [savedMessage, setSavedMessage] = useState('');
 
-    const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+    const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
     useEffect(() => {
         loadTemplates();

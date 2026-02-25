@@ -302,7 +302,7 @@ export const AVAILABLE_SERVICES: ServiceMetadata[] = [
 const CUSTOM_DOCS_KEY = 'custom_documents';
 const CUSTOM_SERVICES_KEY = 'custom_services';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
 export const ServiceConfigStore = {
 

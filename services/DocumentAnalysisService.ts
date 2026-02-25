@@ -26,7 +26,7 @@ const ANALYSIS_DELAY = () => Math.random() * 2000 + 1000;
  */
 const DocumentAnalysisService = {
     analyze: async (file: File, docType?: string): Promise<AnalysisResponse> => {
-    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
     try {
         const formData = new FormData();

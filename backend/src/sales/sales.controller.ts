@@ -73,13 +73,46 @@ export class SalesController {
         return this.salesService.update(id, data);
     }
 
+    // ═══════════════════════════════════════════════
+    // APPOINTMENTS
+    // ═══════════════════════════════════════════════
+
+    @Post('prospects/:id/book-appointment')
+    async bookAppointment(
+        @Param('id') id: string,
+        @Body() data: {
+            date: string;
+            agencyId: string;
+            agencyName: string;
+            serviceId?: string;
+            confirmed?: boolean;
+            confirmationSentVia?: string;
+        }
+    ) {
+        const result = await this.salesService.bookAppointment(id, data);
+        if (!result) {
+            return { success: false, error: 'Prospect not found' };
+        }
+        return { success: true, ...result };
+    }
+
+    @Get('appointments')
+    async getAppointments(
+        @Query('agencyId') agencyId?: string,
+        @Query('status') status?: string,
+        @Query('dateFrom') dateFrom?: string,
+        @Query('dateTo') dateTo?: string
+    ) {
+        return this.salesService.getAppointments({ agencyId, status, dateFrom, dateTo });
+    }
+
     @Post('prospects/:id/notes')
     addNote(
         @Param('id') id: string,
         @Request() req: any,
         @Body() data: { text: string }
     ) {
-        return this.salesService.addNote(id, req.user.id, data.text);
+        return this.salesService.addNote(id, req.user?.userId || req.user?.id || 'system', data.text);
     }
 
     @Post('prospects/:id/reassign')
@@ -130,6 +163,20 @@ export class SalesController {
     async forceCheck() {
         const result = await this.prospectPipeline.forceCheck();
         return { success: true, ...result };
+    }
+
+    @Get('pipeline/velocity')
+    async getPipelineVelocity() {
+        return this.salesService.getPipelineVelocity();
+    }
+
+    @Post('prospects/:id/reactivate')
+    async reactivateProspect(@Param('id') id: string) {
+        const result = await this.salesService.reactivateProspect(id);
+        if (!result) {
+            return { success: false, error: 'Prospect not found or not LOST' };
+        }
+        return { success: true, prospect: result };
     }
 
     @Post('prospects/:id/convert')

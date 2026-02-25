@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import AuthStore from '../../../services/authStore';
 
-const API_BASE = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/$/, '');
+const API_BASE = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000').replace(/\/$/, '');
 
 interface LegalDocument {
     content: string;

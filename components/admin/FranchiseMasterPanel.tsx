@@ -23,7 +23,7 @@ const PerformanceTrendChart = ({ data, agencyId }: { data: any[], agencyId: stri
     const downloadSepaSample = async () => {
         // Just as an example, for the current agency, 
         // in a real scenario we'd use a specific payout from a list
-        window.open(`http://localhost:5000/finance/payouts/LATEST/sepa?agencyId=${agencyId}`, '_blank');
+        window.open(`http://localhost:4000/finance/payouts/LATEST/sepa?agencyId=${agencyId}`, '_blank');
     };
 
     return (

@@ -344,7 +344,7 @@ export default function FranchiseLeadDetailPage() {
                         {/* DIP Download */}
                         {['DIP_SENT', 'CONTRACT_SENT', 'SIGNED'].includes(lead.status) && (
                             <button
-                                onClick={() => window.open(`http://localhost:5000/franchise-leads/${lead.id}/dip`, '_blank')}
+                                onClick={() => window.open(`http://localhost:4000/franchise-leads/${lead.id}/dip`, '_blank')}
                                 className="px-4 py-2 bg-slate-100 text-slate-700 border border-slate-300 rounded-lg font-medium hover:bg-slate-200 flex items-center gap-2">
                                 <ScrollText size={18} /> Voir DIP
                             </button>
@@ -354,7 +354,7 @@ export default function FranchiseLeadDetailPage() {
                         {canGenerateContract && (
                             <button
                                 onClick={async () => {
-                                    window.open(`http://localhost:5000/franchise-leads/${lead.id}/contract`, '_blank');
+                                    window.open(`http://localhost:4000/franchise-leads/${lead.id}/contract`, '_blank');
                                     setTimeout(() => loadLead(lead.id), 2000);
                                 }}
                                 className="px-4 py-2 bg-orange-500 text-white rounded-lg font-medium hover:bg-orange-600 flex items-center gap-2 shadow-sm">
@@ -365,7 +365,7 @@ export default function FranchiseLeadDetailPage() {
                         {/* View Contract */}
                         {['CONTRACT_SENT', 'SIGNED'].includes(lead.status) && (
                             <button
-                                onClick={() => window.open(`http://localhost:5000/franchise-leads/${lead.id}/contract`, '_blank')}
+                                onClick={() => window.open(`http://localhost:4000/franchise-leads/${lead.id}/contract`, '_blank')}
                                 className="px-4 py-2 bg-slate-100 text-slate-700 border border-slate-300 rounded-lg font-medium hover:bg-slate-200 flex items-center gap-2">
                                 <FileSignature size={18} /> Voir Contrat
                             </button>

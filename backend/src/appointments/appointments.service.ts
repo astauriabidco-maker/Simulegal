@@ -16,7 +16,7 @@ export class AppointmentsService {
     }): Promise<any[]> {
         const appointments = await this.prisma.appointment.findMany({
             ...params,
-            include: { lead: true }
+            include: { lead: true, prospect: true, hostUser: true, agency: true }
         });
 
         return appointments.map((appointment: any) => {

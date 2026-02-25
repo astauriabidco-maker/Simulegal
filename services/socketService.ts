@@ -1,6 +1,6 @@
 import { io, Socket } from 'socket.io-client';
 
-const WS_URL = 'http://localhost:5000/ws/inbox';
+const WS_URL = 'http://localhost:4000/ws/inbox';
 
 class SocketService {
     private socket: Socket | null = null;

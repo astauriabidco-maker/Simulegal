@@ -63,7 +63,7 @@ export interface SystemSettings {
     };
 }
 
-const API_BASE = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/$/, '');
+const API_BASE = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000').replace(/\/$/, '');
 
 const DEFAULT_SETTINGS: SystemSettings = {
     company: {

@@ -1,4 +1,4 @@
-import { Controller, Get, Patch, Body, UseGuards, Param } from '@nestjs/common';
+import { Controller, Get, Patch, Body, UseGuards, Param, Query } from '@nestjs/common';
 import { SettingsService } from './settings.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
@@ -197,6 +197,23 @@ export class SettingsController {
     async resetServicePrice(@Param('serviceId') serviceId: string) {
         const updated = await this.settingsService.resetServicePrice(serviceId);
         return { success: true, overrides: updated };
+    }
+
+    /**
+     * GET /settings/service-pricing/history
+     * Retourne l'historique des modifications de prix (audit trail)
+     */
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles('SUPER_ADMIN', 'SUPERADMIN')
+    @Get('service-pricing/history')
+    async getServicePricingHistory(@Query('serviceId') serviceId?: string, @Query('limit') limit?: string) {
+        const history = await this.settingsService.getServicePricingHistory();
+        let filtered = history;
+        if (serviceId) {
+            filtered = history.filter((h: any) => h.serviceId === serviceId);
+        }
+        const max = parseInt(limit || '50', 10);
+        return { history: filtered.slice(0, max), total: filtered.length };
     }
 
     // ═══════════════════════════════════════════════════

@@ -42,7 +42,7 @@ export default function AiReportingChat() {
 
         try {
             const token = localStorage.getItem('admin_token'); // Or import AuthStore
-            const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+            const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
             const res = await fetch(`${API}/ai-reporting/query`, {
                 method: 'POST',
