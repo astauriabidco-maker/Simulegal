@@ -74,6 +74,7 @@ export interface Prospect {
     qualifiedAt?: string;       // Date de qualification
     stageEnteredAt?: string;    // Date d'entrée dans l'étape actuelle
     lostReason?: string;        // Raison de la perte
+    tags?: string;              // JSON array de tags
 
     // Historique
     notes: ProspectNote[];
@@ -139,7 +140,7 @@ export const SalesStore = {
     },
 
     /**
-     * Fetch all prospects (Paginated with filters)
+     * Fetch all prospects (Paginated with filters + search)
      */
     getProspects: async (
         page = 1,
@@ -150,6 +151,8 @@ export const SalesStore = {
             source?: string;
             dateFrom?: string;
             dateTo?: string;
+            search?: string;
+            tags?: string;
         }
     ): Promise<{ data: Prospect[], meta: any }> => {
         try {
@@ -162,6 +165,8 @@ export const SalesStore = {
             if (filters?.source) params.append('source', filters.source);
             if (filters?.dateFrom) params.append('dateFrom', filters.dateFrom);
             if (filters?.dateTo) params.append('dateTo', filters.dateTo);
+            if (filters?.search) params.append('search', filters.search);
+            if (filters?.tags) params.append('tags', filters.tags);
 
             const response = await fetch(`${API_URL}/sales/prospects?${params.toString()}`, {
                 headers: SalesStore.getHeaders()
@@ -537,6 +542,178 @@ export const SalesStore = {
         } catch (error) {
             console.error('[SalesStore] Error fetching velocity:', error);
             return null;
+        }
+    },
+
+    // ═══════════════════════════════════════════════
+    // SUPPRESSION
+    // ═══════════════════════════════════════════════
+
+    deleteProspect: async (id: string): Promise<boolean> => {
+        try {
+            const response = await fetch(`${API_URL}/sales/prospects/${id}`, {
+                method: 'DELETE',
+                headers: SalesStore.getHeaders(),
+            });
+            if (!response.ok) throw new Error('Failed to delete');
+            const data = await response.json();
+            return data.success;
+        } catch (error) {
+            console.error('[SalesStore] Error deleting prospect:', error);
+            return false;
+        }
+    },
+
+    // ═══════════════════════════════════════════════
+    // ACTIONS EN MASSE
+    // ═══════════════════════════════════════════════
+
+    bulkUpdate: async (ids: string[], updates: { status?: string; assignedToSalesId?: string; tags?: string[] }): Promise<{ updated: number; failed: number }> => {
+        try {
+            const response = await fetch(`${API_URL}/sales/bulk/update`, {
+                method: 'POST',
+                headers: SalesStore.getHeaders(),
+                body: JSON.stringify({ ids, updates }),
+            });
+            if (!response.ok) throw new Error('Bulk update failed');
+            return await response.json();
+        } catch (error) {
+            console.error('[SalesStore] Error bulk update:', error);
+            return { updated: 0, failed: ids.length };
+        }
+    },
+
+    bulkDelete: async (ids: string[]): Promise<{ deleted: number }> => {
+        try {
+            const response = await fetch(`${API_URL}/sales/bulk/delete`, {
+                method: 'POST',
+                headers: SalesStore.getHeaders(),
+                body: JSON.stringify({ ids }),
+            });
+            if (!response.ok) throw new Error('Bulk delete failed');
+            return await response.json();
+        } catch (error) {
+            console.error('[SalesStore] Error bulk delete:', error);
+            return { deleted: 0 };
+        }
+    },
+
+    // ═══════════════════════════════════════════════
+    // ANNULATION / REPROGRAMMATION RDV
+    // ═══════════════════════════════════════════════
+
+    cancelAppointment: async (prospectId: string, reason?: string): Promise<Prospect | null> => {
+        try {
+            const response = await fetch(`${API_URL}/sales/prospects/${prospectId}/cancel-appointment`, {
+                method: 'POST',
+                headers: SalesStore.getHeaders(),
+                body: JSON.stringify({ reason }),
+            });
+            if (!response.ok) throw new Error('Cancel failed');
+            const data = await response.json();
+            return data.prospect || null;
+        } catch (error) {
+            console.error('[SalesStore] Error cancelling appointment:', error);
+            return null;
+        }
+    },
+
+    rescheduleAppointment: async (prospectId: string, appointmentData: { date: string; agencyId: string; agencyName: string; serviceId?: string }): Promise<any> => {
+        try {
+            const response = await fetch(`${API_URL}/sales/prospects/${prospectId}/reschedule-appointment`, {
+                method: 'POST',
+                headers: SalesStore.getHeaders(),
+                body: JSON.stringify(appointmentData),
+            });
+            if (!response.ok) throw new Error('Reschedule failed');
+            return await response.json();
+        } catch (error) {
+            console.error('[SalesStore] Error rescheduling appointment:', error);
+            return null;
+        }
+    },
+
+    // ═══════════════════════════════════════════════
+    // RELANCES PROGRAMMÉES
+    // ═══════════════════════════════════════════════
+
+    scheduleFollowUp: async (prospectId: string, scheduledAt: string, reason?: string): Promise<Prospect | null> => {
+        try {
+            const response = await fetch(`${API_URL}/sales/prospects/${prospectId}/schedule-followup`, {
+                method: 'POST',
+                headers: SalesStore.getHeaders(),
+                body: JSON.stringify({ scheduledAt, reason }),
+            });
+            if (!response.ok) throw new Error('Schedule failed');
+            const data = await response.json();
+            return data.prospect || null;
+        } catch (error) {
+            console.error('[SalesStore] Error scheduling followup:', error);
+            return null;
+        }
+    },
+
+    getDueFollowUps: async (agencyId?: string): Promise<Prospect[]> => {
+        try {
+            const params = agencyId ? `?agencyId=${agencyId}` : '';
+            const response = await fetch(`${API_URL}/sales/followups/due${params}`, {
+                headers: SalesStore.getHeaders(),
+            });
+            if (!response.ok) throw new Error('Failed to fetch');
+            return await response.json();
+        } catch (error) {
+            console.error('[SalesStore] Error fetching due followups:', error);
+            return [];
+        }
+    },
+
+    // ═══════════════════════════════════════════════
+    // TIMELINE / HISTORIQUE COMMUNICATIONS
+    // ═══════════════════════════════════════════════
+
+    getTimeline: async (prospectId: string): Promise<any[]> => {
+        try {
+            const response = await fetch(`${API_URL}/sales/prospects/${prospectId}/timeline`, {
+                headers: SalesStore.getHeaders(),
+            });
+            if (!response.ok) throw new Error('Failed to fetch timeline');
+            return await response.json();
+        } catch (error) {
+            console.error('[SalesStore] Error fetching timeline:', error);
+            return [];
+        }
+    },
+
+    // ═══════════════════════════════════════════════
+    // GÉNÉRATION DE DEVIS PDF
+    // ═══════════════════════════════════════════════
+
+    generateQuote: async (prospectId: string, options?: {
+        serviceId?: string;
+        serviceName?: string;
+        priceEuros?: number;
+        notes?: string;
+    }): Promise<void> => {
+        try {
+            const response = await fetch(`${API_URL}/sales/prospects/${prospectId}/quote`, {
+                method: 'POST',
+                headers: SalesStore.getHeaders(),
+                body: JSON.stringify(options || {}),
+            });
+            if (!response.ok) throw new Error('Failed to generate quote');
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `devis_${prospectId}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        } catch (error) {
+            console.error('[SalesStore] Error generating quote:', error);
+            throw error;
         }
     },
 };

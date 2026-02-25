@@ -45,6 +45,7 @@ model Prospect {
   qualifiedAt          DateTime?              // Date de qualification
   stageEnteredAt       DateTime? @default(now()) // Date d'entrée dans l'étape actuelle
   lostReason           String?                // Raison de la perte
+  tags                 String?                // JSON array de tags ex: ["VIP","Urgent","Diaspora"]
 
   // ── Rendez-vous ──
   appointment          Json?        // Données de RDV (date, agence, etc.)
@@ -516,6 +517,74 @@ model Article {
   viewCount      Int      @default(0)
   featured       Boolean  @default(false) // Show in hero section
   publishedAt    DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  comments       ArticleComment[]
+}
+
+model ArticleComment {
+  id          String   @id @default(cuid())
+  articleId   String
+  article     Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  authorName  String
+  authorEmail String?
+  content     String
+  status      String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  parentId    String?  // For reply threading
+  createdAt   DateTime @default(now())
+}
+
+// ══════════════════════════════════════════════════
+// MODULE SUIVI COMMERCIAL
+// ══════════════════════════════════════════════════
+
+// Objectifs commerciaux par utilisateur (mensuels/trimestriels)
+model SalesObjective {
+  id             String   @id @default(cuid())
+  userId         String                       // Commercial concerné
+  agencyId       String?                      // Optionnel — filtre par agence
+  period         String                       // Ex: "2026-02", "2026-Q1"
+  periodType     String   @default("MONTHLY") // MONTHLY, QUARTERLY, YEARLY
+  metric         String                       // CALLS, MEETINGS_BOOKED, CONVERSIONS, REVENUE, QUALIFIED
+  targetValue    Int                          // Objectif cible
+  currentValue   Int      @default(0)         // Valeur actuelle (recalculée)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([userId, period, metric])
+}
+
+// Journal d'activité commerciale quotidien
+model SalesActivity {
+  id             String   @id @default(cuid())
+  userId         String                       // Commercial
+  agencyId       String?
+  date           DateTime @default(now())     // Jour de l'activité
+  activityType   String                       // CALL, EMAIL, WHATSAPP, MEETING, NOTE, FOLLOW_UP, QUALIFICATION, CONVERSION
+  prospectId     String?                      // Prospect lié (optionnel)
+  prospectName   String?                      // Snapshot du nom pour historique
+  outcome        String?                      // Résultat (INTERESTED, CALLBACK, NO_ANSWER, etc.)
+  duration       Int?                         // Durée en secondes (pour appels)
+  notes          String?                      // Notes libres
+  metadata       Json?                        // Données additionnelles (JSON)
+  createdAt      DateTime @default(now())
+}
+
+// Commissions individuelles par commercial
+model SalesCommission {
+  id             String   @id @default(cuid())
+  userId         String                       // Commercial bénéficiaire
+  agencyId       String?
+  prospectId     String?                      // Prospect à l'origine
+  prospectName   String?                      // Snapshot nom
+  serviceId      String?                      // Service vendu
+  serviceName    String?                      // Snapshot nom du service
+  amountEuros    Float                        // Montant de la commission
+  rate           Float                        // Taux appliqué (ex: 5%)
+  baseAmount     Float                        // Montant de base (prix du service)
+  status         String   @default("PENDING") // PENDING, APPROVED, PAID, CANCELLED
+  paidAt         DateTime?                    // Date de versement
+  period         String?                      // Période de rattachement (ex: "2026-02")
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 }

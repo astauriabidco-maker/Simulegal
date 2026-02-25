@@ -166,11 +166,39 @@ export default function SalesDashboard() {
         source?: string;
         dateFrom?: string;
         dateTo?: string;
+        search?: string;
+        tags?: string;
     }>({});
     const [showFilters, setShowFilters] = useState(false);
     const [hoveredColumnId, setHoveredColumnId] = useState<string | null>(null);
     const [velocityMetrics, setVelocityMetrics] = useState<any>(null);
     const [callbackSchedule, setCallbackSchedule] = useState('');
+
+    // ─── Recherche temps réel ───
+    const [searchQuery, setSearchQuery] = useState('');
+    const searchTimeout = React.useRef<NodeJS.Timeout | null>(null);
+
+    // ─── Sélection en masse ───
+    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+    const [showBulkBar, setShowBulkBar] = useState(false);
+
+    // ─── Timeline / Historique ───
+    const [timeline, setTimeline] = useState<any[]>([]);
+    const [showTimeline, setShowTimeline] = useState(false);
+
+    // ─── Relance programmée ───
+    const [showFollowUpModal, setShowFollowUpModal] = useState(false);
+    const [followUpDate, setFollowUpDate] = useState('');
+    const [followUpReason, setFollowUpReason] = useState('');
+
+    // ─── Raison de perte ───
+    const [showLostReasonModal, setShowLostReasonModal] = useState(false);
+    const [lostReason, setLostReason] = useState('');
+    const [pendingLostProspectId, setPendingLostProspectId] = useState<string | null>(null);
+
+    // ─── Tags ───
+    const AVAILABLE_TAGS = ['VIP', 'Urgent', 'Diaspora', 'À relancer', 'Référé', 'Froid', 'Chaud', 'Concurrent'];
+    const [showTagsModal, setShowTagsModal] = useState(false);
     // ─── Tarification backend (source unique de vérité) ───
     const [backendPricing, setBackendPricing] = useState<Record<string, { priceEuros: number; pricePer3: number; serviceName: string; source: string; promoActive: boolean }>>({});
     const pricingCache = React.useRef<Record<string, Promise<any> | undefined>>({});
@@ -394,6 +422,132 @@ export default function SalesDashboard() {
         showToast(`${count} prospect${(count || 0) > 1 ? 's' : ''} importé${(count || 0) > 1 ? 's' : ''} avec succès !`, 'success', '📥');
     };
 
+    // ─── Recherche avec debounce ───
+    const handleSearchChange = (value: string) => {
+        setSearchQuery(value);
+        if (searchTimeout.current) clearTimeout(searchTimeout.current);
+        searchTimeout.current = setTimeout(() => {
+            setFilters(prev => ({ ...prev, search: value || undefined }));
+        }, 300);
+    };
+
+    // ─── Suppression de prospect ───
+    const handleDeleteProspect = (prospect: Prospect) => {
+        setConfirmDialog({
+            title: '🗑️ Supprimer le prospect',
+            message: `Êtes-vous sûr de vouloir supprimer ${prospect.firstName} ${prospect.lastName} ? Cette action est irréversible. Toutes les notes, appels et RDV liés seront également supprimés.`,
+            confirmLabel: 'Supprimer définitivement',
+            type: 'danger',
+            onConfirm: async () => {
+                const success = await SalesStore.deleteProspect(prospect.id);
+                if (success) {
+                    setProspects(prev => prev.filter(p => p.id !== prospect.id));
+                    if (selectedProspect?.id === prospect.id) setSelectedProspect(null);
+                    showToast(`${prospect.firstName} ${prospect.lastName} supprimé`, 'success', '🗑️');
+                } else {
+                    showToast('Échec de la suppression', 'error', '❌');
+                }
+                setConfirmDialog(null);
+            }
+        });
+    };
+
+    // ─── Annulation de RDV ───
+    const handleCancelAppointment = async (prospectId: string, reason?: string) => {
+        const result = await SalesStore.cancelAppointment(prospectId, reason);
+        if (result) {
+            await loadProspects();
+            setSelectedProspect(result);
+            showToast('RDV annulé avec succès', 'success', '❌');
+        } else {
+            showToast('Échec annulation RDV', 'error');
+        }
+    };
+
+    // ─── Relance programmée ───
+    const handleScheduleFollowUp = async () => {
+        if (!selectedProspect || !followUpDate) return;
+        const result = await SalesStore.scheduleFollowUp(selectedProspect.id, followUpDate, followUpReason);
+        if (result) {
+            await loadProspects();
+            setShowFollowUpModal(false);
+            setFollowUpDate('');
+            setFollowUpReason('');
+            showToast(`Relance programmée le ${new Date(followUpDate).toLocaleDateString('fr-FR')}`, 'success', '⏰');
+        }
+    };
+
+    // ─── Passage en LOST avec raison ───
+    const handleMarkAsLost = (prospectId: string) => {
+        setPendingLostProspectId(prospectId);
+        setLostReason('');
+        setShowLostReasonModal(true);
+    };
+
+    const confirmLostReason = async () => {
+        if (!pendingLostProspectId) return;
+        await SalesStore.updateProspect(pendingLostProspectId, { status: 'LOST', lostReason: lostReason || 'Non spécifié' } as any);
+        await loadProspects();
+        setShowLostReasonModal(false);
+        setPendingLostProspectId(null);
+        showToast('Prospect marqué comme perdu', 'warning', '⚫');
+    };
+
+    // ─── Tags ───
+    const handleToggleTag = async (prospect: Prospect, tag: string) => {
+        const currentTags: string[] = prospect.tags ? JSON.parse(prospect.tags) : [];
+        const newTags = currentTags.includes(tag)
+            ? currentTags.filter(t => t !== tag)
+            : [...currentTags, tag];
+
+        await SalesStore.updateProspect(prospect.id, { tags: JSON.stringify(newTags) } as any);
+        setProspects(prev => prev.map(p => p.id === prospect.id ? { ...p, tags: JSON.stringify(newTags) } : p));
+        setSelectedProspect(prev => prev?.id === prospect.id ? { ...prev, tags: JSON.stringify(newTags) } : prev);
+    };
+
+    // ─── Sélection en masse ───
+    const toggleSelection = (id: string) => {
+        setSelectedIds(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id);
+            else next.add(id);
+            return next;
+        });
+    };
+
+    const handleBulkStatusChange = async (status: string) => {
+        const ids = Array.from(selectedIds);
+        const result = await SalesStore.bulkUpdate(ids, { status });
+        showToast(`${result.updated} prospect(s) mis à jour`, 'success', '📦');
+        setSelectedIds(new Set());
+        await loadProspects();
+    };
+
+    const handleBulkDelete = () => {
+        const count = selectedIds.size;
+        setConfirmDialog({
+            title: '🗑️ Suppression en masse',
+            message: `Supprimer ${count} prospect(s) sélectionné(s) ? Cette action est irréversible.`,
+            confirmLabel: `Supprimer ${count} prospect(s)`,
+            type: 'danger',
+            onConfirm: async () => {
+                const ids = Array.from(selectedIds);
+                const result = await SalesStore.bulkDelete(ids);
+                showToast(`${result.deleted} prospect(s) supprimé(s)`, 'success', '🗑️');
+                setSelectedIds(new Set());
+                await loadProspects();
+                setConfirmDialog(null);
+            }
+        });
+    };
+
+    // ─── Timeline ───
+    const loadTimeline = async (prospectId: string) => {
+        const data = await SalesStore.getTimeline(prospectId);
+        setTimeline(data);
+        setShowTimeline(true);
+    };
+
     // ─── Action rapide : Issue d'appel sans cockpit ─────────────
     const handleQuickCallOutcome = async (outcome: 'NO_ANSWER' | 'CALLBACK' | 'NOT_INTERESTED' | 'WRONG_NUMBER' | 'INTERESTED') => {
         if (!selectedProspect) return;
@@ -487,44 +641,117 @@ export default function SalesDashboard() {
     return (
         <div className="h-full flex flex-col bg-slate-50">
             {/* Header / Actions Bar */}
-            <div className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-bold text-slate-900">Sales Hub (Pilotage)</h1>
-                    <p className="text-slate-500 text-sm">Gestion de la prospection commerciale</p>
+            <div className="bg-white border-b border-slate-200 px-6 py-4">
+                <div className="flex items-center justify-between mb-3">
+                    <div>
+                        <h1 className="text-2xl font-bold text-slate-900">Sales Hub (Pilotage)</h1>
+                        <p className="text-slate-500 text-sm">Gestion de la prospection commerciale</p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <div className="bg-white p-1 rounded-xl border border-slate-200 flex">
+                            <button
+                                onClick={() => setViewMode('KANBAN')}
+                                className={`px-4 py-2 rounded-lg text-xs font-black transition-all flex items-center gap-2 ${viewMode === 'KANBAN' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-500 hover:bg-slate-50'}`}
+                            >
+                                <Layout size={14} /> Kanban
+                            </button>
+                            <button
+                                onClick={() => setViewMode('ANALYTICS')}
+                                className={`px-4 py-2 rounded-lg text-xs font-black transition-all flex items-center gap-2 ${viewMode === 'ANALYTICS' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'text-slate-500 hover:bg-slate-50'}`}
+                            >
+                                <BarChart2 size={14} /> Pilotage
+                            </button>
+                        </div>
+
+                        <button
+                            onClick={() => setShowAddModal(true)}
+                            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium shadow-sm"
+                        >
+                            <Plus size={18} />
+                            Ajouter
+                        </button>
+
+                        <button
+                            onClick={() => SalesStore.exportProspects(filters)}
+                            className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors font-medium"
+                        >
+                            <Download size={18} />
+                            Export CSV
+                        </button>
+                    </div>
                 </div>
+
+                {/* ── Barre de recherche ── */}
                 <div className="flex items-center gap-3">
-                    <div className="bg-white p-1 rounded-xl border border-slate-200 flex">
-                        <button
-                            onClick={() => setViewMode('KANBAN')}
-                            className={`px-4 py-2 rounded-lg text-xs font-black transition-all flex items-center gap-2 ${viewMode === 'KANBAN' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-500 hover:bg-slate-50'}`}
-                        >
-                            <Layout size={14} /> Kanban
-                        </button>
-                        <button
-                            onClick={() => setViewMode('ANALYTICS')}
-                            className={`px-4 py-2 rounded-lg text-xs font-black transition-all flex items-center gap-2 ${viewMode === 'ANALYTICS' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'text-slate-500 hover:bg-slate-50'}`}
-                        >
-                            <BarChart2 size={14} /> Pilotage
-                        </button>
+                    <div className="relative flex-1 max-w-md">
+                        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                        <input
+                            type="text"
+                            value={searchQuery}
+                            onChange={(e) => handleSearchChange(e.target.value)}
+                            placeholder="Rechercher par nom, téléphone, email, ville..."
+                            className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 transition-all"
+                        />
+                        {searchQuery && (
+                            <button
+                                onClick={() => { setSearchQuery(''); setFilters(prev => ({ ...prev, search: undefined })); }}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                            >
+                                <X size={14} />
+                            </button>
+                        )}
                     </div>
 
                     <button
-                        onClick={() => setShowAddModal(true)}
-                        className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium shadow-sm"
+                        onClick={() => setShowFilters(!showFilters)}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium border transition-all ${showFilters ? 'bg-indigo-50 border-indigo-200 text-indigo-700' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}
                     >
-                        <Plus size={18} />
-                        Ajouter
+                        <Filter size={14} /> Filtres
+                        {Object.values(filters).filter(v => v && v !== searchQuery).length > 0 && (
+                            <span className="w-5 h-5 flex items-center justify-center bg-indigo-600 text-white text-[10px] font-bold rounded-full">
+                                {Object.values(filters).filter(v => v && v !== searchQuery).length}
+                            </span>
+                        )}
                     </button>
 
-                    <button
-                        onClick={() => SalesStore.exportProspects(filters)}
-                        className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors font-medium"
-                    >
-                        <Download size={18} />
-                        Export CSV
-                    </button>
+                    <span className="text-xs text-slate-400 font-medium">
+                        {prospects.length} prospect{prospects.length > 1 ? 's' : ''}
+                    </span>
                 </div>
             </div>
+
+            {/* ── Barre d'actions en masse ── */}
+            {selectedIds.size > 0 && (
+                <div className="bg-indigo-600 text-white px-6 py-3 flex items-center justify-between animate-in slide-in-from-top">
+                    <span className="text-sm font-bold">
+                        📦 {selectedIds.size} prospect(s) sélectionné(s)
+                    </span>
+                    <div className="flex items-center gap-2">
+                        <select
+                            onChange={(e) => { if (e.target.value) handleBulkStatusChange(e.target.value); e.target.value = ''; }}
+                            className="bg-white/20 text-white border border-white/30 rounded-lg px-3 py-1.5 text-sm font-medium focus:outline-none [&>option]:text-slate-900"
+                            defaultValue=""
+                        >
+                            <option value="" disabled>Changer statut...</option>
+                            {COLUMNS.filter(c => c.id !== 'SIGNED').map(col => (
+                                <option key={col.id} value={col.id}>{col.label}</option>
+                            ))}
+                        </select>
+                        <button
+                            onClick={handleBulkDelete}
+                            className="px-3 py-1.5 bg-red-500 text-white rounded-lg text-sm font-bold hover:bg-red-600 transition-all"
+                        >
+                            🗑️ Supprimer
+                        </button>
+                        <button
+                            onClick={() => setSelectedIds(new Set())}
+                            className="px-3 py-1.5 bg-white/20 text-white rounded-lg text-sm font-medium hover:bg-white/30 transition-all"
+                        >
+                            Annuler
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {viewMode === 'ANALYTICS' ? (
                 <div className="p-8 overflow-y-auto space-y-8">
@@ -851,12 +1078,22 @@ export default function SalesDashboard() {
                                                             )}
 
                                                             <div className={`p-4 ${stripColor ? 'pl-5' : ''}`}>
-                                                                {/* Hot Lead Badge */}
-                                                                {prospect.score >= 50 && (
-                                                                    <div className="absolute top-3 right-3 text-orange-500 animate-pulse" title="Prospect chaud !">
-                                                                        <Flame size={16} fill="currentColor" />
-                                                                    </div>
-                                                                )}
+                                                                {/* Selection checkbox + Hot Lead Badge */}
+                                                                <div className="flex items-center justify-between mb-1">
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        checked={selectedIds.has(prospect.id)}
+                                                                        onChange={(e) => { e.stopPropagation(); toggleSelection(prospect.id); }}
+                                                                        onClick={(e) => e.stopPropagation()}
+                                                                        className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-200 cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"
+                                                                        style={selectedIds.has(prospect.id) ? { opacity: 1 } : {}}
+                                                                    />
+                                                                    {prospect.score >= 50 && (
+                                                                        <div className="text-orange-500 animate-pulse" title="Prospect chaud !">
+                                                                            <Flame size={16} fill="currentColor" />
+                                                                        </div>
+                                                                    )}
+                                                                </div>
 
                                                                 {/* Call Outcome Banner */}
                                                                 {badgeContent}
@@ -880,6 +1117,12 @@ export default function SalesDashboard() {
                                                                             📞 {prospect.callAttempts} appel{(prospect.callAttempts || 0) > 1 ? 's' : ''}
                                                                         </span>
                                                                     )}
+                                                                    {/* Custom Tags */}
+                                                                    {prospect.tags && JSON.parse(prospect.tags).map((tag: string) => (
+                                                                        <span key={tag} className="text-[11px] px-2 py-0.5 bg-amber-50 text-amber-700 rounded-md font-bold border border-amber-200">
+                                                                            🏷️ {tag}
+                                                                        </span>
+                                                                    ))}
                                                                 </div>
 
                                                                 {/* Contextual status indicators */}
@@ -1629,6 +1872,73 @@ export default function SalesDashboard() {
                                         )}
                                     </div>
 
+                                    {/* ─── ACTIONS SECONDAIRES ─── */}
+                                    <div className="px-5 py-3 border-b border-slate-100 flex flex-wrap gap-2">
+                                        <button
+                                            onClick={() => setShowFollowUpModal(true)}
+                                            className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-700 rounded-lg text-xs font-bold border border-indigo-200 hover:bg-indigo-100 transition-all"
+                                        >
+                                            ⏰ Relance
+                                        </button>
+                                        <button
+                                            onClick={() => setShowTagsModal(true)}
+                                            className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 text-amber-700 rounded-lg text-xs font-bold border border-amber-200 hover:bg-amber-100 transition-all"
+                                        >
+                                            🏷️ Tags
+                                        </button>
+                                        <button
+                                            onClick={() => loadTimeline(selectedProspect.id)}
+                                            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 text-slate-600 rounded-lg text-xs font-bold border border-slate-200 hover:bg-slate-100 transition-all"
+                                        >
+                                            📜 Historique
+                                        </button>
+                                        <button
+                                            onClick={async () => {
+                                                try {
+                                                    await SalesStore.generateQuote(selectedProspect.id, {
+                                                        serviceId: selectedProspect.interestServiceId,
+                                                    });
+                                                    showToast('Devis PDF téléchargé', 'success', '📄');
+                                                } catch { showToast('Erreur lors de la génération du devis', 'error', '❌'); }
+                                            }}
+                                            className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-lg text-xs font-bold border border-emerald-200 hover:bg-emerald-100 transition-all"
+                                        >
+                                            📄 Devis PDF
+                                        </button>
+                                        {selectedProspect.status === 'MEETING_BOOKED' && (
+                                            <button
+                                                onClick={() => {
+                                                    setConfirmDialog({
+                                                        title: '❌ Annuler le RDV',
+                                                        message: `Annuler le rendez-vous de ${selectedProspect.firstName} ${selectedProspect.lastName} ? Le prospect sera remis en statut Contacté/Qualifié.`,
+                                                        confirmLabel: 'Annuler le RDV',
+                                                        type: 'warning',
+                                                        onConfirm: async () => {
+                                                            await handleCancelAppointment(selectedProspect.id, 'Annulé par le commercial');
+                                                            setConfirmDialog(null);
+                                                        }
+                                                    });
+                                                }}
+                                                className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-50 text-orange-700 rounded-lg text-xs font-bold border border-orange-200 hover:bg-orange-100 transition-all"
+                                            >
+                                                ❌ Annuler RDV
+                                            </button>
+                                        )}
+                                        {selectedProspect.status !== 'LOST' && selectedProspect.status !== 'SIGNED' && (
+                                            <button
+                                                onClick={() => handleMarkAsLost(selectedProspect.id)}
+                                                className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 text-slate-500 rounded-lg text-xs font-bold border border-slate-200 hover:bg-slate-200 transition-all"
+                                            >
+                                                ⚫ Perdu
+                                            </button>
+                                        )}
+                                        <button
+                                            onClick={() => handleDeleteProspect(selectedProspect)}
+                                            className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-600 rounded-lg text-xs font-bold border border-red-200 hover:bg-red-100 transition-all ml-auto"
+                                        >
+                                            🗑️ Supprimer
+                                        </button>
+                                    </div>
 
                                     {/* ─── SECTIONS ACCORDÉON ─── */}
 
@@ -2069,6 +2379,224 @@ export default function SalesDashboard() {
                             to { width: 0%; }
                         }
                     `}</style>
+                </div>
+            )}
+
+            {/* ─── MODAL : Raison de perte ─── */}
+            {showLostReasonModal && (
+                <div className="fixed inset-0 z-[90] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={() => setShowLostReasonModal(false)} />
+                    <div className="relative w-[440px] bg-white rounded-3xl shadow-2xl p-8 animate-in zoom-in-95">
+                        <h3 className="text-lg font-black text-slate-900 mb-4">⚫ Raison de la perte</h3>
+                        <p className="text-sm text-slate-500 mb-4">Pourquoi ce prospect est-il perdu ?</p>
+
+                        <div className="flex flex-wrap gap-2 mb-4">
+                            {['Trop cher', 'Injoignable', 'Concurrent', 'Non éligible', 'Pas intéressé', 'Délai trop long', 'Mauvais timing', 'Doublon'].map(reason => (
+                                <button
+                                    key={reason}
+                                    onClick={() => setLostReason(reason)}
+                                    className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-all ${lostReason === reason
+                                        ? 'bg-slate-900 text-white border-slate-900'
+                                        : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                                        }`}
+                                >
+                                    {reason}
+                                </button>
+                            ))}
+                        </div>
+
+                        <input
+                            type="text"
+                            value={lostReason}
+                            onChange={(e) => setLostReason(e.target.value)}
+                            placeholder="Ou saisir une raison personnalisée..."
+                            className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm mb-6 focus:outline-none focus:ring-2 focus:ring-slate-200"
+                        />
+
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setShowLostReasonModal(false)}
+                                className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50"
+                            >
+                                Annuler
+                            </button>
+                            <button
+                                onClick={confirmLostReason}
+                                className="flex-1 py-3 rounded-xl bg-slate-800 text-white font-bold text-sm hover:bg-slate-900 transition-all"
+                            >
+                                Confirmer la perte
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ─── MODAL : Relance programmée ─── */}
+            {showFollowUpModal && selectedProspect && (
+                <div className="fixed inset-0 z-[90] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={() => setShowFollowUpModal(false)} />
+                    <div className="relative w-[440px] bg-white rounded-3xl shadow-2xl p-8 animate-in zoom-in-95">
+                        <h3 className="text-lg font-black text-slate-900 mb-2">⏰ Programmer une relance</h3>
+                        <p className="text-sm text-slate-500 mb-4">
+                            Relancer <strong>{selectedProspect.firstName} {selectedProspect.lastName}</strong>
+                        </p>
+
+                        {/* Quick picks */}
+                        <div className="flex flex-wrap gap-2 mb-4">
+                            {[
+                                { label: 'Dans 2h', hours: 2 },
+                                { label: 'Demain 9h', hours: 0, tomorrow9: true },
+                                { label: 'Dans 3 jours', days: 3 },
+                                { label: 'Dans 1 semaine', days: 7 },
+                            ].map(pick => {
+                                const getDate = () => {
+                                    const d = new Date();
+                                    if ('tomorrow9' in pick && pick.tomorrow9) {
+                                        d.setDate(d.getDate() + 1);
+                                        d.setHours(9, 0, 0, 0);
+                                    } else if ('days' in pick && pick.days) {
+                                        d.setDate(d.getDate() + pick.days);
+                                        d.setHours(9, 0, 0, 0);
+                                    } else if ('hours' in pick) {
+                                        d.setHours(d.getHours() + (pick.hours || 0));
+                                    }
+                                    return d.toISOString().slice(0, 16);
+                                };
+                                return (
+                                    <button
+                                        key={pick.label}
+                                        onClick={() => setFollowUpDate(getDate())}
+                                        className="px-3 py-1.5 rounded-lg text-sm font-medium bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition-all"
+                                    >
+                                        {pick.label}
+                                    </button>
+                                );
+                            })}
+                        </div>
+
+                        <label className="block text-xs font-bold text-slate-600 mb-1">Date et heure</label>
+                        <input
+                            type="datetime-local"
+                            value={followUpDate}
+                            onChange={(e) => setFollowUpDate(e.target.value)}
+                            className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                        />
+
+                        <label className="block text-xs font-bold text-slate-600 mb-1">Raison (optionnel)</label>
+                        <input
+                            type="text"
+                            value={followUpReason}
+                            onChange={(e) => setFollowUpReason(e.target.value)}
+                            placeholder="Ex: Rappeler pour devis, vérifier documents..."
+                            className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm mb-6 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                        />
+
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setShowFollowUpModal(false)}
+                                className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50"
+                            >
+                                Annuler
+                            </button>
+                            <button
+                                onClick={handleScheduleFollowUp}
+                                disabled={!followUpDate}
+                                className="flex-1 py-3 rounded-xl bg-indigo-600 text-white font-bold text-sm hover:bg-indigo-700 transition-all disabled:opacity-50"
+                            >
+                                Programmer
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ─── MODAL : Tags ─── */}
+            {showTagsModal && selectedProspect && (
+                <div className="fixed inset-0 z-[90] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={() => setShowTagsModal(false)} />
+                    <div className="relative w-[440px] bg-white rounded-3xl shadow-2xl p-8 animate-in zoom-in-95">
+                        <h3 className="text-lg font-black text-slate-900 mb-2">🏷️ Tags</h3>
+                        <p className="text-sm text-slate-500 mb-4">
+                            Gérer les tags de <strong>{selectedProspect.firstName} {selectedProspect.lastName}</strong>
+                        </p>
+
+                        <div className="flex flex-wrap gap-2">
+                            {AVAILABLE_TAGS.map(tag => {
+                                const currentTags: string[] = selectedProspect.tags ? JSON.parse(selectedProspect.tags) : [];
+                                const isActive = currentTags.includes(tag);
+                                return (
+                                    <button
+                                        key={tag}
+                                        onClick={() => handleToggleTag(selectedProspect, tag)}
+                                        className={`px-4 py-2 rounded-xl text-sm font-bold border-2 transition-all ${isActive
+                                            ? 'bg-amber-100 text-amber-800 border-amber-300 shadow-sm'
+                                            : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'
+                                            }`}
+                                    >
+                                        {isActive ? '✓ ' : ''}{tag}
+                                    </button>
+                                );
+                            })}
+                        </div>
+
+                        <button
+                            onClick={() => setShowTagsModal(false)}
+                            className="w-full mt-6 py-3 rounded-xl bg-slate-100 text-slate-700 font-bold text-sm hover:bg-slate-200 transition-all"
+                        >
+                            Fermer
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* ─── MODAL : Timeline / Historique Communications ─── */}
+            {showTimeline && selectedProspect && (
+                <div className="fixed inset-0 z-[90] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={() => setShowTimeline(false)} />
+                    <div className="relative w-[520px] max-h-[80vh] bg-white rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 flex flex-col">
+                        <div className="p-6 border-b border-slate-100 flex-shrink-0">
+                            <h3 className="text-lg font-black text-slate-900">📜 Historique complet</h3>
+                            <p className="text-sm text-slate-500">{selectedProspect.firstName} {selectedProspect.lastName}</p>
+                        </div>
+                        <div className="flex-1 overflow-y-auto p-6">
+                            {timeline.length === 0 ? (
+                                <p className="text-sm text-slate-400 text-center py-8">Aucune communication enregistrée</p>
+                            ) : (
+                                <div className="space-y-3">
+                                    {timeline.map((event: any, i: number) => {
+                                        const typeConfig: any = {
+                                            'EMAIL': { icon: '📧', color: 'bg-blue-50 border-blue-200 text-blue-700' },
+                                            'WHATSAPP': { icon: '💬', color: 'bg-green-50 border-green-200 text-green-700' },
+                                            'SMS': { icon: '📱', color: 'bg-purple-50 border-purple-200 text-purple-700' },
+                                            'CALL': { icon: '📞', color: 'bg-orange-50 border-orange-200 text-orange-700' },
+                                            'NOTE': { icon: '📝', color: 'bg-slate-50 border-slate-200 text-slate-700' },
+                                        };
+                                        const cfg = typeConfig[event.type] || typeConfig.NOTE;
+                                        return (
+                                            <div key={i} className={`p-3 rounded-xl border text-sm ${cfg.color}`}>
+                                                <div className="flex items-center justify-between mb-1">
+                                                    <span className="font-bold">{cfg.icon} {event.type} {event.direction === 'INBOUND' ? '→' : '←'}</span>
+                                                    <span className="text-[10px] opacity-70">
+                                                        {new Date(event.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                                                    </span>
+                                                </div>
+                                                <p className="text-xs opacity-80 line-clamp-2">{event.content}</p>
+                                                {event.duration && <span className="text-[10px] font-bold">Durée: {event.duration}s</span>}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                        <div className="p-4 border-t border-slate-100 flex-shrink-0">
+                            <button
+                                onClick={() => setShowTimeline(false)}
+                                className="w-full py-3 rounded-xl bg-slate-100 text-slate-700 font-bold text-sm hover:bg-slate-200"
+                            >
+                                Fermer
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
 

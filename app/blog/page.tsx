@@ -115,8 +115,8 @@ export default function BlogPage() {
                                 key={cat.id}
                                 onClick={() => setFilterCategory(cat.id)}
                                 className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all ${filterCategory === cat.id
-                                        ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200'
-                                        : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                                    ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200'
+                                    : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
                                     }`}
                             >
                                 {cat.icon} {cat.label}
@@ -277,7 +277,11 @@ export default function BlogPage() {
             </main>
 
             {/* ── Footer ── */}
-            <footer className="bg-slate-900 py-12 text-white/40 text-center text-xs font-bold uppercase tracking-widest mt-20">
+            <footer className="bg-slate-900 py-12 px-6 text-white/40 text-center text-xs font-bold uppercase tracking-widest mt-20 flex flex-col items-center justify-center gap-4">
+                <div className="flex items-center gap-6">
+                    <a href="/public/blog/rss" target="_blank" rel="noopener noreferrer" className="hover:text-amber-500 transition-colors">RSS Feed</a>
+                    <a href="/public/blog/sitemap.xml" target="_blank" rel="noopener noreferrer" className="hover:text-emerald-500 transition-colors">Sitemap</a>
+                </div>
                 <p>© 2026 SimuLegal — Blog & Insights Juridiques</p>
             </footer>
         </div>

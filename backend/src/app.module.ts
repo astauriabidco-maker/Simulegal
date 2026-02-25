@@ -23,6 +23,7 @@ import { CatalogModule } from './catalog/catalog.module';
 import { SettingsModule } from './settings/settings.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { SalesModule } from './sales/sales.module';
+import { SalesTrackingModule } from './sales-tracking/sales-tracking.module';
 import { InvoicesModule } from './invoices/invoices.module';
 import { PaymentsModule } from './payments/payments.module';
 import { WhatsappModule } from './whatsapp/whatsapp.module';
@@ -55,6 +56,7 @@ import { AgentsModule } from './agents/agents.module';
     SettingsModule,
     DashboardModule,
     SalesModule,
+    SalesTrackingModule,
     InvoicesModule,
     PaymentsModule,
     AbsencesModule,

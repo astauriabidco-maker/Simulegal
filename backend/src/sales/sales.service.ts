@@ -1,10 +1,11 @@
 import { Injectable, BadRequestException, Inject, forwardRef } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { Prospect, ProspectStatus } from '@prisma/client';
+import { Prisma, Prospect, ProspectStatus } from '@prisma/client';
 import { AssignmentService } from './assignment.service';
 import { ProspectPipelineService } from './prospect-pipeline.service';
 import { AppointmentsService } from '../appointments/appointments.service';
 import { SERVICE_CATALOG, DOCUMENT_CATALOG } from '../config/services-pipeline.config';
+import { SalesTrackingService } from '../sales-tracking/sales-tracking.service';
 
 @Injectable()
 export class SalesService {
@@ -14,6 +15,7 @@ export class SalesService {
         private prospectPipeline: ProspectPipelineService,
         @Inject(forwardRef(() => AppointmentsService))
         private appointmentsService: AppointmentsService,
+        private salesTracking: SalesTrackingService,
     ) { }
 
     async findAll(params: {
@@ -24,11 +26,25 @@ export class SalesService {
         source?: string;
         dateFrom?: string;
         dateTo?: string;
+        search?: string;
+        tags?: string;
     }) {
-        const { page, limit, status, agencyId, source, dateFrom, dateTo } = params;
+        const { page, limit, status, agencyId, source, dateFrom, dateTo, search, tags } = params;
         const skip = (page - 1) * limit;
 
         const where: any = {};
+
+        // ── Full-text search across name, phone, email ──
+        if (search && search.trim().length > 0) {
+            const q = search.trim();
+            where.OR = [
+                { firstName: { contains: q, mode: 'insensitive' } },
+                { lastName: { contains: q, mode: 'insensitive' } },
+                { phone: { contains: q } },
+                { email: { contains: q, mode: 'insensitive' } },
+                { city: { contains: q, mode: 'insensitive' } },
+            ];
+        }
 
         // Status filter
         if (status) {
@@ -43,6 +59,17 @@ export class SalesService {
         // Source filter
         if (source) {
             where.source = source;
+        }
+
+        // Tags filter
+        if (tags) {
+            const tagList = tags.split(',').map(t => t.trim()).filter(Boolean);
+            if (tagList.length > 0) {
+                // Tags stored as JSON array string
+                where.AND = tagList.map(tag => ({
+                    tags: { contains: tag }
+                }));
+            }
         }
 
         // Date range filter
@@ -120,6 +147,31 @@ export class SalesService {
     }
 
     async create(data: any) {
+        // ── Détection de doublons (téléphone ou email) ──
+        const duplicateChecks: any[] = [];
+        if (data.phone) {
+            duplicateChecks.push({ phone: data.phone });
+        }
+        if (data.email) {
+            duplicateChecks.push({ email: data.email });
+        }
+
+        if (duplicateChecks.length > 0) {
+            const existing = await this.prisma.prospect.findFirst({
+                where: { OR: duplicateChecks },
+                select: { id: true, firstName: true, lastName: true, phone: true, email: true, status: true },
+            });
+
+            if (existing) {
+                console.log(`[Sales] ⚠️ Doublon détecté: ${existing.firstName} ${existing.lastName} (${existing.phone})`);
+                throw new BadRequestException({
+                    message: `Un prospect avec ce ${existing.phone === data.phone ? 'téléphone' : 'email'} existe déjà : ${existing.firstName} ${existing.lastName} (statut: ${existing.status})`,
+                    existingProspectId: existing.id,
+                    existingProspect: existing,
+                });
+            }
+        }
+
         const score = this.calculateScore(data);
 
         // Round-robin assignment to a sales agent
@@ -136,6 +188,211 @@ export class SalesService {
 
         await this.triggerAutomation(prospect, 'NEW');
         return prospect;
+    }
+
+    // ═══════════════════════════════════════════════════
+    // SUPPRESSION
+    // ═══════════════════════════════════════════════════
+
+    async delete(id: string) {
+        const prospect = await this.prisma.prospect.findUnique({ where: { id } });
+        if (!prospect) return null;
+
+        // Cascade: supprimer notes, call logs, appointments liés
+        await this.prisma.$transaction([
+            this.prisma.prospectNote.deleteMany({ where: { prospectId: id } }),
+            this.prisma.callLog.deleteMany({ where: { prospectId: id } }),
+            this.prisma.salesAppointment.deleteMany({ where: { prospectId: id } }),
+            this.prisma.communication.deleteMany({ where: { prospectId: id } }),
+            this.prisma.prospect.delete({ where: { id } }),
+        ]);
+
+        console.log(`[Sales] 🗑️ Prospect ${prospect.firstName} ${prospect.lastName} supprimé (ID: ${id})`);
+        return { deleted: true, id };
+    }
+
+    // ═══════════════════════════════════════════════════
+    // ACTIONS EN MASSE (BULK)
+    // ═══════════════════════════════════════════════════
+
+    async bulkUpdate(ids: string[], updates: { status?: string; assignedToSalesId?: string; tags?: string[] }) {
+        const results = { updated: 0, failed: 0, errors: [] as string[] };
+
+        for (const id of ids) {
+            try {
+                const data: any = {};
+                if (updates.status) data.status = updates.status;
+                if (updates.assignedToSalesId) data.assignedToSalesId = updates.assignedToSalesId;
+                if (updates.tags) data.tags = JSON.stringify(updates.tags);
+
+                await this.prisma.prospect.update({ where: { id }, data });
+                results.updated++;
+            } catch (err: any) {
+                results.failed++;
+                results.errors.push(`${id}: ${err.message}`);
+            }
+        }
+
+        console.log(`[Sales] 📦 Bulk update: ${results.updated} OK, ${results.failed} failed`);
+        return results;
+    }
+
+    async bulkDelete(ids: string[]) {
+        let deleted = 0;
+        for (const id of ids) {
+            const result = await this.delete(id);
+            if (result) deleted++;
+        }
+        return { deleted, total: ids.length };
+    }
+
+    // ═══════════════════════════════════════════════════
+    // ANNULATION / REPROGRAMMATION DE RDV
+    // ═══════════════════════════════════════════════════
+
+    async cancelAppointment(prospectId: string, reason?: string) {
+        const prospect = await this.prisma.prospect.findUnique({
+            where: { id: prospectId },
+            include: { appointments: { orderBy: { createdAt: 'desc' }, take: 1 } },
+        });
+
+        if (!prospect) return null;
+
+        // Annuler le dernier SalesAppointment
+        if (prospect.appointments.length > 0) {
+            const lastAppt = prospect.appointments[0];
+            await this.prisma.salesAppointment.update({
+                where: { id: lastAppt.id },
+                data: { status: 'CANCELLED', notes: reason || 'Annulé par le commercial' },
+            });
+        }
+
+        // Remettre le prospect en CONTACTED (ou QUALIFIED s'il était qualifié)
+        const newStatus = prospect.qualifiedAt ? 'QUALIFIED' : 'CONTACTED';
+        const updated = await this.prisma.prospect.update({
+            where: { id: prospectId },
+            data: {
+                status: newStatus,
+                appointment: Prisma.JsonNull, // Clear appointment data
+                stageEnteredAt: new Date(),
+            },
+            include: { notes: true },
+        });
+
+        // Log
+        await this.addNote(prospectId, 'system', `[AUTO] RDV annulé${reason ? ` — Raison: ${reason}` : ''}. Retour en ${newStatus}.`);
+        console.log(`[Sales] ❌ RDV annulé pour ${prospect.firstName} ${prospect.lastName} → ${newStatus}`);
+
+        return updated;
+    }
+
+    async rescheduleAppointment(prospectId: string, newAppointmentData: {
+        date: string;
+        agencyId: string;
+        agencyName: string;
+        serviceId?: string;
+    }) {
+        // 1. Annuler l'ancien
+        await this.cancelAppointment(prospectId, 'Reprogrammé vers un nouveau créneau');
+
+        // 2. Booker le nouveau (avec vérification temps réel)
+        const result = await this.bookAppointment(prospectId, newAppointmentData);
+
+        if (result) {
+            await this.addNote(prospectId, 'system', `[AUTO] RDV reprogrammé au ${new Date(newAppointmentData.date).toLocaleDateString('fr-FR')} à ${newAppointmentData.agencyName}.`);
+        }
+
+        return result;
+    }
+
+    // ═══════════════════════════════════════════════════
+    // RELANCES PROGRAMMÉES
+    // ═══════════════════════════════════════════════════
+
+    async scheduleFollowUp(prospectId: string, userId: string, scheduledAt: string, reason?: string) {
+        const prospect = await this.prisma.prospect.findUnique({ where: { id: prospectId } });
+        if (!prospect) return null;
+
+        const updated = await this.prisma.prospect.update({
+            where: { id: prospectId },
+            data: {
+                callbackScheduledAt: new Date(scheduledAt),
+                callbackRequestedAt: new Date(),
+                callbackCount: { increment: 1 },
+            },
+        });
+
+        await this.addNote(prospectId, userId,
+            `[RAPPEL] Relance programmée le ${new Date(scheduledAt).toLocaleDateString('fr-FR')} à ${new Date(scheduledAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}${reason ? ` — ${reason}` : ''}`
+        );
+
+        console.log(`[Sales] ⏰ Relance programmée pour ${prospect.firstName} ${prospect.lastName} le ${scheduledAt}`);
+        return updated;
+    }
+
+    async getDueFollowUps(agencyId?: string) {
+        const now = new Date();
+        const where: any = {
+            callbackScheduledAt: { lte: now },
+            status: { notIn: ['LOST', 'SIGNED'] },
+        };
+        if (agencyId) where.agencyId = agencyId;
+
+        return this.prisma.prospect.findMany({
+            where,
+            include: { notes: true },
+            orderBy: { callbackScheduledAt: 'asc' },
+        });
+    }
+
+    // ═══════════════════════════════════════════════════
+    // HISTORIQUE DE COMMUNICATIONS
+    // ═══════════════════════════════════════════════════
+
+    async getCommunicationTimeline(prospectId: string) {
+        const [communications, callLogs, notes] = await Promise.all([
+            this.prisma.communication.findMany({
+                where: { prospectId },
+                orderBy: { createdAt: 'desc' },
+            }),
+            this.prisma.callLog.findMany({
+                where: { prospectId },
+                orderBy: { startedAt: 'desc' },
+            }),
+            this.prisma.prospectNote.findMany({
+                where: { prospectId },
+                orderBy: { createdAt: 'desc' },
+            }),
+        ]);
+
+        // Fusionner en timeline unifiée
+        const timeline = [
+            ...communications.map(c => ({
+                type: c.type, // EMAIL, WHATSAPP, SMS
+                direction: c.direction,
+                content: c.content,
+                sender: c.senderName || c.sender,
+                date: c.createdAt,
+            })),
+            ...callLogs.map(c => ({
+                type: 'CALL',
+                direction: c.direction,
+                content: c.notes || `Appel ${c.status} (${c.duration}s)`,
+                sender: c.userId,
+                date: c.startedAt,
+                duration: c.duration,
+                callStatus: c.status,
+            })),
+            ...notes.map(n => ({
+                type: 'NOTE',
+                direction: 'INTERNAL',
+                content: n.text,
+                sender: n.authorId,
+                date: n.createdAt,
+            })),
+        ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+        return timeline;
     }
 
     async update(id: string, data: any) {
@@ -212,6 +469,22 @@ export class SalesService {
         // Trigger notification automations on status change
         if (sanitizedData.status && sanitizedData.status !== oldProspect.status) {
             await this.triggerAutomation(updatedProspect, sanitizedData.status);
+
+            // ─── PONT → SUIVI COMMERCIAL : log qualification ───
+            if (sanitizedData.status === 'QUALIFIED') {
+                try {
+                    await this.salesTracking.logActivity({
+                        userId: updatedProspect.assignedToSalesId || 'SYSTEM',
+                        agencyId: updatedProspect.agencyId || undefined,
+                        activityType: 'QUALIFICATION',
+                        prospectId: updatedProspect.id,
+                        prospectName: `${updatedProspect.firstName} ${updatedProspect.lastName}`,
+                        outcome: 'QUALIFIED',
+                        notes: `Score: ${updatedProspect.score}/100`,
+                    });
+                    console.log(`[TRACKING] ✅ Qualification logged for ${updatedProspect.firstName}`);
+                } catch (e) { console.warn('[TRACKING] qualification log failed:', e); }
+            }
         }
 
         // ─── RÈGLE 2 : Auto-qualification check ───────────────
@@ -348,6 +621,22 @@ export class SalesService {
         // ─── 5. Trigger pipeline automation ───
         await this.prospectPipeline.onAppointmentBooked(prospectId, appointmentData.date);
 
+        // ─── PONT → SUIVI COMMERCIAL : log RDV fixé ───
+        try {
+            const salesUserId = prospect.assignedToSalesId || hostUserId;
+            await this.salesTracking.logActivity({
+                userId: salesUserId,
+                agencyId: appointmentData.agencyId,
+                activityType: 'MEETING',
+                prospectId: prospectId,
+                prospectName: `${prospect.firstName} ${prospect.lastName}`,
+                outcome: 'BOOKED',
+                notes: `RDV ${appointmentData.date} @ ${appointmentData.agencyName}`,
+                metadata: { appointmentId: salesAppointment.id, hostUserId, calendarId: calendarAppointment?.id },
+            });
+            console.log(`[TRACKING] ✅ Meeting logged for ${prospect.firstName}`);
+        } catch (e) { console.warn('[TRACKING] meeting log failed:', e); }
+
         console.log(`[SalesService] 📅 RDV temps-réel: ${salesAppointment.id} — prospect ${prospectId} — ${appointmentData.date} @ ${appointmentData.agencyName} — juriste: ${hostName || hostUserId}`);
 
         return {
@@ -390,52 +679,144 @@ export class SalesService {
     }
 
     /**
-     * Score dynamique — recalcule le score en fonction de l'état actuel et des interactions
+     * Score prédictif multi-signaux — simule un modèle ML en utilisant
+     * plusieurs dimensions de données pour prédire la probabilité de conversion.
+     *
+     * Signaux utilisés :
+     * 1. Source d'acquisition (pondération historique)
+     * 2. Complétude du profil
+     * 3. Engagement (appels, réponses)
+     * 4. Progression pipeline
+     * 5. Vélocité comportementale (rapidité de progression)
+     * 6. Temporalité (décroissance après inactivité)
+     * 7. Tags (VIP, Urgent = boost)
+     * 8. Éligibilité (simulation faite et positive = fort signal)
+     * 9. Patterns jour/heure (créneaux à forte conversion)
      */
     private recalculateScore(prospect: any, updates: any): number {
         let score = 0;
 
-        // ─── Base : Source d'acquisition ───
+        // ─── 1. Source d'acquisition (pondération historique) ───
         const source = updates.source || prospect.source;
-        if (source === 'GOOGLE_ADS') score += 30;
-        else if (source === 'META_ADS') score += 20;
-        else if (source === 'TIKTOK_ADS') score += 15;
-        else if (source === 'REFERRAL') score += 25;
-        else if (source === 'WEBSITE') score += 10;
-        else score += 5;
+        const sourceWeights: Record<string, number> = {
+            'REFERRAL': 30,      // Meilleur taux de conversion
+            'GOOGLE_ADS': 25,
+            'WEBSITE': 20,
+            'META_ADS': 18,
+            'TIKTOK_ADS': 12,
+            'MANUAL': 8,
+            'CSV_IMPORT': 5,
+        };
+        score += sourceWeights[source] || 5;
 
-        // ─── Complétude du profil ───
+        // ─── 2. Complétude du profil ───
         const email = updates.email !== undefined ? updates.email : prospect.email;
         const phone = updates.phone !== undefined ? updates.phone : prospect.phone;
         const interestServiceId = updates.interestServiceId !== undefined ? updates.interestServiceId : prospect.interestServiceId;
         const address = updates.address !== undefined ? updates.address : prospect.address;
         const zipCode = updates.zipCode !== undefined ? updates.zipCode : prospect.zipCode;
+        const city = updates.city !== undefined ? updates.city : prospect.city;
 
-        if (email && email.length > 5) score += 5;
-        if (phone && phone.length > 8) score += 5;
-        if (interestServiceId) score += 10;
-        if (address) score += 5;
-        if (zipCode) score += 5;
+        let profileCompleteness = 0;
+        if (email && email.length > 5) profileCompleteness++;
+        if (phone && phone.length > 8) profileCompleteness++;
+        if (interestServiceId) profileCompleteness++;
+        if (address) profileCompleteness++;
+        if (zipCode) profileCompleteness++;
+        if (city) profileCompleteness++;
+        // 0-6 items → 0-12 points (progressif)
+        score += Math.round(profileCompleteness * 2);
 
-        // ─── Engagement (interactions positives) ───
+        // ─── 3. Engagement (appels, réponses) ───
         const outcome = updates.lastCallOutcome || prospect.lastCallOutcome;
-        if (outcome === 'INTERESTED') score += 20;
-        else if (outcome === 'CALLBACK') score += 10;
-        else if (outcome === 'NO_ANSWER') score -= 5;
-        else if (outcome === 'NOT_INTERESTED') score -= 30;
-        else if (outcome === 'WRONG_NUMBER') score -= 40;
+        const engagementScores: Record<string, number> = {
+            'INTERESTED': 20,
+            'CALLBACK': 10,
+            'NO_ANSWER': -5,
+            'NOT_INTERESTED': -25,
+            'WRONG_NUMBER': -40,
+        };
+        score += engagementScores[outcome] || 0;
 
-        // ─── Progression pipeline ───
+        // Bonus pour réactivité (a décroché rapidement)
+        const callAttempts = updates.callAttempts !== undefined ? updates.callAttempts : (prospect.callAttempts || 0);
+        if (callAttempts === 1 && outcome === 'INTERESTED') score += 10; // Converti au 1er appel
+
+        // ─── 4. Progression pipeline ───
         const status = updates.status || prospect.status;
-        if (status === 'CONTACTED') score += 5;
-        if (status === 'QUALIFIED') score += 15;
-        if (status === 'MEETING_BOOKED') score += 25;
-        if (status === 'NO_SHOW') score -= 10;
-        if (status === 'LOST') score -= 20;
+        const statusScores: Record<string, number> = {
+            'NEW': 0,
+            'CONTACTED': 5,
+            'QUALIFIED': 15,
+            'MEETING_BOOKED': 25,
+            'NO_SHOW': -10,
+            'LOST': -20,
+            'SIGNED': 0, // déjà converti
+        };
+        score += statusScores[status] || 0;
 
-        // ─── Pénalités ───
+        // ─── 5. Vélocité comportementale ───
+        // Un prospect qui avance vite dans le pipeline a plus de chances de convertir
+        const createdAt = prospect.createdAt ? new Date(prospect.createdAt) : null;
+        const stageEnteredAt = updates.stageEnteredAt ? new Date(updates.stageEnteredAt) : (prospect.stageEnteredAt ? new Date(prospect.stageEnteredAt) : null);
+
+        if (createdAt && stageEnteredAt && ['QUALIFIED', 'MEETING_BOOKED'].includes(status)) {
+            const daysToReachStage = (stageEnteredAt.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24);
+            if (daysToReachStage < 1) score += 10;       // Même jour → très chaud
+            else if (daysToReachStage < 3) score += 5;   // < 3 jours → bon rythme
+            else if (daysToReachStage > 14) score -= 5;  // > 2 semaines → refroidit
+        }
+
+        // ─── 6. Décroissance temporelle (time-decay) ───
+        const lastContactAt = prospect.lastContactAt ? new Date(prospect.lastContactAt) : createdAt;
+        if (lastContactAt) {
+            const daysSinceContact = (Date.now() - lastContactAt.getTime()) / (1000 * 60 * 60 * 24);
+            if (daysSinceContact > 30) score -= 15;      // Inactif > 1 mois
+            else if (daysSinceContact > 14) score -= 8;  // Inactif > 2 semaines
+            else if (daysSinceContact > 7) score -= 3;   // Inactif > 1 semaine
+        }
+
+        // ─── 7. Tags (signaux manuels enrichis) ───
+        const tags = updates.tags || prospect.tags;
+        if (tags) {
+            try {
+                const tagList = typeof tags === 'string' ? JSON.parse(tags) : tags;
+                if (tagList.includes('VIP')) score += 10;
+                if (tagList.includes('Urgent')) score += 8;
+                if (tagList.includes('Chaud')) score += 8;
+                if (tagList.includes('Référé')) score += 5;
+                if (tagList.includes('Diaspora')) score += 3;
+                if (tagList.includes('Froid')) score -= 10;
+                if (tagList.includes('Concurrent')) score -= 5;
+            } catch { /* ignore JSON parse errors */ }
+        }
+
+        // ─── 8. Éligibilité (simulation réalisée) ───
+        const eligibilityResult = updates.eligibilityResult || prospect.eligibilityResult;
+        if (eligibilityResult) {
+            if (eligibilityResult.isEligible) score += 15;   // Éligible = forte intention
+            else score -= 5;                                  // Non éligible mais a testé
+        }
+
+        // ─── 9. Pattern temporel (créneaux à forte conversion) ───
+        if (createdAt) {
+            const hour = createdAt.getHours();
+            const dayOfWeek = createdAt.getDay();
+            // Les inscriptions en semaine 9-12h et 14-18h convertissent mieux
+            if (dayOfWeek >= 1 && dayOfWeek <= 5 && ((hour >= 9 && hour <= 12) || (hour >= 14 && hour <= 18))) {
+                score += 3;
+            }
+            // Les inscriptions du weekend tard le soir sont souvent des curiosités
+            if ((dayOfWeek === 0 || dayOfWeek === 6) && hour >= 23) {
+                score -= 3;
+            }
+        }
+
+        // ─── 10. Pénalités répétées ───
         const noAnswerCount = updates.noAnswerCount !== undefined ? updates.noAnswerCount : (prospect.noAnswerCount || 0);
+        const noShowCount = updates.noShowCount !== undefined ? updates.noShowCount : (prospect.noShowCount || 0);
         score -= noAnswerCount * 3;
+        score -= noShowCount * 8;
 
         return Math.max(0, Math.min(100, score));
     }
@@ -738,6 +1119,42 @@ export class SalesService {
 
         // Trigger notification automation
         await this.triggerAutomation(updatedProspect, 'SIGNED');
+
+        // ─── PONT → SUIVI COMMERCIAL : log conversion + commission ───
+        try {
+            const salesUserId = prospect.assignedToSalesId || 'SYSTEM';
+
+            // 1. Log l'activité CONVERSION
+            await this.salesTracking.logActivity({
+                userId: salesUserId,
+                agencyId: prospect.agencyId || undefined,
+                activityType: 'CONVERSION',
+                prospectId: prospect.id,
+                prospectName: `${prospect.firstName} ${prospect.lastName}`,
+                outcome: 'SIGNED',
+                notes: `Converti en Lead ${leadId} — Service: ${resolvedServiceName}`,
+                metadata: { leadId, serviceId: resolvedServiceId },
+            });
+
+            // 2. Créer la commission automatiquement
+            const servicePrice = catalogEntry?.basePrice ? catalogEntry.basePrice / 100 : 0; // basePrice en centimes → euros
+            const commissionRate = 5; // 5% par défaut
+            if (servicePrice > 0) {
+                await this.salesTracking.createCommission({
+                    userId: salesUserId,
+                    agencyId: prospect.agencyId || undefined,
+                    prospectId: prospect.id,
+                    prospectName: `${prospect.firstName} ${prospect.lastName}`,
+                    serviceId: resolvedServiceId,
+                    serviceName: resolvedServiceName,
+                    baseAmount: servicePrice,
+                    rate: commissionRate,
+                });
+                console.log(`[TRACKING] 💰 Commission auto: ${commissionRate}% de ${servicePrice}€ pour ${salesUserId}`);
+            }
+
+            console.log(`[TRACKING] ✅ Conversion logged for ${prospect.firstName}`);
+        } catch (e) { console.warn('[TRACKING] conversion log failed:', e); }
 
         console.log(`[CONVERSION] ✅ ${prospect.firstName} ${prospect.lastName} → Lead ${leadId} (service: ${resolvedServiceId})`);
 

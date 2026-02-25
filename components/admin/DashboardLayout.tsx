@@ -64,6 +64,7 @@ const DEFAULT_MENU: MenuItem[] = [
     // ─── BLOC 2: ACTIVITÉ ─── Opérations quotidiennes (agences + siège)
     { id: 'calendar', label: 'Agenda & RDV', icon: <CalendarIcon size={20} />, href: '/admin/calendar', permission: 'crm.view_agency', category: 'ACTIVITE' },
     { id: 'sales', label: 'Pipeline Ventes', icon: <TrendingUp size={20} />, href: '/admin/sales', permission: 'crm.view_agency', category: 'ACTIVITE' },
+    { id: 'sales-tracking', label: 'Suivi Commercial', icon: <BarChart3 size={20} />, href: '/admin/sales-tracking', permission: 'crm.view_agency', category: 'ACTIVITE' },
     { id: 'dossiers', label: 'Dossiers Clients', icon: <FolderKanban size={20} />, href: '/admin/dossiers', permission: 'crm.view_agency', category: 'ACTIVITE' },
     { id: 'inbox', label: 'Messagerie', icon: <MessageSquare size={20} />, href: '/admin/inbox', permission: 'inbox.view', category: 'ACTIVITE' },
     { id: 'blog', label: 'Blog & Insights', icon: <Newspaper size={20} />, href: '/admin/blog', permission: 'settings.manage', category: 'ACTIVITE' },

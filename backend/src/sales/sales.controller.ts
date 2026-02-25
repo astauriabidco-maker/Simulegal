@@ -1,11 +1,13 @@
-import { Controller, Get, Post, Body, Patch, Param, UseGuards, Request, Query, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Body, Patch, Param, UseGuards, Request, Query, UseInterceptors, UploadedFile, Res } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { SalesService } from './sales.service';
 import { AuthGuard } from '@nestjs/passport';
 
+
 import { SalesAnalyticsService } from './sales-analytics.service';
 import { AssignmentService } from './assignment.service';
 import { ProspectPipelineService } from './prospect-pipeline.service';
+import { QuotePdfService } from './quote-pdf.service';
 
 @Controller('sales')
 @UseGuards(AuthGuard('jwt'))
@@ -15,6 +17,7 @@ export class SalesController {
         private readonly analyticsService: SalesAnalyticsService,
         private readonly assignmentService: AssignmentService,
         private readonly prospectPipeline: ProspectPipelineService,
+        private readonly quotePdfService: QuotePdfService,
     ) { }
 
     @Get('analytics')
@@ -30,7 +33,9 @@ export class SalesController {
         @Query('agencyId') agencyId?: string,
         @Query('source') source?: string,
         @Query('dateFrom') dateFrom?: string,
-        @Query('dateTo') dateTo?: string
+        @Query('dateTo') dateTo?: string,
+        @Query('search') search?: string,
+        @Query('tags') tags?: string
     ) {
         return this.salesService.findAll({
             page: Number(page),
@@ -39,7 +44,9 @@ export class SalesController {
             agencyId,
             source,
             dateFrom,
-            dateTo
+            dateTo,
+            search,
+            tags,
         });
     }
 
@@ -74,6 +81,33 @@ export class SalesController {
     }
 
     // ═══════════════════════════════════════════════
+    // SUPPRESSION
+    // ═══════════════════════════════════════════════
+
+    @Delete('prospects/:id')
+    async deleteProspect(@Param('id') id: string) {
+        const result = await this.salesService.delete(id);
+        if (!result) {
+            return { success: false, error: 'Prospect not found' };
+        }
+        return { success: true, ...result };
+    }
+
+    // ═══════════════════════════════════════════════
+    // ACTIONS EN MASSE (BULK)
+    // ═══════════════════════════════════════════════
+
+    @Post('bulk/update')
+    async bulkUpdate(@Body() data: { ids: string[]; updates: { status?: string; assignedToSalesId?: string; tags?: string[] } }) {
+        return this.salesService.bulkUpdate(data.ids, data.updates);
+    }
+
+    @Post('bulk/delete')
+    async bulkDelete(@Body() data: { ids: string[] }) {
+        return this.salesService.bulkDelete(data.ids);
+    }
+
+    // ═══════════════════════════════════════════════
     // APPOINTMENTS
     // ═══════════════════════════════════════════════
 
@@ -96,6 +130,39 @@ export class SalesController {
         return { success: true, ...result };
     }
 
+    @Post('prospects/:id/cancel-appointment')
+    async cancelAppointment(
+        @Param('id') id: string,
+        @Body() data: { reason?: string }
+    ) {
+        const result = await this.salesService.cancelAppointment(id, data.reason);
+        if (!result) {
+            return { success: false, error: 'Prospect not found' };
+        }
+        return { success: true, prospect: result };
+    }
+
+    @Post('prospects/:id/reschedule-appointment')
+    async rescheduleAppointment(
+        @Param('id') id: string,
+        @Body() data: {
+            date: string;
+            agencyId: string;
+            agencyName: string;
+            serviceId?: string;
+        }
+    ) {
+        try {
+            const result = await this.salesService.rescheduleAppointment(id, data);
+            if (!result) {
+                return { success: false, error: 'Prospect not found or slot unavailable' };
+            }
+            return { success: true, ...result };
+        } catch (err: any) {
+            return { success: false, error: err.message };
+        }
+    }
+
     @Get('appointments')
     async getAppointments(
         @Query('agencyId') agencyId?: string,
@@ -105,6 +172,42 @@ export class SalesController {
     ) {
         return this.salesService.getAppointments({ agencyId, status, dateFrom, dateTo });
     }
+
+    // ═══════════════════════════════════════════════
+    // RELANCES PROGRAMMÉES
+    // ═══════════════════════════════════════════════
+
+    @Post('prospects/:id/schedule-followup')
+    async scheduleFollowUp(
+        @Param('id') id: string,
+        @Request() req: any,
+        @Body() data: { scheduledAt: string; reason?: string }
+    ) {
+        const userId = req.user?.userId || req.user?.id || 'system';
+        const result = await this.salesService.scheduleFollowUp(id, userId, data.scheduledAt, data.reason);
+        if (!result) {
+            return { success: false, error: 'Prospect not found' };
+        }
+        return { success: true, prospect: result };
+    }
+
+    @Get('followups/due')
+    async getDueFollowUps(@Query('agencyId') agencyId?: string) {
+        return this.salesService.getDueFollowUps(agencyId);
+    }
+
+    // ═══════════════════════════════════════════════
+    // HISTORIQUE / TIMELINE
+    // ═══════════════════════════════════════════════
+
+    @Get('prospects/:id/timeline')
+    async getTimeline(@Param('id') id: string) {
+        return this.salesService.getCommunicationTimeline(id);
+    }
+
+    // ═══════════════════════════════════════════════
+    // NOTES & INTERACTIONS
+    // ═══════════════════════════════════════════════
 
     @Post('prospects/:id/notes')
     addNote(
@@ -192,6 +295,29 @@ export class SalesController {
             return { success: true, leadId: result.leadId, prospect: result.prospect };
         } catch (err: any) {
             return { success: false, error: err.message };
+        }
+    }
+
+    // ═══════════════════════════════════════════════
+    // GÉNÉRATION DE DEVIS PDF
+    // ═══════════════════════════════════════════════
+
+    @Post('prospects/:id/quote')
+    async generateQuote(
+        @Param('id') id: string,
+        @Body() data: { serviceId?: string; serviceName?: string; priceEuros?: number; notes?: string },
+        @Res() res: any
+    ) {
+        try {
+            const { buffer, filename } = await this.quotePdfService.generateQuotePdf(id, data);
+            res.set({
+                'Content-Type': 'application/pdf',
+                'Content-Disposition': `attachment; filename="${filename}"`,
+                'Content-Length': buffer.length,
+            });
+            res.end(buffer);
+        } catch (err: any) {
+            res.status(400).json({ success: false, error: err.message });
         }
     }
 }

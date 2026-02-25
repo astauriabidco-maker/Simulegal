@@ -1,5 +1,17 @@
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
+export interface ArticleComment {
+    id: string;
+    articleId: string;
+    authorName: string;
+    authorEmail?: string;
+    content: string;
+    status: 'PENDING' | 'APPROVED' | 'REJECTED';
+    parentId?: string;
+    createdAt: string;
+    article?: { title: string; slug: string };
+}
+
 export interface Article {
     id: string;
     title: string;
@@ -20,6 +32,8 @@ export interface Article {
     publishedAt: string | null;
     createdAt: string;
     updatedAt: string;
+    comments?: ArticleComment[];
+    _count?: { comments: number };
 }
 
 export type ArticleCategory = 'GENERAL' | 'IMMIGRATION' | 'NATURALISATION' | 'SEJOUR' | 'PERMIS' | 'FAMILY';
@@ -55,6 +69,15 @@ export const BlogStore = {
         const res = await fetch(`${API}/public/blog/${slug}`);
         if (!res.ok) return null;
         return res.json();
+    },
+
+    postComment: async (slug: string, data: { authorName: string; authorEmail?: string; content: string; honeypot?: string }): Promise<boolean> => {
+        const res = await fetch(`${API}/public/blog/${slug}/comments`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        });
+        return res.ok;
     },
 
     // ── Admin ──
@@ -93,6 +116,30 @@ export const BlogStore = {
 
     remove: async (id: string): Promise<boolean> => {
         const res = await fetch(`${API}/blog/${id}`, {
+            method: 'DELETE',
+            headers: getAuthHeaders(),
+        });
+        return res.ok;
+    },
+
+    // ── Admin Comments ──
+    getPendingComments: async (): Promise<ArticleComment[]> => {
+        const res = await fetch(`${API}/blog/comments/pending`, { headers: getAuthHeaders() });
+        if (!res.ok) return [];
+        return res.json();
+    },
+
+    moderateComment: async (commentId: string, status: 'APPROVED' | 'REJECTED'): Promise<boolean> => {
+        const res = await fetch(`${API}/blog/comments/${commentId}`, {
+            method: 'PATCH',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ status }),
+        });
+        return res.ok;
+    },
+
+    deleteComment: async (commentId: string): Promise<boolean> => {
+        const res = await fetch(`${API}/blog/comments/${commentId}`, {
             method: 'DELETE',
             headers: getAuthHeaders(),
         });
