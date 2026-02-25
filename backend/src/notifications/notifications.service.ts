@@ -333,10 +333,10 @@ export class NotificationsService {
     }
 
     /**
-     * Send email with optional HTML content
+     * Send email with optional HTML content and attachments
      * Uses dynamic SMTP configuration from database or env vars
      */
-    async sendEmail(to: string, subject: string, body: string, html?: string) {
+    async sendEmail(to: string, subject: string, body: string, html?: string, attachments?: { filename: string; content: Buffer; contentType?: string }[]) {
         const transporter = await this.createTransporter();
 
         if (!transporter) {
@@ -344,18 +344,31 @@ export class NotificationsService {
             console.log(`[Mailer] 📧 DEV MODE - Would send to ${to}:`);
             console.log(`  Subject: ${subject}`);
             console.log(`  Body preview: ${body.substring(0, 100)}...`);
+            if (attachments?.length) {
+                console.log(`  📎 Attachments: ${attachments.map(a => a.filename).join(', ')}`);
+            }
             return { success: true, messageId: 'dev-mode-no-smtp' };
         }
 
         try {
-            const info = await transporter.sendMail({
-                from: '"SimuLegal" <no-reply@simulegal.fr>', // sender address
-                to: to, // list of receivers
-                subject: subject, // Subject line
-                text: body, // plain text body
-                html: html || body.replace(/\n/g, '<br>'), // HTML body
-            });
-            console.log(`[Email] 📧 Sent to ${to}: ${info.messageId}`);
+            const mailOptions: any = {
+                from: '"SimuLegal" <no-reply@simulegal.fr>',
+                to,
+                subject,
+                text: body,
+                html: html || body.replace(/\n/g, '<br>'),
+            };
+
+            if (attachments?.length) {
+                mailOptions.attachments = attachments.map(a => ({
+                    filename: a.filename,
+                    content: a.content,
+                    contentType: a.contentType || 'application/pdf',
+                }));
+            }
+
+            const info = await transporter.sendMail(mailOptions);
+            console.log(`[Email] 📧 Sent to ${to}: ${info.messageId}${attachments?.length ? ` (${attachments.length} attachment(s))` : ''}`);
             return { success: true, messageId: info.messageId };
         } catch (error) {
             console.error('[Email] Error:', error);

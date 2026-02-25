@@ -7,6 +7,7 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { PipelineAutomationService } from '../pipeline-automation/pipeline-automation.service';
 import { SalesService } from '../sales/sales.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { InvoicePdfService } from './invoice-pdf.service';
 import { SERVICE_CATALOG } from '../config/services-pipeline.config';
 
 import { EventEmitter2 } from '@nestjs/event-emitter';
@@ -25,6 +26,7 @@ export class PaymentsService implements OnModuleInit {
         @Inject(forwardRef(() => SalesService)) private salesService: SalesService,
         private prisma: PrismaService,
         private eventEmitter: EventEmitter2,
+        private invoicePdfService: InvoicePdfService,
     ) { }
 
     async onModuleInit() {
@@ -303,7 +305,19 @@ export class PaymentsService implements OnModuleInit {
                             await this.pipelineAutomation.onPaymentReceived(leadInfo);
                         }
 
-                        // ── Envoi email de confirmation + copie du mandat ──
+                        // ── Génération automatique de la facture PDF ──
+                        let invoicePdfBuffer: Buffer | undefined;
+                        let invoiceFilename: string | undefined;
+                        try {
+                            invoicePdfBuffer = await this.invoicePdfService.generateInvoicePdf(result.leadId);
+                            const invoiceNum = leadInfo?.invoiceNumber || `FAC-${new Date().getFullYear()}-${result.leadId.substring(0, 6).toUpperCase()}`;
+                            invoiceFilename = `facture-${invoiceNum}.pdf`;
+                            this.logger.log(`[📄] Facture PDF générée : ${invoiceFilename} (${invoicePdfBuffer.length} bytes)`);
+                        } catch (pdfErr: any) {
+                            this.logger.error(`[❌] Échec génération facture PDF pour ${result.leadId}: ${pdfErr.message}`);
+                        }
+
+                        // ── Envoi email de confirmation + facture PDF en PJ + mandat ──
                         if (leadInfo?.email) {
                             try {
                                 const clientSpaceUrlForEmail = this.leadsService.generateClientSpaceUrl(result.leadId);
@@ -314,21 +328,27 @@ export class PaymentsService implements OnModuleInit {
                                     amountStr,
                                     session.id,
                                     leadInfo.requiredDocs,
-                                    clientSpaceUrlForEmail
+                                    clientSpaceUrlForEmail,
+                                    invoicePdfBuffer,
+                                    invoiceFilename,
                                 );
                                 await this.emailService.sendMandateCopy(leadInfo.email, leadInfo.name);
-                                this.logger.log(`[📧] Email confirmation + mandat envoyé à ${leadInfo.email}`);
+                                this.logger.log(`[📧] Email confirmation + facture PDF + mandat envoyé à ${leadInfo.email}`);
                             } catch (emailErr) {
                                 this.logger.error(`[❌] Failed to send confirmation email: ${emailErr.message}`);
                             }
                         }
 
-                        // ── Envoi WhatsApp checklist avec magic links ──
+                        // ── Envoi WhatsApp checklist avec magic links + lien facture ──
+                        const invoiceDownloadUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/payments/${result.leadId}/invoice`;
                         if (leadInfo?.phone && leadInfo?.requiredDocs && leadInfo.requiredDocs.length > 0) {
                             try {
                                 const uploadLinks = this.leadsService.generateDocumentUploadLinks(result.leadId, leadInfo.requiredDocs);
                                 const clientSpaceUrl = this.leadsService.generateClientSpaceUrl(result.leadId);
                                 const { message, buttons } = this.leadsService.buildWhatsAppChecklistMessage(serviceLabel, clientSpaceUrl, uploadLinks);
+
+                                // Ajouter le bouton de téléchargement de la facture
+                                buttons.push({ title: '📄 Télécharger ma facture', url: invoiceDownloadUrl });
 
                                 await this.notificationsService.sendWhatsApp(
                                     leadInfo.phone,
@@ -337,7 +357,7 @@ export class PaymentsService implements OnModuleInit {
                                     { leadId: result.leadId },
                                     buttons
                                 );
-                                this.logger.log(`[📲] WhatsApp checklist envoyé au ${leadInfo.phone} (${uploadLinks.length} docs)`);
+                                this.logger.log(`[📲] WhatsApp checklist + lien facture envoyé au ${leadInfo.phone} (${uploadLinks.length} docs)`);
                             } catch (waErr) {
                                 this.logger.error(`[❌] Failed to send WhatsApp checklist: ${waErr.message}`);
                             }
@@ -349,7 +369,8 @@ export class PaymentsService implements OnModuleInit {
                                 {
                                     name: leadInfo.name,
                                     message: `✅ ${leadInfo.name}, votre paiement de ${amountStr}€ a été confirmé ! ` +
-                                        `Votre dossier ${serviceLabel} est maintenant ouvert. Nous vous recontacterons sous 24h.`,
+                                        `Votre dossier ${serviceLabel} est maintenant ouvert. Nous vous recontacterons sous 24h.\n\n` +
+                                        `📄 Téléchargez votre facture : ${invoiceDownloadUrl}`,
                                 },
                             );
                         }
@@ -394,6 +415,18 @@ export class PaymentsService implements OnModuleInit {
                         const amountStr = session.amount_total ? session.amount_total / 100 : 0;
                         const serviceLabel = session.metadata?.label || leadInfo.serviceName;
 
+                        // ── Génération automatique de la facture PDF ──
+                        let invoicePdfBuffer: Buffer | undefined;
+                        let invoiceFilename: string | undefined;
+                        try {
+                            invoicePdfBuffer = await this.invoicePdfService.generateInvoicePdf(leadId);
+                            const invoiceNum = leadInfo.invoiceNumber || `FAC-${new Date().getFullYear()}-${leadId.substring(0, 6).toUpperCase()}`;
+                            invoiceFilename = `facture-${invoiceNum}.pdf`;
+                            this.logger.log(`[📄] Facture PDF générée : ${invoiceFilename} (${invoicePdfBuffer.length} bytes)`);
+                        } catch (pdfErr: any) {
+                            this.logger.error(`[❌] Échec génération facture PDF pour ${leadId}: ${pdfErr.message}`);
+                        }
+
                         if (leadInfo.email) {
                             const clientSpaceUrlForEmail = this.leadsService.generateClientSpaceUrl(leadInfo.id);
                             await this.emailService.sendOrderConfirmation(
@@ -403,16 +436,23 @@ export class PaymentsService implements OnModuleInit {
                                 amountStr,
                                 session.id,
                                 leadInfo.requiredDocs,
-                                clientSpaceUrlForEmail
+                                clientSpaceUrlForEmail,
+                                invoicePdfBuffer,
+                                invoiceFilename,
                             );
                             await this.emailService.sendMandateCopy(leadInfo.email, leadInfo.name);
+                            this.logger.log(`[📧] Email confirmation + facture PDF + mandat envoyé à ${leadInfo.email}`);
                         }
 
-                        // Envoi de la checklist WhatsApp avec Boutons Interactifs + Espace Client
+                        // Envoi de la checklist WhatsApp avec Boutons Interactifs + lien facture
+                        const invoiceDownloadUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/payments/${leadInfo.id}/invoice`;
                         if (leadInfo.phone && leadInfo.requiredDocs && leadInfo.requiredDocs.length > 0) {
                             const uploadLinks = this.leadsService.generateDocumentUploadLinks(leadInfo.id, leadInfo.requiredDocs);
                             const clientSpaceUrl = this.leadsService.generateClientSpaceUrl(leadInfo.id);
                             const { message, buttons } = this.leadsService.buildWhatsAppChecklistMessage(serviceLabel, clientSpaceUrl, uploadLinks);
+
+                            // Ajouter le bouton de téléchargement de la facture
+                            buttons.push({ title: '📄 Télécharger ma facture', url: invoiceDownloadUrl });
 
                             await this.notificationsService.sendWhatsApp(
                                 leadInfo.phone,

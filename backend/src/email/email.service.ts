@@ -11,7 +11,17 @@ export class EmailService {
         private notifications: NotificationsService
     ) { }
 
-    async sendOrderConfirmation(to: string, clientName: string, serviceName: string, amount: number, transactionRef: string, requiredDocs?: any[], clientSpaceUrl?: string) {
+    async sendOrderConfirmation(
+        to: string,
+        clientName: string,
+        serviceName: string,
+        amount: number,
+        transactionRef: string,
+        requiredDocs?: any[],
+        clientSpaceUrl?: string,
+        invoicePdf?: Buffer,
+        invoiceFilename?: string
+    ) {
         const subject = `Confirmation de votre commande Simulegal #${transactionRef}`;
 
         let checklistText = '';
@@ -52,21 +62,32 @@ export class EmailService {
         ✅ Suivre l'avancement de votre dossier
         ✅ Consulter les pièces validées ou à corriger
         
-        Un juriste va prendre connaissance de votre dossier sous 24h ouvrées.
+        ${invoicePdf ? '📎 Votre facture est jointe à cet email au format PDF.\n        ' : ''}Un juriste va prendre connaissance de votre dossier sous 24h ouvrées.
         
         Cordialement,
         L'équipe Simulegal
         `;
 
-        // Route vers le vrai SMTP via NotificationsService
-        await this.notifications.sendEmail(to, subject, textContent);
+        // Build attachments array
+        const attachments: { filename: string; content: Buffer; contentType?: string }[] = [];
+        if (invoicePdf) {
+            attachments.push({
+                filename: invoiceFilename || `facture-simulegal.pdf`,
+                content: invoicePdf,
+                contentType: 'application/pdf',
+            });
+        }
+
+        // Route vers le vrai SMTP via NotificationsService (with attachments)
+        await this.notifications.sendEmail(to, subject, textContent, undefined, attachments.length > 0 ? attachments : undefined);
 
         // Debug storage
         this.lastEmailSent = {
             to,
             subject,
             content: textContent,
-            type: 'OrderConfirmation'
+            type: 'OrderConfirmation',
+            hasInvoicePdf: !!invoicePdf,
         };
 
         return true;
