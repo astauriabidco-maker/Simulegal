@@ -36,6 +36,7 @@ import { SERVICES_CATALOG } from '../../data/services';
 import { AuthStore } from '../../services/authStore';
 import { AgencyStore, AgencyExt } from '../../services/AgencyStore';
 import { UserStore, StaffUser } from '../../services/UserStore';
+import SimulatorWrapper from '../SimulatorWrapper';
 
 const COLUMNS: { id: ProspectStatus; label: string; color: string; icon: string }[] = [
     { id: 'NEW', label: 'Nouveau', color: 'bg-amber-100 text-amber-800', icon: '🟡' },
@@ -130,6 +131,7 @@ export default function SalesDashboard() {
     const [showCallCockpit, setShowCallCockpit] = useState(false);
     const [showAddModal, setShowAddModal] = useState(false);
     const [showBookingModal, setShowBookingModal] = useState(false);
+    const [showSimulatorModal, setShowSimulatorModal] = useState(false);
     const [callHistory, setCallHistory] = useState<any[]>([]);
 
     // ─── Toast & Confirmation system ───
@@ -171,27 +173,39 @@ export default function SalesDashboard() {
     const [callbackSchedule, setCallbackSchedule] = useState('');
     // ─── Tarification backend (source unique de vérité) ───
     const [backendPricing, setBackendPricing] = useState<Record<string, { priceEuros: number; pricePer3: number; serviceName: string; source: string; promoActive: boolean }>>({});
+    const pricingCache = React.useRef<Record<string, Promise<any> | undefined>>({});
 
     const router = useRouter();
 
     // Fetch le prix résolu d'un service depuis le backend
     const fetchServicePrice = async (serviceId: string): Promise<{ priceEuros: number; pricePer3: number; serviceName: string; source: string; promoActive: boolean }> => {
-        // Cache hit
+        // Cache statique
         if (backendPricing[serviceId]) return backendPricing[serviceId];
-        try {
-            const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
-            const res = await fetch(`${API_URL}/payments/resolve-price/${serviceId}`);
-            if (!res.ok) throw new Error('Failed to resolve price');
-            const data = await res.json();
-            const entry = { priceEuros: data.priceEuros, pricePer3: data.pricePer3, serviceName: data.serviceName, source: data.source, promoActive: data.promoActive };
-            setBackendPricing(prev => ({ ...prev, [serviceId]: entry }));
-            return entry;
-        } catch (e) {
-            console.error('[Pricing] Failed to fetch price for', serviceId, e);
-            // Fallback si le backend est indisponible
-            const fallback = SERVICES_CATALOG.find(s => s.id === serviceId);
-            return { priceEuros: 100, pricePer3: 34, serviceName: fallback?.title || serviceId, source: 'OFFLINE_FALLBACK', promoActive: false };
+
+        // Cache des requêtes en cours
+        if (pricingCache.current[serviceId]) {
+            return pricingCache.current[serviceId];
         }
+
+        const fetchPromise = (async () => {
+            try {
+                const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+                const res = await fetch(`${API_URL}/payments/resolve-price/${serviceId}`);
+                if (!res.ok) throw new Error('Failed to resolve price');
+                const data = await res.json();
+                const entry = { priceEuros: data.priceEuros, pricePer3: data.pricePer3, serviceName: data.serviceName, source: data.source, promoActive: data.promoActive };
+                setBackendPricing(prev => ({ ...prev, [serviceId]: entry }));
+                return entry;
+            } catch (e) {
+                console.error('[Pricing] Failed to fetch price for', serviceId, e);
+                // Fallback si le backend est indisponible
+                const fallback = SERVICES_CATALOG.find(s => s.id === serviceId);
+                return { priceEuros: 100, pricePer3: 34, serviceName: fallback?.title || serviceId, source: 'OFFLINE_FALLBACK', promoActive: false };
+            }
+        })();
+
+        pricingCache.current[serviceId] = fetchPromise;
+        return fetchPromise;
     };
 
     // Initial load
@@ -1111,7 +1125,7 @@ export default function SalesDashboard() {
                                             {/* Ligne 1 : Simulateur + Appeler + Non honoré */}
                                             <div className="flex gap-2">
                                                 <button
-                                                    onClick={() => router.push(`/?prospectId=${selectedProspect.id}&serviceId=${encodeURIComponent(selectedProspect.interestServiceId || '')}`)}
+                                                    onClick={() => setShowSimulatorModal(true)}
                                                     className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 transition-all shadow-sm shadow-indigo-200 active:scale-[0.97]"
                                                 >
                                                     <Microscope size={15} />
@@ -1375,7 +1389,7 @@ export default function SalesDashboard() {
                                         )}
                                         {selectedProspect.status === 'MEETING_BOOKED' && !selectedProspect.eligibilityResult && (
                                             <button
-                                                onClick={() => router.push(`/?prospectId=${selectedProspect.id}&serviceId=${encodeURIComponent(selectedProspect.interestServiceId || '')}`)}
+                                                onClick={() => setShowSimulatorModal(true)}
                                                 className="w-full flex items-center gap-4 p-4 rounded-2xl bg-gradient-to-r from-indigo-50 via-purple-50 to-indigo-50 border border-indigo-100 hover:border-indigo-200 transition-all group active:scale-[0.98]"
                                             >
                                                 <div className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -1701,8 +1715,8 @@ export default function SalesDashboard() {
                                                             <div
                                                                 key={note.id}
                                                                 className={`p-4 rounded-xl relative group border-2 ${isAgentNote
-                                                                        ? 'bg-amber-50/80 border-amber-200'
-                                                                        : 'bg-slate-50 border-slate-100'
+                                                                    ? 'bg-amber-50/80 border-amber-200'
+                                                                    : 'bg-slate-50 border-slate-100'
                                                                     }`}
                                                             >
                                                                 {isAgentNote && (
@@ -1987,6 +2001,33 @@ export default function SalesDashboard() {
                             onSaveNote={handleSaveNote}
                             onBookAppointment={(appointment) => handleBookAppointment(selectedProspect, appointment)}
                         />
+                    )}
+
+                    {/* Modal Simulateur */}
+                    {showSimulatorModal && selectedProspect && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                            <div
+                                className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+                                onClick={() => setShowSimulatorModal(false)}
+                            />
+                            <div className="relative bg-transparent w-full max-w-5xl max-h-[90vh] overflow-y-auto rounded-[3rem] shadow-2xl animate-in zoom-in-95 duration-200">
+                                <button
+                                    onClick={() => setShowSimulatorModal(false)}
+                                    className="absolute top-6 right-6 z-10 w-10 h-10 bg-white/50 hover:bg-white text-slate-800 rounded-full flex items-center justify-center transition-all shadow-sm"
+                                >
+                                    <X size={20} />
+                                </button>
+                                <SimulatorWrapper
+                                    serviceId={selectedProspect.interestServiceId || ''}
+                                    prospectId={selectedProspect.id}
+                                    onComplete={() => {
+                                        setShowSimulatorModal(false);
+                                        loadProspects();
+                                        showToast('Simulation terminée et dossier mis à jour.', 'success');
+                                    }}
+                                />
+                            </div>
+                        </div>
                     )}
                 </>
             )}

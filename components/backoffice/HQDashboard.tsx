@@ -47,10 +47,6 @@ export default function HQDashboard({ onViewDossier }: HQDashboardProps) {
     const [servicesByCategory, setServicesByCategory] = useState<Record<string, { id: string; name: string; shortName: string }[]>>({});
     const [catalogLoaded, setCatalogLoaded] = useState(false);
 
-    useEffect(() => {
-        loadLeads();
-    }, []);
-
     const loadLeads = async () => {
         try {
             const allLeads = await DossierStore.getAll();
@@ -75,10 +71,15 @@ export default function HQDashboard({ onViewDossier }: HQDashboardProps) {
     }, []);
 
     useEffect(() => {
-        loadLeads();
-        loadStaff();
-        loadServiceCatalog();
-    }, []);
+        const loadAllData = async () => {
+            await Promise.all([
+                loadLeads(),
+                loadStaff(),
+                loadServiceCatalog()
+            ]);
+        };
+        loadAllData();
+    }, [loadServiceCatalog]);
 
     // Pré-charger les pipelines quand les leads changent
     useEffect(() => {
@@ -536,8 +537,8 @@ function LeadDetailModal({
                                                 <div
                                                     key={idx}
                                                     className={`p-4 rounded-2xl relative group border-2 ${isAgentNote
-                                                            ? 'bg-amber-50/80 border-amber-200'
-                                                            : 'bg-slate-50 border-transparent'
+                                                        ? 'bg-amber-50/80 border-amber-200'
+                                                        : 'bg-slate-50 border-transparent'
                                                         }`}
                                                 >
                                                     {isAgentNote && (
