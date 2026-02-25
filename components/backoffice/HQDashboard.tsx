@@ -528,15 +528,40 @@ function LeadDetailModal({
                                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-3">Notes Internes</label>
                                 <div className="space-y-4 max-h-[250px] overflow-y-auto mb-4 pr-2">
                                     {lead.notes && lead.notes.length > 0 ? (
-                                        lead.notes.map((note, idx) => (
-                                            <div key={idx} className="bg-slate-50 p-4 rounded-2xl relative group">
-                                                <p className="text-xs text-slate-700 font-medium leading-relaxed">{note.content}</p>
-                                                <div className="mt-2 flex items-center justify-between">
-                                                    <span className="text-[9px] font-black text-indigo-400 uppercase tracking-wider">{note.authorName || note.author}</span>
-                                                    <span className="text-[9px] text-slate-400 font-mono italic">{new Date(note.createdAt).toLocaleDateString('fr-FR')}</span>
+                                        lead.notes.map((note, idx) => {
+                                            const authorLabel = note.authorName || note.author;
+                                            const isAgentNote = authorLabel?.includes('🤖');
+
+                                            return (
+                                                <div
+                                                    key={idx}
+                                                    className={`p-4 rounded-2xl relative group border-2 ${isAgentNote
+                                                            ? 'bg-amber-50/80 border-amber-200'
+                                                            : 'bg-slate-50 border-transparent'
+                                                        }`}
+                                                >
+                                                    {isAgentNote && (
+                                                        <div className="absolute -top-2.5 right-4 bg-amber-400 text-amber-900 px-2 py-0.5 rounded-full text-[9px] font-black tracking-widest uppercase shadow-sm flex items-center gap-1">
+                                                            <span>Agent QA</span>
+                                                        </div>
+                                                    )}
+                                                    <p className={`text-xs font-medium leading-relaxed whitespace-pre-wrap ${isAgentNote ? 'text-amber-900 font-semibold' : 'text-slate-700'
+                                                        }`}>
+                                                        {note.content}
+                                                    </p>
+                                                    <div className="mt-3 flex items-center justify-between">
+                                                        <span className={`text-[9px] font-black uppercase tracking-wider ${isAgentNote ? 'text-amber-600' : 'text-indigo-400'
+                                                            }`}>
+                                                            {authorLabel}
+                                                        </span>
+                                                        <span className={`text-[9px] font-mono flex items-center gap-1 ${isAgentNote ? 'text-amber-500 font-bold' : 'text-slate-400 italic'
+                                                            }`}>
+                                                            {new Date(note.createdAt).toLocaleDateString('fr-FR')} à {new Date(note.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                                                        </span>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        ))
+                                            );
+                                        })
                                     ) : (
                                         <p className="text-xs text-slate-400 italic text-center py-4">Aucune note pour le moment</p>
                                     )}

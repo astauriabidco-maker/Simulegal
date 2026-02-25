@@ -22,23 +22,104 @@ import {
     Download,
     MapPin,
     Clock,
-    Microscope
+    Microscope,
+    AlertTriangle,
+    Info,
+    X
 } from 'lucide-react';
 
 
 import { SalesAnalyticsDashboard } from './SalesAnalyticsDashboard';
 import { WhatsAppWidget } from '../backoffice/WhatsAppWidget';
 import BookAppointmentModal from './BookAppointmentModal';
+import { SERVICES_CATALOG } from '../../data/services';
+import { AuthStore } from '../../services/authStore';
+import { AgencyStore, AgencyExt } from '../../services/AgencyStore';
+import { UserStore, StaffUser } from '../../services/UserStore';
 
 const COLUMNS: { id: ProspectStatus; label: string; color: string; icon: string }[] = [
     { id: 'NEW', label: 'Nouveau', color: 'bg-amber-100 text-amber-800', icon: '🟡' },
     { id: 'CONTACTED', label: 'Contacté', color: 'bg-purple-100 text-purple-800', icon: '🟣' },
-    { id: 'QUALIFIED', label: 'Qualifié', color: 'bg-blue-100 text-blue-800', icon: '🔵' },
-    { id: 'MEETING_BOOKED', label: 'RDV Fixé', color: 'bg-indigo-100 text-indigo-800', icon: '�' },
+    { id: 'QUALIFIED', label: 'Qualifié', color: 'bg-cyan-100 text-cyan-800', icon: '🔵' },
+    { id: 'MEETING_BOOKED', label: 'RDV Fixé', color: 'bg-indigo-100 text-indigo-800', icon: '📅' },
     { id: 'SIGNED', label: 'Signé', color: 'bg-emerald-100 text-emerald-800', icon: '✅' },
     { id: 'NO_SHOW', label: 'Non Honoré', color: 'bg-red-100 text-red-800', icon: '🚫' },
     { id: 'LOST', label: 'Perdu', color: 'bg-slate-100 text-slate-800', icon: '⚫' }
 ];
+
+// ─── Boutons d'encaissement avec prix backend ───
+function PaymentButtons({ prospect, onPay, fetchPrice }: {
+    prospect: Prospect;
+    onPay: (prospect: Prospect, installments: 1 | 3) => void;
+    fetchPrice: (serviceId: string) => Promise<{ priceEuros: number; pricePer3: number; serviceName: string; source: string; promoActive: boolean }>;
+}) {
+    const [pricing, setPricing] = React.useState<{ priceEuros: number; pricePer3: number; promoActive: boolean } | null>(null);
+
+    React.useEffect(() => {
+        const serviceId = prospect.eligibilityResult?.matchedProcedures?.[0] || prospect.interestServiceId || '';
+        if (serviceId) {
+            fetchPrice(serviceId).then(setPricing);
+        }
+    }, [prospect.id, prospect.interestServiceId]);
+
+    if (!pricing) {
+        return (
+            <div className="flex gap-2">
+                <div className="flex-1 py-2.5 bg-slate-100 rounded-xl animate-pulse" />
+                <div className="flex-1 py-2.5 bg-slate-100 rounded-xl animate-pulse" />
+            </div>
+        );
+    }
+
+    return (
+        <div className="flex gap-2">
+            <button
+                onClick={() => onPay(prospect, 1)}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700 transition-all shadow-sm shadow-emerald-200 active:scale-[0.97]"
+            >
+                💳 Encaisser {pricing.priceEuros}€
+                {pricing.promoActive && <span className="ml-1 px-1 py-0.5 bg-red-500 text-[9px] rounded-md uppercase">Promo</span>}
+            </button>
+            <button
+                onClick={() => onPay(prospect, 3)}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-white border border-emerald-300 text-emerald-700 rounded-xl text-sm font-bold hover:bg-emerald-50 transition-all active:scale-[0.97]"
+            >
+                💳 3x {pricing.pricePer3}€
+            </button>
+        </div>
+    );
+}
+
+// ─── Affichage informatif du prix backend dans le drawer ───
+function ServicePriceDisplay({ serviceId, fetchPrice }: {
+    serviceId: string;
+    fetchPrice: (serviceId: string) => Promise<{ priceEuros: number; pricePer3: number; serviceName: string; source: string; promoActive: boolean }>;
+}) {
+    const [pricing, setPricing] = React.useState<{ priceEuros: number; serviceName: string; source: string; promoActive: boolean } | null>(null);
+
+    React.useEffect(() => {
+        if (serviceId) {
+            fetchPrice(serviceId).then(setPricing);
+        }
+    }, [serviceId]);
+
+    if (!serviceId || !pricing) return null;
+
+    const sourceLabel = pricing.source === 'PROMO' ? '🏷️ Promo' :
+        pricing.source === 'ADMIN_OVERRIDE' ? '⚙️ Admin' :
+            pricing.source === 'CATALOG_DEFAULT' || pricing.source === 'FRONTEND_MAP' ? '📋 Défaut' : '';
+
+    const sourceColor = pricing.source === 'PROMO' ? 'text-red-500' :
+        pricing.source === 'ADMIN_OVERRIDE' ? 'text-indigo-500' : 'text-slate-400';
+
+    return (
+        <div className="flex items-center gap-2 mt-1">
+            <span className="text-sm font-black text-emerald-600">{pricing.priceEuros}€</span>
+            {sourceLabel && <span className={`text-[9px] font-bold ${sourceColor}`}>{sourceLabel}</span>}
+            {pricing.promoActive && <span className="px-1.5 py-0.5 bg-red-100 text-red-600 text-[9px] font-bold rounded-md animate-pulse">PROMO ACTIVE</span>}
+        </div>
+    );
+}
 
 export default function SalesDashboard() {
     const [prospects, setProspects] = useState<Prospect[]>([]);
@@ -51,9 +132,31 @@ export default function SalesDashboard() {
     const [showBookingModal, setShowBookingModal] = useState(false);
     const [callHistory, setCallHistory] = useState<any[]>([]);
 
+    // ─── Toast & Confirmation system ───
+    const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'warning' | 'info'; icon?: string } | null>(null);
+    const [confirmDialog, setConfirmDialog] = useState<{
+        title: string;
+        message: string;
+        confirmLabel: string;
+        cancelLabel?: string;
+        type: 'danger' | 'warning' | 'info';
+        onConfirm: () => void;
+    } | null>(null);
+
+    const showToast = (message: string, type: 'success' | 'error' | 'warning' | 'info' = 'success', icon?: string) => {
+        setToast({ message, type, icon });
+        setTimeout(() => setToast(null), 3500);
+    };
+
     const [isEditingInfo, setIsEditingInfo] = useState(false);
     const [editForm, setEditForm] = useState({ firstName: '', lastName: '', phone: '', email: '', address: '', city: '', zipCode: '', country: 'France' });
-    const [addForm, setAddForm] = useState({ firstName: '', lastName: '', phone: '', email: '', source: 'WEBSITE', address: '', city: '', zipCode: '', country: 'France' });
+    const [isEditingMarketing, setIsEditingMarketing] = useState(false);
+    const [marketingForm, setMarketingForm] = useState({ source: '', campaignName: '', interestServiceId: '' });
+    const [newNote, setNewNote] = useState('');
+    const currentUserInfo = AuthStore.getCurrentUser();
+    const [addForm, setAddForm] = useState({ firstName: '', lastName: '', phone: '', email: '', source: 'WEBSITE', address: '', city: '', zipCode: '', country: 'France', interestServiceId: '', agencyId: currentUserInfo?.agencyId || 'HQ-001', assignedToSalesId: '' });
+    const [agencies, setAgencies] = useState<AgencyExt[]>([]);
+    const [users, setUsers] = useState<StaffUser[]>([]);
 
     // Advanced Filters
     const [filters, setFilters] = useState<{
@@ -64,12 +167,39 @@ export default function SalesDashboard() {
     }>({});
     const [showFilters, setShowFilters] = useState(false);
     const [hoveredColumnId, setHoveredColumnId] = useState<string | null>(null);
+    const [velocityMetrics, setVelocityMetrics] = useState<any>(null);
+    const [callbackSchedule, setCallbackSchedule] = useState('');
+    // ─── Tarification backend (source unique de vérité) ───
+    const [backendPricing, setBackendPricing] = useState<Record<string, { priceEuros: number; pricePer3: number; serviceName: string; source: string; promoActive: boolean }>>({});
 
     const router = useRouter();
+
+    // Fetch le prix résolu d'un service depuis le backend
+    const fetchServicePrice = async (serviceId: string): Promise<{ priceEuros: number; pricePer3: number; serviceName: string; source: string; promoActive: boolean }> => {
+        // Cache hit
+        if (backendPricing[serviceId]) return backendPricing[serviceId];
+        try {
+            const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+            const res = await fetch(`${API_URL}/payments/resolve-price/${serviceId}`);
+            if (!res.ok) throw new Error('Failed to resolve price');
+            const data = await res.json();
+            const entry = { priceEuros: data.priceEuros, pricePer3: data.pricePer3, serviceName: data.serviceName, source: data.source, promoActive: data.promoActive };
+            setBackendPricing(prev => ({ ...prev, [serviceId]: entry }));
+            return entry;
+        } catch (e) {
+            console.error('[Pricing] Failed to fetch price for', serviceId, e);
+            // Fallback si le backend est indisponible
+            const fallback = SERVICES_CATALOG.find(s => s.id === serviceId);
+            return { priceEuros: 100, pricePer3: 34, serviceName: fallback?.title || serviceId, source: 'OFFLINE_FALLBACK', promoActive: false };
+        }
+    };
 
     // Initial load
     useEffect(() => {
         loadProspects();
+        AgencyStore.getAllAgencies().then(setAgencies);
+        UserStore.getAllUsers().then(setUsers);
+        SalesStore.getPipelineVelocity().then(setVelocityMetrics);
     }, []);
 
     // Load call history when prospect is selected
@@ -86,10 +216,19 @@ export default function SalesDashboard() {
                 zipCode: selectedProspect.zipCode || '',
                 country: selectedProspect.country || 'France'
             });
+            setMarketingForm({
+                source: selectedProspect.source || 'WEBSITE',
+                campaignName: selectedProspect.campaignName || '',
+                interestServiceId: selectedProspect.interestServiceId || ''
+            });
             setIsEditingInfo(false);
+            setIsEditingMarketing(false);
+            setNewNote('');
         } else {
             setCallHistory([]);
             setIsEditingInfo(false);
+            setIsEditingMarketing(false);
+            setNewNote('');
         }
     }, [selectedProspect?.id]);
 
@@ -102,11 +241,34 @@ export default function SalesDashboard() {
         setIsEditingInfo(false);
         setIsLoading(false);
     };
+
+    const handleSaveMarketing = async () => {
+        if (!selectedProspect) return;
+        setIsLoading(true);
+        await SalesStore.updateProspect(selectedProspect.id, marketingForm as any);
+        setSelectedProspect(prev => prev ? { ...prev, ...marketingForm } as any : null);
+        setProspects(prev => prev.map(p => p.id === selectedProspect.id ? { ...p, ...marketingForm } as any : p));
+        setIsEditingMarketing(false);
+        setIsLoading(false);
+    };
+
     const loadProspects = async () => {
         setIsLoading(true);
         const result = await SalesStore.getProspects(1, 100, filters);
+
         // Handle paginated response
-        setProspects(Array.isArray(result) ? result : result.data || []);
+        const newData = Array.isArray(result) ? result : result.data || [];
+        setProspects(newData);
+
+        // Maj du prospect sélectionné si ouvert (pour que la drawer affiche les nouvelles infos)
+        setSelectedProspect(prev => {
+            if (prev) {
+                const updated = newData.find((p: Prospect) => p.id === prev.id);
+                return updated || prev;
+            }
+            return prev;
+        });
+
         setIsLoading(false);
     };
 
@@ -116,6 +278,11 @@ export default function SalesDashboard() {
     }, [filters]);
 
     const handleStatusChange = async (prospectId: string, newStatus: ProspectStatus) => {
+        if (newStatus === 'SIGNED') {
+            showToast('Le statut "Signé" est automatique. Il se déclenche après encaissement Stripe validé.', 'warning', '⚠️');
+            return;
+        }
+
         // Optimistic update
         setProspects((prev: Prospect[]) => prev.map((p: Prospect) =>
             p.id === prospectId ? { ...p, status: newStatus } : p
@@ -141,59 +308,64 @@ export default function SalesDashboard() {
                 setSelectedProspect((prev: Prospect | null) => prev ? { ...prev, status: 'MEETING_BOOKED', appointment } : null);
             }
             setShowBookingModal(false);
-            alert('📅 RDV fixé avec succès ! Confirmation envoyée.');
         }
     };
 
     // Marquer comme non honoré (no-show)
-    const handleNoShow = async (prospect: Prospect) => {
-        if (!confirm(`Confirmer que ${prospect.firstName} n'est pas venu au RDV ?`)) return;
-        await handleStatusChange(prospect.id, 'NO_SHOW');
+    const handleNoShow = (prospect: Prospect) => {
+        setConfirmDialog({
+            title: 'Marquer comme Non Honoré',
+            message: `Confirmer que ${prospect.firstName} ${prospect.lastName} n'est pas venu au rendez-vous ?\n\nLe prospect sera déplacé dans la colonne "Non Honoré" et pourra être reprogrammé.`,
+            confirmLabel: 'Confirmer le No-Show',
+            type: 'warning',
+            onConfirm: async () => {
+                await handleStatusChange(prospect.id, 'NO_SHOW');
+                showToast(`${prospect.firstName} marqué Non Honoré — à reprogrammer ou relancer`, 'warning', '🚫');
+                setConfirmDialog(null);
+            }
+        });
     };
 
     // Encaissement : crée une session Stripe pour le prospect
     // Le webhook Stripe déclenchera auto : SIGNED + Lead CRM
     const handleStartPayment = async (prospect: Prospect, installments: 1 | 3 = 1) => {
         const serviceId = prospect.eligibilityResult?.matchedProcedures?.[0] || prospect.interestServiceId || 'consultation_juridique';
-        // Prix selon le service (à terme, vient de la config backend)
-        const SERVICE_PRICES: Record<string, { price: number; label: string }> = {
-            'naturalisation': { price: 1500, label: 'Naturalisation' },
-            'regroupement_familial': { price: 1200, label: 'Regroupement familial' },
-            'titre_sejour': { price: 800, label: 'Titre de séjour' },
-            'changement_statut': { price: 900, label: 'Changement de statut' },
-            'consultation_juridique': { price: 150, label: 'Consultation juridique' },
-        };
-        const service = SERVICE_PRICES[serviceId] || { price: 1000, label: serviceId };
-        const amount = installments === 3 ? Math.ceil(service.price / 3) : service.price;
+
+        // ── Récupérer le prix officiel depuis le backend ──
+        const resolved = await fetchServicePrice(serviceId);
+        const amount = installments === 3 ? resolved.pricePer3 : resolved.priceEuros;
 
         try {
-            const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+            const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
             const response = await fetch(`${API_URL}/payments/prospect-checkout`, {
                 method: 'POST',
                 headers: SalesStore.getHeaders(),
                 body: JSON.stringify({
                     prospectId: prospect.id,
-                    amount,
+                    amount, // informatif — le backend résout le vrai prix
                     serviceId,
-                    serviceName: service.label,
+                    serviceName: resolved.serviceName,
                     installments,
                     successUrl: `${window.location.origin}/admin/sales?payment=success&prospect=${prospect.id}`,
                     cancelUrl: `${window.location.origin}/admin/sales?payment=cancelled&prospect=${prospect.id}`,
                 }),
             });
 
-            if (!response.ok) throw new Error('Checkout creation failed');
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.message || 'Checkout creation failed');
+            }
             const data = await response.json();
 
             if (data.url) {
                 // Redirection vers Stripe Checkout
                 window.location.href = data.url;
             } else {
-                alert('❌ Impossible de créer la session de paiement. Vérifiez la configuration Stripe.');
+                showToast('Impossible de créer la session de paiement. Vérifiez la configuration Stripe.', 'error', '❌');
             }
         } catch (error) {
             console.error('[Payment] Error:', error);
-            alert('❌ Erreur de paiement. Vérifiez votre connexion ou la configuration Stripe.');
+            showToast('Erreur de paiement. Vérifiez votre connexion ou la configuration Stripe.', 'error', '❌');
         }
     };
 
@@ -202,12 +374,95 @@ export default function SalesDashboard() {
         const count = await SalesStore.importProspectsFromCSV(new File([], 'dummy.csv'));
         await loadProspects();
         setShowImportModal(false);
-        alert(`${count} prospects importés !`);
+        showToast(`${count} prospect${(count || 0) > 1 ? 's' : ''} importé${(count || 0) > 1 ? 's' : ''} avec succès !`, 'success', '📥');
+    };
+
+    // ─── Action rapide : Issue d'appel sans cockpit ─────────────
+    const handleQuickCallOutcome = async (outcome: 'NO_ANSWER' | 'CALLBACK' | 'NOT_INTERESTED' | 'WRONG_NUMBER' | 'INTERESTED') => {
+        if (!selectedProspect) return;
+
+        const MAX_NO_ANSWER = 5;
+        const MAX_CALLBACKS = 3;
+
+        const updates: any = {};
+        const newCallAttempts = (selectedProspect.callAttempts || 0) + 1;
+        let newNoAnswerCount = selectedProspect.noAnswerCount || 0;
+        let newCallbackCount = selectedProspect.callbackCount || 0;
+
+        updates.callAttempts = newCallAttempts;
+        updates.lastCallOutcome = outcome;
+        updates.lastContactAt = new Date().toISOString();
+
+        if (outcome === 'NO_ANSWER') {
+            newNoAnswerCount++;
+            updates.noAnswerCount = newNoAnswerCount;
+        } else {
+            updates.noAnswerCount = 0;
+            newNoAnswerCount = 0;
+        }
+
+        if (outcome === 'CALLBACK') {
+            newCallbackCount++;
+            updates.callbackCount = newCallbackCount;
+            updates.callbackRequestedAt = new Date().toISOString();
+            if (callbackSchedule) {
+                updates.callbackScheduledAt = new Date(callbackSchedule).toISOString();
+            }
+        }
+
+        let autoLostReason = '';
+
+        if (outcome === 'NOT_INTERESTED' || outcome === 'WRONG_NUMBER') {
+            updates.status = 'LOST';
+            autoLostReason = outcome === 'NOT_INTERESTED' ? 'Pas intéressé' : 'Mauvais numéro';
+            updates.lostReason = autoLostReason;
+        } else if (outcome === 'INTERESTED') {
+            updates.status = 'QUALIFIED';
+            updates.lastCallOutcome = 'INTERESTED';
+        } else if (newNoAnswerCount >= MAX_NO_ANSWER) {
+            updates.status = 'LOST';
+            autoLostReason = `${newNoAnswerCount} appels sans réponse consécutifs`;
+            updates.lostReason = autoLostReason;
+        } else if (newCallbackCount >= MAX_CALLBACKS) {
+            updates.status = 'LOST';
+            autoLostReason = `${newCallbackCount} demandes de rappel sans suite`;
+            updates.lostReason = autoLostReason;
+        } else {
+            updates.status = 'CONTACTED';
+        }
+
+        await SalesStore.updateProspect(selectedProspect.id, updates);
+
+        // Log note
+        const outcomeLabels: Record<string, string> = {
+            'NO_ANSWER': 'Pas de réponse',
+            'CALLBACK': 'À rappeler',
+            'NOT_INTERESTED': 'Pas intéressé',
+            'WRONG_NUMBER': 'Mauvais numéro',
+            'INTERESTED': 'Intéressé — Qualifié ✅'
+        };
+        let noteText = `📞 Tentative #${newCallAttempts} — ${outcomeLabels[outcome]}`;
+        if (outcome === 'NO_ANSWER') noteText += ` (${newNoAnswerCount}/${MAX_NO_ANSWER})`;
+        if (outcome === 'CALLBACK') noteText += ` (${newCallbackCount}/${MAX_CALLBACKS})`;
+        if (autoLostReason) noteText += `\n⚠️ Auto-classé PERDU : ${autoLostReason}`;
+
+        await SalesStore.addNote(selectedProspect.id, noteText);
+
+        if (autoLostReason) {
+            showToast(`Prospect automatiquement classé PERDU — ${autoLostReason}`, 'warning', '⚠️');
+        } else {
+            const outcomeEmoji: Record<string, string> = { 'NO_ANSWER': '📵', 'CALLBACK': '🔄', 'NOT_INTERESTED': '❌', 'WRONG_NUMBER': '⚠️', 'INTERESTED': '✅' };
+            showToast(`${outcomeLabels[outcome]} enregistré (tentative #${newCallAttempts})`, 'info', outcomeEmoji[outcome] || '📞');
+        }
+
+        loadProspects();
     };
 
     const handleSaveNote = async (text: string) => {
         if (!selectedProspect) return;
-        await SalesStore.addNote(selectedProspect.id, text);
+        if (text) {
+            await SalesStore.addNote(selectedProspect.id, text);
+        }
         // Refresh to see notes (optional, but good for UX)
         loadProspects();
     };
@@ -255,7 +510,108 @@ export default function SalesDashboard() {
             </div>
 
             {viewMode === 'ANALYTICS' ? (
-                <div className="p-8 overflow-y-auto">
+                <div className="p-8 overflow-y-auto space-y-8">
+                    {/* ─── Pipeline Velocity Metrics ─── */}
+                    {velocityMetrics && (
+                        <div className="space-y-6">
+                            <h2 className="text-lg font-black text-slate-800">📊 Vélocité du Pipeline</h2>
+
+                            {/* Alerts */}
+                            {(velocityMetrics.alerts?.staleLeads > 0 || velocityMetrics.alerts?.overdueCallbacks > 0) && (
+                                <div className="flex gap-3">
+                                    {velocityMetrics.alerts.staleLeads > 0 && (
+                                        <div className="flex-1 flex items-center gap-3 p-4 bg-red-50 border-2 border-red-200 rounded-xl">
+                                            <span className="text-2xl">🚨</span>
+                                            <div>
+                                                <p className="text-sm font-black text-red-800">{velocityMetrics.alerts.staleLeads} leads stagnants</p>
+                                                <p className="text-xs text-red-600">En NEW depuis &gt;48h sans appel</p>
+                                            </div>
+                                        </div>
+                                    )}
+                                    {velocityMetrics.alerts.overdueCallbacks > 0 && (
+                                        <div className="flex-1 flex items-center gap-3 p-4 bg-amber-50 border-2 border-amber-200 rounded-xl">
+                                            <span className="text-2xl">⏰</span>
+                                            <div>
+                                                <p className="text-sm font-black text-amber-800">{velocityMetrics.alerts.overdueCallbacks} rappels en retard</p>
+                                                <p className="text-xs text-amber-600">Rappels programmés non effectués</p>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Conversion Funnel */}
+                            <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+                                <h3 className="text-sm font-black text-slate-700 mb-4">Taux de Conversion</h3>
+                                <div className="flex items-center gap-2">
+                                    {[
+                                        { label: 'Nouveau → Contacté', value: velocityMetrics.conversionRates?.newToContacted, color: 'bg-purple-500' },
+                                        { label: 'Contacté → Qualifié', value: velocityMetrics.conversionRates?.contactedToQualified, color: 'bg-cyan-500' },
+                                        { label: 'Qualifié → RDV', value: velocityMetrics.conversionRates?.qualifiedToMeeting, color: 'bg-indigo-500' },
+                                        { label: 'RDV → Signé', value: velocityMetrics.conversionRates?.meetingToSigned, color: 'bg-emerald-500' },
+                                    ].map((step, i) => (
+                                        <div key={i} className="flex-1 flex flex-col items-center">
+                                            <div className="text-center mb-2">
+                                                <div className="text-2xl font-black text-slate-800">{step.value || 0}%</div>
+                                                <div className="text-[10px] text-slate-500 font-medium">{step.label}</div>
+                                            </div>
+                                            <div className="w-full bg-slate-100 rounded-full h-2">
+                                                <div className={`${step.color} h-2 rounded-full transition-all`} style={{ width: `${Math.min(step.value || 0, 100)}%` }} />
+                                            </div>
+                                            {i < 3 && <div className="text-slate-300 text-lg mt-1">→</div>}
+                                        </div>
+                                    ))}
+                                </div>
+                                <div className="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between">
+                                    <span className="text-xs font-bold text-slate-500">Conversion globale</span>
+                                    <span className="text-lg font-black text-emerald-600">{velocityMetrics.conversionRates?.overall || 0}%</span>
+                                </div>
+                            </div>
+
+                            {/* Time in Stage + Status Distribution */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+                                    <h3 className="text-sm font-black text-slate-700 mb-4">⏱ Temps moyen par étape</h3>
+                                    <div className="space-y-3">
+                                        {['NEW', 'CONTACTED', 'QUALIFIED', 'MEETING_BOOKED'].map(status => {
+                                            const hours = velocityMetrics.avgHoursInStage?.[status] || 0;
+                                            const label = { NEW: 'Nouveau', CONTACTED: 'Contacté', QUALIFIED: 'Qualifié', MEETING_BOOKED: 'RDV Fixé' }[status];
+                                            const displayTime = hours >= 24 ? `${Math.round(hours / 24)}j` : `${hours}h`;
+                                            const isLong = (status === 'NEW' && hours > 48) || (status === 'CONTACTED' && hours > 72);
+                                            return (
+                                                <div key={status} className="flex items-center justify-between">
+                                                    <span className="text-xs font-medium text-slate-600">{label}</span>
+                                                    <span className={`text-sm font-black ${isLong ? 'text-red-600' : 'text-slate-800'}`}>
+                                                        {displayTime} {isLong && '⚠️'}
+                                                    </span>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+
+                                <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+                                    <h3 className="text-sm font-black text-slate-700 mb-4">📈 Répartition par statut</h3>
+                                    <div className="space-y-2">
+                                        {COLUMNS.map(col => {
+                                            const count = velocityMetrics.statusCounts?.[col.id] || 0;
+                                            const percent = velocityMetrics.totalProspects ? Math.round((count / velocityMetrics.totalProspects) * 100) : 0;
+                                            return (
+                                                <div key={col.id} className="flex items-center gap-2">
+                                                    <span className="text-xs w-24 font-medium text-slate-600">{col.icon} {col.label}</span>
+                                                    <div className="flex-1 bg-slate-100 rounded-full h-3">
+                                                        <div className={`${col.color.split(' ')[0]} h-3 rounded-full transition-all`} style={{ width: `${percent}%` }} />
+                                                    </div>
+                                                    <span className="text-xs font-black text-slate-700 w-10 text-right">{count}</span>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     <SalesAnalyticsDashboard />
                 </div>
             ) : (
@@ -364,7 +720,7 @@ export default function SalesDashboard() {
                                             if (prospectId) {
                                                 // SIGNED ne peut être atteint que par paiement
                                                 if (column.id === 'SIGNED') {
-                                                    alert('⚠️ Le statut "Signé" est automatique.\n\nIl se déclenche uniquement après encaissement (paiement Stripe validé).\n\n→ Ouvrez le prospect → Cliquez sur "Encaisser"');
+                                                    showToast('Le statut "Signé" est automatique — encaissement Stripe requis.', 'warning', '⚠️');
                                                     return;
                                                 }
                                                 handleStatusChange(prospectId, column.id as ProspectStatus);
@@ -379,64 +735,182 @@ export default function SalesDashboard() {
                                                     if (column.id === 'NEW') {
                                                         return b.score - a.score;
                                                     }
+                                                    // CONTACTED: Overdue callbacks first, then by score
+                                                    if (column.id === 'CONTACTED' || column.id === 'QUALIFIED') {
+                                                        const aOverdue = a.callbackScheduledAt && new Date(a.callbackScheduledAt) < new Date() ? 1 : 0;
+                                                        const bOverdue = b.callbackScheduledAt && new Date(b.callbackScheduledAt) < new Date() ? 1 : 0;
+                                                        if (aOverdue !== bOverdue) return bOverdue - aOverdue;
+                                                        return b.score - a.score;
+                                                    }
                                                     // Default: Newest first
                                                     return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
                                                 })
-                                                .map(prospect => (
-                                                    <div
-                                                        key={prospect.id}
-                                                        draggable={true}
-                                                        onDragStart={(e) => {
-                                                            e.dataTransfer.setData('prospectId', prospect.id);
-                                                            e.dataTransfer.effectAllowed = 'move';
-                                                        }}
-                                                        onClick={() => setSelectedProspect(prospect)}
-                                                        className="bg-white p-4 rounded-lg shadow-sm border border-slate-200 cursor-pointer hover:shadow-md transition-all group relative active:scale-[0.98] active:rotate-1"
-                                                    >
-                                                        {/* Hot Lead Badge */}
-                                                        {prospect.score >= 50 && (
-                                                            <div className="absolute top-2 right-2 text-orange-500 animate-pulse" title="Prospect chaud !">
-                                                                <Flame size={16} fill="currentColor" />
+                                                .map(prospect => {
+                                                    // ─── Visual differentiation by call outcome ───
+                                                    const outcome = prospect.lastCallOutcome;
+                                                    const noAnswerCount = prospect.noAnswerCount || 0;
+                                                    const callbackCount = prospect.callbackCount || 0;
+
+                                                    // Default (no call yet)
+                                                    let cardClasses = 'bg-white border border-slate-200';
+                                                    let stripColor = '';
+                                                    let badgeContent: React.ReactNode = null;
+                                                    let nameClass = 'text-slate-900';
+                                                    let cardOpacity = '';
+
+                                                    if (outcome === 'CALLBACK') {
+                                                        cardClasses = 'bg-amber-50 border-2 border-amber-400';
+                                                        stripColor = 'bg-amber-500';
+                                                        nameClass = 'text-amber-900';
+                                                        badgeContent = (
+                                                            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-amber-500 text-white text-xs font-black tracking-wide mb-2">
+                                                                <span className="text-sm">🔄</span>
+                                                                <span>À RAPPELER</span>
+                                                                {callbackCount > 1 && <span className="ml-auto bg-white/30 px-1.5 py-0.5 rounded text-[10px]">×{callbackCount}</span>}
                                                             </div>
-                                                        )}
+                                                        );
+                                                    } else if (outcome === 'NO_ANSWER') {
+                                                        const critical = noAnswerCount >= 3;
+                                                        cardClasses = critical
+                                                            ? 'bg-red-50 border-2 border-red-500 shadow-red-100'
+                                                            : 'bg-orange-50 border-2 border-orange-400';
+                                                        stripColor = critical ? 'bg-red-600' : 'bg-orange-500';
+                                                        nameClass = critical ? 'text-red-900' : 'text-orange-900';
+                                                        badgeContent = (
+                                                            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-white text-xs font-black tracking-wide mb-2 ${critical ? 'bg-red-600 animate-pulse' : 'bg-orange-500'}`}>
+                                                                <span className="text-sm">📵</span>
+                                                                <span>SANS RÉPONSE</span>
+                                                                <span className="ml-auto bg-white/30 px-1.5 py-0.5 rounded text-[10px] font-mono">{noAnswerCount}/5</span>
+                                                            </div>
+                                                        );
+                                                    } else if (outcome === 'INTERESTED') {
+                                                        cardClasses = 'bg-emerald-50 border-2 border-emerald-500 shadow-emerald-100';
+                                                        stripColor = 'bg-emerald-600';
+                                                        nameClass = 'text-emerald-900';
+                                                        badgeContent = (
+                                                            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-black tracking-wide mb-2">
+                                                                <span className="text-sm">✅</span>
+                                                                <span>INTÉRESSÉ — Prêt pour RDV</span>
+                                                            </div>
+                                                        );
+                                                    } else if (outcome === 'NOT_INTERESTED') {
+                                                        cardClasses = 'bg-slate-100 border border-slate-300';
+                                                        stripColor = 'bg-slate-400';
+                                                        nameClass = 'text-slate-400 line-through';
+                                                        cardOpacity = 'opacity-60';
+                                                        badgeContent = (
+                                                            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-400 text-white text-xs font-black tracking-wide mb-2">
+                                                                <span className="text-sm">❌</span>
+                                                                <span>PAS INTÉRESSÉ</span>
+                                                            </div>
+                                                        );
+                                                    } else if (outcome === 'WRONG_NUMBER') {
+                                                        cardClasses = 'bg-slate-100 border border-slate-300';
+                                                        stripColor = 'bg-slate-500';
+                                                        nameClass = 'text-slate-400 line-through';
+                                                        cardOpacity = 'opacity-50';
+                                                        badgeContent = (
+                                                            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-500 text-white text-xs font-black tracking-wide mb-2">
+                                                                <span className="text-sm">⚠️</span>
+                                                                <span>MAUVAIS NUMÉRO</span>
+                                                            </div>
+                                                        );
+                                                    }
 
-                                                        <h4 className="font-semibold text-slate-900 mb-1">
-                                                            {prospect.firstName} {prospect.lastName}
-                                                        </h4>
-
-                                                        {/* Tags */}
-                                                        <div className="flex flex-wrap gap-2 mb-3">
-                                                            <span className="text-xs px-2 py-0.5 bg-slate-100 text-slate-600 rounded">
-                                                                {prospect.source.replace('_', ' ')}
-                                                            </span>
-                                                            {prospect.campaignName && (
-                                                                <span className="text-xs px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded">
-                                                                    {prospect.campaignName}
-                                                                </span>
+                                                    return (
+                                                        <div
+                                                            key={prospect.id}
+                                                            draggable={true}
+                                                            onDragStart={(e) => {
+                                                                e.dataTransfer.setData('prospectId', prospect.id);
+                                                                e.dataTransfer.effectAllowed = 'move';
+                                                            }}
+                                                            onClick={() => setSelectedProspect(prospect)}
+                                                            className={`relative overflow-hidden rounded-xl shadow-sm cursor-pointer hover:shadow-lg transition-all group active:scale-[0.98] ${cardClasses} ${cardOpacity}`}
+                                                        >
+                                                            {/* Colored left strip */}
+                                                            {stripColor && (
+                                                                <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${stripColor}`} />
                                                             )}
-                                                        </div>
 
-                                                        {/* Quick Actions (visible on hover) */}
-                                                        <div className="flex items-center justify-between pt-2 border-t border-slate-50 text-slate-400 text-sm">
-                                                            <span>{new Date(prospect.createdAt).toLocaleDateString()}</span>
-                                                            <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                <button
-                                                                    onClick={(e: React.MouseEvent) => {
-                                                                        e.stopPropagation();
-                                                                        router.push(`/admin/calendar?leadId=${prospect.id}&name=${encodeURIComponent(prospect.firstName + ' ' + prospect.lastName)}&email=${encodeURIComponent(prospect.email || '')}&service=${encodeURIComponent(prospect.interestServiceId || '')}`);
-                                                                    }}
-                                                                    className="hover:text-amber-600 p-1"
-                                                                    title="Prendre RDV"
-                                                                >
-                                                                    <Calendar size={16} />
-                                                                </button>
-                                                                <button className="hover:text-indigo-600 p-1" onClick={(e) => { e.stopPropagation(); setSelectedProspect(prospect); setShowCallCockpit(true); }} title="Appeler">
-                                                                    <Phone size={16} />
-                                                                </button>
+                                                            <div className={`p-4 ${stripColor ? 'pl-5' : ''}`}>
+                                                                {/* Hot Lead Badge */}
+                                                                {prospect.score >= 50 && (
+                                                                    <div className="absolute top-3 right-3 text-orange-500 animate-pulse" title="Prospect chaud !">
+                                                                        <Flame size={16} fill="currentColor" />
+                                                                    </div>
+                                                                )}
+
+                                                                {/* Call Outcome Banner */}
+                                                                {badgeContent}
+
+                                                                <h4 className={`font-bold mb-1.5 ${nameClass}`}>
+                                                                    {prospect.firstName} {prospect.lastName}
+                                                                </h4>
+
+                                                                {/* Tags */}
+                                                                <div className="flex flex-wrap gap-1.5 mb-3">
+                                                                    <span className="text-[11px] px-2 py-0.5 bg-white/80 text-slate-600 rounded-md font-medium border border-slate-100">
+                                                                        {prospect.source.replace('_', ' ')}
+                                                                    </span>
+                                                                    {prospect.campaignName && (
+                                                                        <span className="text-[11px] px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded-md font-medium border border-indigo-100">
+                                                                            {prospect.campaignName}
+                                                                        </span>
+                                                                    )}
+                                                                    {(prospect.callAttempts || 0) > 0 && (
+                                                                        <span className="text-[11px] px-2 py-0.5 bg-violet-100 text-violet-700 rounded-md font-bold border border-violet-200">
+                                                                            📞 {prospect.callAttempts} appel{(prospect.callAttempts || 0) > 1 ? 's' : ''}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+
+                                                                {/* Contextual status indicators */}
+                                                                {prospect.status === 'MEETING_BOOKED' && prospect.eligibilityResult && (
+                                                                    <div className="text-[10px] px-2 py-1 bg-emerald-50 text-emerald-700 rounded-lg border border-emerald-200 mb-2 font-bold">
+                                                                        ✅ Simulation faite
+                                                                    </div>
+                                                                )}
+                                                                {prospect.callbackScheduledAt && prospect.lastCallOutcome === 'CALLBACK' && (
+                                                                    <div className={`text-[10px] px-2 py-1 rounded-lg border mb-2 font-bold ${new Date(prospect.callbackScheduledAt) < new Date() ? 'bg-red-50 text-red-700 border-red-200' : 'bg-blue-50 text-blue-700 border-blue-200'}`}>
+                                                                        📅 Rappel : {new Date(prospect.callbackScheduledAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                                                                        {new Date(prospect.callbackScheduledAt) < new Date() && ' ⚠️ EN RETARD'}
+                                                                    </div>
+                                                                )}
+                                                                {prospect.status === 'LOST' && prospect.lostReason && (
+                                                                    <div className="text-[10px] px-2 py-1 bg-slate-100 text-slate-500 rounded-lg mb-2 font-medium">
+                                                                        📋 {prospect.lostReason}
+                                                                    </div>
+                                                                )}
+                                                                {prospect.status === 'NO_SHOW' && (
+                                                                    <div className="text-[10px] px-2 py-1 bg-red-50 text-red-600 rounded-lg border border-red-200 mb-2 font-bold">
+                                                                        🚫 No-show #{prospect.noShowCount || 1}
+                                                                    </div>
+                                                                )}
+
+                                                                {/* Footer */}
+                                                                <div className="flex items-center justify-between pt-2 border-t border-black/5 text-slate-400 text-xs">
+                                                                    <span>{new Date(prospect.createdAt).toLocaleDateString('fr-FR')}</span>
+                                                                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                        <button
+                                                                            onClick={(e: React.MouseEvent) => {
+                                                                                e.stopPropagation();
+                                                                                router.push(`/admin/calendar?leadId=${prospect.id}&name=${encodeURIComponent(prospect.firstName + ' ' + prospect.lastName)}&email=${encodeURIComponent(prospect.email || '')}&service=${encodeURIComponent(prospect.interestServiceId || '')}`);
+                                                                            }}
+                                                                            className="hover:text-amber-600 p-1"
+                                                                            title="Prendre RDV"
+                                                                        >
+                                                                            <Calendar size={16} />
+                                                                        </button>
+                                                                        <button className="hover:text-indigo-600 p-1" onClick={(e) => { e.stopPropagation(); setSelectedProspect(prospect); setShowCallCockpit(true); }} title="Appeler">
+                                                                            <Phone size={16} />
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
                                                             </div>
                                                         </div>
-                                                    </div>
-                                                ))}
+                                                    );
+                                                })}
                                         </div>
                                     </div>
                                 </div>
@@ -559,80 +1033,118 @@ export default function SalesDashboard() {
 
                                 {/* ─── STICKY ACTION BAR (Dynamique selon statut) ─── */}
                                 <div className="px-5 py-3 bg-white border-b border-slate-100 flex items-center gap-2 shadow-sm">
-                                    {/* NEW / CONTACTED : Appeler est l'action principale */}
-                                    {(selectedProspect.status === 'NEW' || selectedProspect.status === 'CONTACTED') && (
-                                        <>
+                                    {/* NEW : Appeler uniquement (doit d'abord qualifier) */}
+                                    {selectedProspect.status === 'NEW' && (
+                                        <div className="flex gap-2 w-full">
                                             <button
                                                 onClick={() => setShowCallCockpit(true)}
                                                 className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 transition-all shadow-sm shadow-indigo-200 active:scale-[0.97]"
                                             >
                                                 <Phone size={15} />
-                                                Appeler
+                                                Appeler pour qualifier
                                             </button>
                                             <button
-                                                onClick={() => setShowBookingModal(true)}
-                                                className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl text-sm font-bold hover:bg-slate-50 transition-all active:scale-[0.97]"
+                                                onClick={async () => {
+                                                    await handleStatusChange(selectedProspect.id, 'QUALIFIED');
+                                                    showToast(`${selectedProspect.firstName} qualifié manuellement`, 'success', '🟢');
+                                                }}
+                                                className="flex items-center justify-center gap-2 py-2.5 px-4 bg-cyan-50 border border-cyan-200 text-cyan-700 rounded-xl text-xs font-bold hover:bg-cyan-100 transition-all active:scale-[0.97]"
+                                                title="Qualifier directement (si déjà contacté par un autre canal)"
                                             >
-                                                <Calendar size={15} />
-                                                Fixer RDV
+                                                🟢 Qualifier
                                             </button>
-                                        </>
+                                        </div>
                                     )}
 
-                                    {/* QUALIFIED : Fixer RDV est l'action principale */}
-                                    {selectedProspect.status === 'QUALIFIED' && (
-                                        <>
-                                            <button
-                                                onClick={() => setShowBookingModal(true)}
-                                                className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 transition-all shadow-sm shadow-indigo-200 active:scale-[0.97]"
-                                            >
-                                                <Calendar size={15} />
-                                                Fixer RDV
-                                            </button>
+                                    {/* CONTACTED : Appeler + Fixer RDV */}
+                                    {selectedProspect.status === 'CONTACTED' && (
+                                        <div className="flex gap-2 w-full">
                                             <button
                                                 onClick={() => setShowCallCockpit(true)}
-                                                className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl text-sm font-bold hover:bg-slate-50 transition-all active:scale-[0.97]"
+                                                className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 transition-all shadow-sm shadow-indigo-200 active:scale-[0.97]"
                                             >
                                                 <Phone size={15} />
                                                 Rappeler
                                             </button>
-                                        </>
+                                            <button
+                                                onClick={async () => {
+                                                    await handleStatusChange(selectedProspect.id, 'QUALIFIED');
+                                                    showToast(`${selectedProspect.firstName} qualifié — prêt pour RDV`, 'success', '🟢');
+                                                }}
+                                                className="flex items-center justify-center gap-2 py-2.5 px-4 bg-cyan-500 text-white rounded-xl text-sm font-bold hover:bg-cyan-600 transition-all shadow-sm shadow-cyan-200 active:scale-[0.97]"
+                                            >
+                                                🟢 Qualifier
+                                            </button>
+                                            <button
+                                                onClick={() => setShowBookingModal(true)}
+                                                className="flex items-center justify-center gap-2 py-2.5 px-4 bg-white border border-slate-200 text-slate-700 rounded-xl text-sm font-bold hover:bg-slate-50 transition-all active:scale-[0.97]"
+                                            >
+                                                <Calendar size={15} />
+                                                RDV
+                                            </button>
+                                        </div>
                                     )}
 
-                                    {/* MEETING_BOOKED : Simulateur → Encaisser → Auto SIGNED */}
+                                    {/* QUALIFIED : Fixer RDV + Appeler */}
+                                    {selectedProspect.status === 'QUALIFIED' && (
+                                        <div className="flex gap-2 w-full">
+                                            <button
+                                                onClick={() => setShowBookingModal(true)}
+                                                className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 transition-all shadow-sm shadow-indigo-200 active:scale-[0.97]"
+                                            >
+                                                <Calendar size={15} />
+                                                Fixer un RDV en agence
+                                            </button>
+                                            <button
+                                                onClick={() => setShowCallCockpit(true)}
+                                                className="flex items-center justify-center gap-2 py-2.5 px-4 bg-white border border-slate-200 text-slate-700 rounded-xl text-sm font-bold hover:bg-slate-50 transition-all active:scale-[0.97]"
+                                            >
+                                                <Phone size={15} />
+                                                Appeler
+                                            </button>
+                                        </div>
+                                    )}
+
+                                    {/* MEETING_BOOKED : Simulateur + Appeler + Non honoré → Encaisser → Auto SIGNED */}
                                     {selectedProspect.status === 'MEETING_BOOKED' && (
                                         <div className="flex flex-col gap-2 w-full">
-                                            {/* Ligne 1 : Simulateur + Non honoré */}
+                                            {/* Ligne 1 : Simulateur + Appeler + Non honoré */}
                                             <div className="flex gap-2">
                                                 <button
-                                                    onClick={() => router.push(`/simulateur?prospectId=${selectedProspect.id}`)}
+                                                    onClick={() => router.push(`/?prospectId=${selectedProspect.id}&serviceId=${encodeURIComponent(selectedProspect.interestServiceId || '')}`)}
                                                     className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 transition-all shadow-sm shadow-indigo-200 active:scale-[0.97]"
                                                 >
                                                     <Microscope size={15} />
                                                     Simulateur
                                                 </button>
                                                 <button
+                                                    onClick={() => setShowCallCockpit(true)}
+                                                    className="flex items-center justify-center gap-2 py-2.5 px-3 bg-white border border-slate-200 text-slate-600 rounded-xl text-sm font-bold hover:bg-slate-50 transition-all active:scale-[0.97]"
+                                                >
+                                                    <Phone size={14} />
+                                                </button>
+                                                <button
                                                     onClick={() => handleNoShow(selectedProspect)}
                                                     className="flex items-center justify-center gap-2 py-2.5 px-4 bg-white border border-red-200 text-red-600 rounded-xl text-sm font-bold hover:bg-red-50 transition-all active:scale-[0.97]"
+                                                    title="Marquer Non Honoré"
                                                 >
-                                                    🚫 Non honoré
+                                                    🚫 Non Honoré
                                                 </button>
                                             </div>
-                                            {/* Ligne 2 : Encaissement (déclenche auto-SIGNED via Stripe) */}
-                                            <div className="flex gap-2">
-                                                <button
-                                                    onClick={() => handleStartPayment(selectedProspect, 1)}
-                                                    className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700 transition-all shadow-sm shadow-emerald-200 active:scale-[0.97]"
-                                                >
-                                                    💳 Encaisser (1x)
-                                                </button>
-                                                <button
-                                                    onClick={() => handleStartPayment(selectedProspect, 3)}
-                                                    className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-white border border-emerald-300 text-emerald-700 rounded-xl text-sm font-bold hover:bg-emerald-50 transition-all active:scale-[0.97]"
-                                                >
-                                                    💳 Encaisser (3x)
-                                                </button>
-                                            </div>
+                                            {/* Indicateur simulation réalisée */}
+                                            {selectedProspect.eligibilityResult ? (
+                                                <>
+                                                    <div className="flex items-center gap-2 px-3 py-2 bg-emerald-50 border border-emerald-200 rounded-xl">
+                                                        <span className="text-emerald-600 text-sm">✅</span>
+                                                        <span className="text-xs font-bold text-emerald-800">Simulation réalisée — {selectedProspect.eligibilityResult.isEligible ? 'Éligible' : 'Non éligible'}</span>
+                                                    </div>
+                                                    <PaymentButtons prospect={selectedProspect} onPay={handleStartPayment} fetchPrice={fetchServicePrice} />
+                                                </>
+                                            ) : (
+                                                <div className="text-center p-3 border-2 border-dashed border-amber-200 bg-amber-50/50 rounded-xl">
+                                                    <p className="text-xs text-amber-700 font-medium">⏳ En attente de la simulation lors du RDV — encaissement bloqué</p>
+                                                </div>
+                                            )}
                                         </div>
                                     )}
 
@@ -647,57 +1159,109 @@ export default function SalesDashboard() {
                                         </button>
                                     )}
 
-                                    {/* NO_SHOW : Reprogrammer ou Abandonner */}
+                                    {/* NO_SHOW : Reprogrammer, Rappeler ou Marquer PERDU */}
                                     {selectedProspect.status === 'NO_SHOW' && (
-                                        <>
+                                        <div className="flex flex-col gap-2 w-full">
+                                            <div className="flex items-center gap-2 px-3 py-2 bg-red-50 border border-red-200 rounded-xl">
+                                                <span className="text-red-600 text-sm">🚫</span>
+                                                <span className="text-xs font-bold text-red-800">No-show #{selectedProspect.noShowCount || 1} — {(selectedProspect.noShowCount || 0) >= 2 ? 'Sera auto-perdu au prochain' : 'Possibilité de reprogrammer'}</span>
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <button
+                                                    onClick={() => setShowBookingModal(true)}
+                                                    className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 transition-all shadow-sm shadow-indigo-200 active:scale-[0.97]"
+                                                >
+                                                    <Calendar size={15} />
+                                                    Reprogrammer RDV
+                                                </button>
+                                                <button
+                                                    onClick={async () => {
+                                                        await handleStatusChange(selectedProspect.id, 'CONTACTED');
+                                                        showToast(`${selectedProspect.firstName} remis en file de prospection`, 'success', '🔄');
+                                                    }}
+                                                    className="flex items-center justify-center gap-2 py-2.5 px-4 bg-white border border-purple-200 text-purple-700 rounded-xl text-sm font-bold hover:bg-purple-50 transition-all active:scale-[0.97]"
+                                                >
+                                                    <Phone size={14} />
+                                                    Recontacter
+                                                </button>
+                                            </div>
                                             <button
-                                                onClick={() => setShowBookingModal(true)}
-                                                className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 transition-all shadow-sm shadow-indigo-200 active:scale-[0.97]"
+                                                onClick={() => setConfirmDialog({
+                                                    title: 'Marquer comme Perdu',
+                                                    message: `Confirmer que ${selectedProspect.firstName} ${selectedProspect.lastName} est définitivement perdu ?`,
+                                                    confirmLabel: 'Confirmer Perdu',
+                                                    type: 'danger',
+                                                    onConfirm: async () => {
+                                                        await handleStatusChange(selectedProspect.id, 'LOST');
+                                                        showToast('Prospect marqué comme Perdu', 'info', '⚫');
+                                                        setConfirmDialog(null);
+                                                    }
+                                                })}
+                                                className="w-full flex items-center justify-center gap-2 py-2 bg-slate-100 text-slate-500 rounded-xl text-xs font-bold hover:bg-slate-200 transition-all"
                                             >
-                                                <Calendar size={15} />
-                                                Reprogrammer
+                                                ⚫ Marquer Perdu
                                             </button>
-                                            <button
-                                                onClick={() => setShowCallCockpit(true)}
-                                                className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl text-sm font-bold hover:bg-slate-50 transition-all active:scale-[0.97]"
-                                            >
-                                                <Phone size={15} />
-                                                Rappeler
-                                            </button>
-                                        </>
+                                        </div>
                                     )}
 
                                     {/* LOST : Réactiver */}
                                     {selectedProspect.status === 'LOST' && (
-                                        <button
-                                            onClick={() => handleStatusChange(selectedProspect.id, 'NEW')}
-                                            className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-amber-50 border border-amber-200 text-amber-700 rounded-xl text-sm font-bold hover:bg-amber-100 transition-all active:scale-[0.97]"
-                                        >
-                                            <ArrowRight size={15} />
-                                            Réactiver
-                                        </button>
+                                        <div className="flex flex-col gap-2 w-full">
+                                            {selectedProspect.lostReason && (
+                                                <div className="flex items-center gap-2 px-3 py-2 bg-slate-100 border border-slate-200 rounded-xl">
+                                                    <span className="text-slate-500 text-sm">📋</span>
+                                                    <span className="text-xs font-bold text-slate-600">Raison : {selectedProspect.lostReason}</span>
+                                                </div>
+                                            )}
+                                            <button
+                                                onClick={async () => {
+                                                    setIsLoading(true);
+                                                    const reactivated = await SalesStore.reactivateProspect(selectedProspect.id);
+                                                    if (reactivated) {
+                                                        setSelectedProspect(reactivated);
+                                                        await loadProspects();
+                                                        showToast(`${selectedProspect.firstName} réactivé — retour en prospection`, 'success', '♻️');
+                                                    } else {
+                                                        showToast('Erreur lors de la réactivation', 'error', '❌');
+                                                    }
+                                                    setIsLoading(false);
+                                                }}
+                                                className="w-full flex items-center justify-center gap-2 py-2.5 bg-amber-500 text-white rounded-xl text-sm font-bold hover:bg-amber-600 transition-all shadow-sm shadow-amber-200 active:scale-[0.97]"
+                                            >
+                                                ♻️ Réactiver ce prospect
+                                            </button>
+                                        </div>
                                     )}
                                 </div>
 
                                 {/* ─── SCROLLABLE CONTENT ─── */}
                                 <div className="flex-1 overflow-y-auto">
 
-                                    {/* Pipeline Étapes */}
+                                    {/* Pipeline Étapes — indicateur uniquement, pas de transition libre */}
                                     <div className="px-5 py-4 border-b border-slate-100">
                                         <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2.5">Pipeline</h3>
                                         <div className="flex flex-wrap gap-1.5">
-                                            {COLUMNS.map((status) => (
-                                                <button
-                                                    key={status.id}
-                                                    onClick={() => handleStatusChange(selectedProspect.id, status.id)}
-                                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all active:scale-95 ${selectedProspect.status === status.id
-                                                        ? `${status.color} border-transparent shadow-sm`
-                                                        : 'bg-white border-slate-200 text-slate-400 hover:border-slate-300 hover:text-slate-600'
-                                                        }`}
-                                                >
-                                                    {status.icon} {status.label}
-                                                </button>
-                                            ))}
+                                            {COLUMNS.map((status) => {
+                                                const isActive = selectedProspect.status === status.id;
+                                                // Determine passed steps based on logical flow
+                                                const ORDER = ['NEW', 'CONTACTED', 'QUALIFIED', 'MEETING_BOOKED', 'SIGNED'];
+                                                const currentIdx = ORDER.indexOf(selectedProspect.status);
+                                                const statusIdx = ORDER.indexOf(status.id);
+                                                const isPassed = currentIdx >= 0 && statusIdx >= 0 && statusIdx < currentIdx;
+                                                return (
+                                                    <div
+                                                        key={status.id}
+                                                        className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${isActive
+                                                            ? `${status.color} border-transparent shadow-sm`
+                                                            : isPassed
+                                                                ? 'bg-emerald-50 border-emerald-100 text-emerald-400'
+                                                                : 'bg-white border-slate-100 text-slate-300'
+                                                            }`}
+                                                    >
+                                                        {isPassed ? '✓' : status.icon} {status.label}
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
                                     </div>
 
@@ -741,7 +1305,17 @@ export default function SalesDashboard() {
                                                         </button>
                                                         <span className="text-slate-300">|</span>
                                                         <button
-                                                            onClick={() => handleStatusChange(selectedProspect.id, 'LOST')}
+                                                            onClick={() => setConfirmDialog({
+                                                                title: 'Annuler le rendez-vous',
+                                                                message: `Êtes-vous sûr de vouloir annuler le RDV de ${selectedProspect.firstName} ${selectedProspect.lastName} ?\n\nLe prospect sera déplacé dans la colonne "Perdu".`,
+                                                                confirmLabel: 'Annuler le RDV',
+                                                                type: 'danger',
+                                                                onConfirm: async () => {
+                                                                    await handleStatusChange(selectedProspect.id, 'LOST');
+                                                                    showToast('RDV annulé — prospect marqué comme Perdu', 'warning', '🚫');
+                                                                    setConfirmDialog(null);
+                                                                }
+                                                            })}
                                                             className="text-xs font-bold text-red-500 hover:text-red-700 transition-colors"
                                                         >
                                                             Annuler RDV
@@ -784,7 +1358,7 @@ export default function SalesDashboard() {
                                                 <ArrowRight size={18} className="text-purple-400 group-hover:translate-x-1 transition-transform" />
                                             </button>
                                         )}
-                                        {selectedProspect.status === 'QUALIFIED' && (
+                                        {selectedProspect.status === 'CONTACTED' && (
                                             <button
                                                 onClick={() => setShowBookingModal(true)}
                                                 className="w-full flex items-center gap-4 p-4 rounded-2xl bg-gradient-to-r from-indigo-50 via-blue-50 to-indigo-50 border border-indigo-100 hover:border-indigo-200 transition-all group active:scale-[0.98]"
@@ -794,12 +1368,12 @@ export default function SalesDashboard() {
                                                 </div>
                                                 <div className="flex-1 text-left">
                                                     <p className="font-bold text-slate-900 text-sm">Fixer un rendez-vous en agence</p>
-                                                    <p className="text-xs text-slate-500">Lead qualifié — proposer un créneau pour signer</p>
+                                                    <p className="text-xs text-slate-500">Prospect contacté — proposer un créneau</p>
                                                 </div>
                                                 <ArrowRight size={18} className="text-indigo-400 group-hover:translate-x-1 transition-transform" />
                                             </button>
                                         )}
-                                        {selectedProspect.status === 'MEETING_BOOKED' && (
+                                        {selectedProspect.status === 'MEETING_BOOKED' && !selectedProspect.eligibilityResult && (
                                             <button
                                                 onClick={() => router.push(`/?prospectId=${selectedProspect.id}&serviceId=${encodeURIComponent(selectedProspect.interestServiceId || '')}`)}
                                                 className="w-full flex items-center gap-4 p-4 rounded-2xl bg-gradient-to-r from-indigo-50 via-purple-50 to-indigo-50 border border-indigo-100 hover:border-indigo-200 transition-all group active:scale-[0.98]"
@@ -812,6 +1386,21 @@ export default function SalesDashboard() {
                                                     <p className="text-xs text-slate-500">Vérifier l'éligibilité du lead lors du RDV en agence</p>
                                                 </div>
                                                 <ArrowRight size={18} className="text-indigo-400 group-hover:translate-x-1 transition-transform" />
+                                            </button>
+                                        )}
+                                        {selectedProspect.status === 'MEETING_BOOKED' && selectedProspect.eligibilityResult && (
+                                            <button
+                                                onClick={() => handleStartPayment(selectedProspect, 1)}
+                                                className="w-full flex items-center gap-4 p-4 rounded-2xl bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 border border-emerald-100 hover:border-emerald-200 transition-all group active:scale-[0.98]"
+                                            >
+                                                <div className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center group-hover:scale-110 transition-transform">
+                                                    <span className="text-xl">💳</span>
+                                                </div>
+                                                <div className="flex-1 text-left">
+                                                    <p className="font-bold text-emerald-900 text-sm">Procéder à l'encaissement</p>
+                                                    <p className="text-xs text-emerald-600">Le simulateur a été validé. Encaisser pour signer le contrat.</p>
+                                                </div>
+                                                <ArrowRight size={18} className="text-emerald-500 group-hover:translate-x-1 transition-transform" />
                                             </button>
                                         )}
                                         {selectedProspect.status === 'NO_SHOW' && (
@@ -829,7 +1418,100 @@ export default function SalesDashboard() {
                                                 <span className="font-bold text-sm">✅ Contrat signé — Dossier ouvert dans le CRM</span>
                                             </div>
                                         )}
+                                        {selectedProspect.status === 'LOST' && (
+                                            <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-200 text-slate-600">
+                                                <span className="text-xl">⚫</span>
+                                                <div>
+                                                    <p className="font-bold text-sm">Prospect perdu</p>
+                                                    <p className="text-xs text-slate-400">Ce prospect n'a pas donné suite. Vous pouvez le réactiver si nécessaire.</p>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
+
+                                    {/* ─── ACTIONS RAPIDES D'ISSUE D'APPEL ─── */}
+                                    {(selectedProspect.status === 'NEW' || selectedProspect.status === 'CONTACTED') && (
+                                        <div className="px-5 py-4 border-b border-slate-100">
+                                            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3">📞 Issue d'appel rapide</h3>
+
+                                            {/* Call tracking badges */}
+                                            {(selectedProspect.callAttempts || 0) > 0 && (
+                                                <div className="flex flex-wrap gap-1.5 mb-3">
+                                                    <span className="px-2.5 py-1 bg-slate-100 rounded-lg text-[11px] font-semibold text-slate-600">
+                                                        📞 {selectedProspect.callAttempts} tentative{(selectedProspect.callAttempts || 0) > 1 ? 's' : ''}
+                                                    </span>
+                                                    {(selectedProspect.noAnswerCount || 0) > 0 && (
+                                                        <span className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold ${(selectedProspect.noAnswerCount || 0) >= 3 ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
+                                                            📵 {selectedProspect.noAnswerCount}/5 sans rép.
+                                                        </span>
+                                                    )}
+                                                    {(selectedProspect.callbackCount || 0) > 0 && (
+                                                        <span className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold ${(selectedProspect.callbackCount || 0) >= 2 ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`}>
+                                                            🔄 {selectedProspect.callbackCount}/3 rappels
+                                                        </span>
+                                                    )}
+                                                    {selectedProspect.lastCallOutcome && (
+                                                        <span className="px-2.5 py-1 bg-slate-50 rounded-lg text-[11px] text-slate-500">
+                                                            Dernier : {
+                                                                selectedProspect.lastCallOutcome === 'NO_ANSWER' ? 'Pas de réponse' :
+                                                                    selectedProspect.lastCallOutcome === 'CALLBACK' ? 'À rappeler' :
+                                                                        selectedProspect.lastCallOutcome === 'INTERESTED' ? 'Intéressé' :
+                                                                            selectedProspect.lastCallOutcome
+                                                            }
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            )}
+
+                                            {/* Quick outcome buttons */}
+                                            <div className="mb-3 p-3 bg-blue-50/50 border border-blue-100 rounded-xl">
+                                                <label className="text-[10px] font-bold text-blue-700 uppercase tracking-wider block mb-1.5">📅 Programmer le rappel</label>
+                                                <input
+                                                    type="datetime-local"
+                                                    value={callbackSchedule}
+                                                    onChange={(e) => setCallbackSchedule(e.target.value)}
+                                                    className="w-full text-xs px-3 py-2 border border-blue-200 rounded-lg bg-white text-slate-700 focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
+                                                    min={new Date().toISOString().slice(0, 16)}
+                                                />
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-2">
+                                                <button
+                                                    onClick={() => handleQuickCallOutcome('NO_ANSWER')}
+                                                    className="flex items-center gap-2 p-3 rounded-xl border border-amber-200 bg-amber-50 text-amber-800 text-xs font-bold hover:bg-amber-100 transition-all active:scale-[0.97]"
+                                                >
+                                                    📵 Pas de réponse
+                                                </button>
+                                                <button
+                                                    onClick={() => handleQuickCallOutcome('CALLBACK')}
+                                                    className="flex items-center gap-2 p-3 rounded-xl border border-blue-200 bg-blue-50 text-blue-800 text-xs font-bold hover:bg-blue-100 transition-all active:scale-[0.97]"
+                                                >
+                                                    🔄 À rappeler {callbackSchedule && <span className="text-[9px] opacity-70">({new Date(callbackSchedule).toLocaleDateString('fr-FR')})</span>}
+                                                </button>
+                                                <button
+                                                    onClick={() => handleQuickCallOutcome('NOT_INTERESTED')}
+                                                    className="flex items-center gap-2 p-3 rounded-xl border border-red-200 bg-red-50 text-red-800 text-xs font-bold hover:bg-red-100 transition-all active:scale-[0.97]"
+                                                >
+                                                    ❌ Pas intéressé
+                                                </button>
+                                                <button
+                                                    onClick={() => handleQuickCallOutcome('WRONG_NUMBER')}
+                                                    className="flex items-center gap-2 p-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 text-xs font-bold hover:bg-slate-100 transition-all active:scale-[0.97]"
+                                                >
+                                                    ⚠️ Mauvais numéro
+                                                </button>
+                                            </div>
+                                            {/* Full-width INTERESTED button */}
+                                            <button
+                                                onClick={() => handleQuickCallOutcome('INTERESTED')}
+                                                className="w-full flex items-center justify-center gap-2 p-3 rounded-xl border-2 border-emerald-300 bg-emerald-50 text-emerald-800 text-sm font-black hover:bg-emerald-100 transition-all active:scale-[0.97]"
+                                            >
+                                                ✅ Intéressé — Qualifier le prospect
+                                            </button>
+                                            <p className="text-[10px] text-slate-400 mt-2 text-center">
+                                                Marquer le résultat sans ouvrir le cockpit d'appel
+                                            </p>
+                                        </div>
+                                    )}
 
                                     {/* Adresse & Localisation */}
                                     <div className="px-5 py-4 border-b border-slate-100">
@@ -863,26 +1545,73 @@ export default function SalesDashboard() {
 
                                     {/* Contexte Marketing */}
                                     <div className="px-5 py-4 border-b border-slate-100">
-                                        <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3">Contexte Marketing</h3>
-                                        <div className="grid grid-cols-2 gap-3">
-                                            <div className="bg-slate-50 rounded-xl p-3">
-                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Source</p>
-                                                <p className="text-sm font-bold text-slate-900">{selectedProspect.source.replace(/_/g, ' ')}</p>
-                                            </div>
-                                            <div className="bg-slate-50 rounded-xl p-3">
-                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Campagne</p>
-                                                <p className="text-sm font-bold text-slate-900">{selectedProspect.campaignName || '—'}</p>
-                                            </div>
-                                            <div className="bg-slate-50 rounded-xl p-3">
-                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Service d'intérêt</p>
-                                                <p className="text-sm font-bold text-slate-900">{selectedProspect.interestServiceId || 'Non spécifié'}</p>
-                                            </div>
-                                            <div className="bg-slate-50 rounded-xl p-3">
-                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Créé le</p>
-                                                <p className="text-sm font-bold text-slate-900">{new Date(selectedProspect.createdAt).toLocaleDateString('fr-FR')}</p>
-                                            </div>
+                                        <div className="flex justify-between items-center mb-3">
+                                            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Contexte Marketing</h3>
+                                            {!isEditingMarketing ? (
+                                                <button onClick={() => setIsEditingMarketing(true)} className="text-xs text-indigo-600 font-bold hover:text-indigo-800 transition-colors flex items-center gap-1">
+                                                    Modifier
+                                                </button>
+                                            ) : (
+                                                <div className="flex items-center gap-2">
+                                                    <button onClick={handleSaveMarketing} className="text-xs px-2 py-1 bg-indigo-500 text-white rounded font-bold hover:bg-indigo-600 transition-colors">Enregistrer</button>
+                                                    <button onClick={() => setIsEditingMarketing(false)} className="text-xs px-2 py-1 bg-slate-200 text-slate-700 rounded font-bold hover:bg-slate-300 transition-colors">Annuler</button>
+                                                </div>
+                                            )}
                                         </div>
+                                        {isEditingMarketing ? (
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <div className="bg-slate-50 rounded-xl p-3">
+                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Source</p>
+                                                    <select value={marketingForm.source} onChange={e => setMarketingForm(prev => ({ ...prev, source: e.target.value }))} className="w-full text-sm font-bold bg-white border border-slate-200 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                                                        <option value="WEBSITE">Site Web</option>
+                                                        <option value="PHONE">Appel Entrant</option>
+                                                        <option value="REFERRAL">Parrainage</option>
+                                                        <option value="NETWORKING">Réseau / Événement</option>
+                                                    </select>
+                                                </div>
+                                                <div className="bg-slate-50 rounded-xl p-3">
+                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Campagne</p>
+                                                    <input type="text" value={marketingForm.campaignName} onChange={e => setMarketingForm(prev => ({ ...prev, campaignName: e.target.value }))} className="w-full text-sm font-bold bg-white border border-slate-200 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500" placeholder="Nom campagne" />
+                                                </div>
+                                                <div className="bg-slate-50 rounded-xl p-3 col-span-2">
+                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Service d'intérêt</p>
+                                                    <select value={marketingForm.interestServiceId} onChange={e => setMarketingForm(prev => ({ ...prev, interestServiceId: e.target.value }))} className="w-full text-sm font-bold bg-white border border-slate-200 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                                                        <option value="">Non spécifié</option>
+                                                        {SERVICES_CATALOG.filter(s => s.id !== 'rappel_echeances').map(s => (
+                                                            <option key={s.id} value={s.id}>{s.title}</option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <div className="bg-slate-50 rounded-xl p-3">
+                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Source</p>
+                                                    <p className="text-sm font-bold text-slate-900">{selectedProspect.source.replace(/_/g, ' ')}</p>
+                                                </div>
+                                                <div className="bg-slate-50 rounded-xl p-3">
+                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Campagne</p>
+                                                    <p className="text-sm font-bold text-slate-900">{selectedProspect.campaignName || '—'}</p>
+                                                </div>
+                                                <div className="bg-slate-50 rounded-xl p-3">
+                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Service d'intérêt</p>
+                                                    <p className="text-sm font-bold text-slate-900">
+                                                        {selectedProspect.interestServiceId
+                                                            ? (SERVICES_CATALOG.find(s => s.id === selectedProspect.interestServiceId)?.title || selectedProspect.interestServiceId)
+                                                            : 'Non spécifié'}
+                                                    </p>
+                                                    {selectedProspect.interestServiceId && (
+                                                        <ServicePriceDisplay serviceId={selectedProspect.interestServiceId} fetchPrice={fetchServicePrice} />
+                                                    )}
+                                                </div>
+                                                <div className="bg-slate-50 rounded-xl p-3">
+                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Créé le</p>
+                                                    <p className="text-sm font-bold text-slate-900">{new Date(selectedProspect.createdAt).toLocaleDateString('fr-FR')}</p>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
+
 
                                     {/* ─── SECTIONS ACCORDÉON ─── */}
 
@@ -933,19 +1662,71 @@ export default function SalesDashboard() {
                                             <ArrowRight size={14} className="text-slate-400 group-open:rotate-90 transition-transform" />
                                         </summary>
                                         <div className="px-5 pb-4">
+                                            <div className="mb-4">
+                                                <textarea
+                                                    value={newNote}
+                                                    onChange={(e) => setNewNote(e.target.value)}
+                                                    placeholder="Saisissez une nouvelle note ici..."
+                                                    className="w-full text-sm bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 min-h-[60px] resize-y focus:outline-none focus:ring-2 focus:ring-amber-500"
+                                                />
+                                                <div className="flex justify-end mt-2">
+                                                    <button
+                                                        onClick={async () => {
+                                                            if (!newNote.trim()) return;
+                                                            setIsLoading(true);
+                                                            const addedNote = await SalesStore.addNote(selectedProspect.id, newNote.trim());
+                                                            if (addedNote) {
+                                                                const updatedNotes = [addedNote, ...(selectedProspect.notes || [])];
+                                                                setSelectedProspect(prev => prev ? { ...prev, notes: updatedNotes } : null);
+                                                                setProspects(prev => prev.map(p => p.id === selectedProspect.id ? { ...p, notes: updatedNotes } : p));
+                                                            }
+                                                            setNewNote('');
+                                                            setIsLoading(false);
+                                                        }}
+                                                        disabled={!newNote.trim() || isLoading}
+                                                        className="px-3 py-1.5 bg-amber-500 text-white font-bold text-xs rounded-lg hover:bg-amber-600 transition-colors disabled:opacity-50"
+                                                    >
+                                                        Ajouter la note
+                                                    </button>
+                                                </div>
+                                            </div>
                                             {(!selectedProspect.notes || selectedProspect.notes.length === 0) ? (
                                                 <p className="text-sm text-slate-400 italic py-2">Aucune note enregistrée.</p>
                                             ) : (
-                                                <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-                                                    {selectedProspect.notes.map((note: ProspectNote) => (
-                                                        <div key={note.id} className="p-3 bg-amber-50 rounded-xl border border-amber-100 text-sm">
-                                                            <p className="text-slate-700 whitespace-pre-wrap">{note.text}</p>
-                                                            <div className="flex justify-between items-center mt-2 text-xs text-slate-500">
-                                                                <span>👤 {note.authorId}</span>
-                                                                <span>{new Date(note.createdAt || '').toLocaleDateString('fr-FR')} à {new Date(note.createdAt || '').toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</span>
+                                                <div className="space-y-3 max-h-56 overflow-y-auto pr-1">
+                                                    {selectedProspect.notes.map((note: ProspectNote) => {
+                                                        const isAgentNote = note.authorId?.includes('🤖');
+
+                                                        return (
+                                                            <div
+                                                                key={note.id}
+                                                                className={`p-4 rounded-xl relative group border-2 ${isAgentNote
+                                                                        ? 'bg-amber-50/80 border-amber-200'
+                                                                        : 'bg-slate-50 border-slate-100'
+                                                                    }`}
+                                                            >
+                                                                {isAgentNote && (
+                                                                    <div className="absolute -top-2.5 right-4 bg-amber-400 text-amber-900 px-2 py-0.5 rounded-full text-[9px] font-black tracking-widest uppercase shadow-sm flex items-center gap-1">
+                                                                        <span>Agent QA</span>
+                                                                    </div>
+                                                                )}
+                                                                <p className={`text-sm whitespace-pre-wrap ${isAgentNote ? 'text-amber-900 font-semibold text-xs' : 'text-slate-700'
+                                                                    }`}>
+                                                                    {note.text}
+                                                                </p>
+                                                                <div className="flex justify-between items-center mt-3 text-xs">
+                                                                    <span className={`font-black uppercase tracking-wider ${isAgentNote ? 'text-amber-600 text-[10px]' : 'text-indigo-400 text-[10px]'
+                                                                        }`}>
+                                                                        {isAgentNote ? 'IA Supervision' : `👤 ${note.authorId}`}
+                                                                    </span>
+                                                                    <span className={`font-mono flex items-center gap-1 ${isAgentNote ? 'text-amber-500 font-bold text-[9px]' : 'text-slate-400 text-[10px]'
+                                                                        }`}>
+                                                                        {new Date(note.createdAt || '').toLocaleDateString('fr-FR')} à {new Date(note.createdAt || '').toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                                                                    </span>
+                                                                </div>
                                                             </div>
-                                                        </div>
-                                                    ))}
+                                                        );
+                                                    })}
                                                 </div>
                                             )}
                                         </div>
@@ -1070,27 +1851,27 @@ export default function SalesDashboard() {
                     {/* Modale d'ajout manuel de prospect */}
                     {showAddModal && (
                         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-                            <div className="bg-white p-6 rounded-2xl shadow-xl max-w-md w-full animate-in slide-in-from-bottom-4 duration-200">
-                                <div className="flex justify-between items-center mb-6">
+                            <div className="bg-white p-6 rounded-2xl shadow-xl max-w-md w-full max-h-[90vh] flex flex-col animate-in slide-in-from-bottom-4 duration-200">
+                                <div className="flex justify-between items-center mb-6 flex-shrink-0">
                                     <h2 className="text-xl font-bold flex items-center gap-2">
                                         <Plus className="text-indigo-600" /> Ajouter un prospect
                                     </h2>
                                     <button onClick={() => setShowAddModal(false)} className="text-slate-400 hover:text-slate-600"><XCircle size={20} /></button>
                                 </div>
-                                <div className="space-y-4">
+                                <div className="space-y-4 overflow-y-auto flex-1 pr-2">
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
-                                            <label className="block text-xs font-bold text-slate-500 mb-1">Prénom</label>
-                                            <input type="text" value={addForm.firstName} onChange={e => setAddForm({ ...addForm, firstName: e.target.value })} className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Prénom" autoFocus />
+                                            <label className="block text-xs font-bold text-slate-500 mb-1">Prénom <span className="text-red-500">*</span></label>
+                                            <input type="text" required value={addForm.firstName} onChange={e => setAddForm({ ...addForm, firstName: e.target.value })} className={`w-full px-4 py-2 bg-slate-50 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 ${!addForm.firstName ? 'border-red-300' : 'border-slate-200'}`} placeholder="Prénom" autoFocus />
                                         </div>
                                         <div>
-                                            <label className="block text-xs font-bold text-slate-500 mb-1">Nom</label>
-                                            <input type="text" value={addForm.lastName} onChange={e => setAddForm({ ...addForm, lastName: e.target.value })} className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Nom" />
+                                            <label className="block text-xs font-bold text-slate-500 mb-1">Nom <span className="text-red-500">*</span></label>
+                                            <input type="text" required value={addForm.lastName} onChange={e => setAddForm({ ...addForm, lastName: e.target.value })} className={`w-full px-4 py-2 bg-slate-50 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 ${!addForm.lastName ? 'border-red-300' : 'border-slate-200'}`} placeholder="Nom" />
                                         </div>
                                     </div>
                                     <div>
-                                        <label className="block text-xs font-bold text-slate-500 mb-1">Téléphone</label>
-                                        <input type="tel" value={addForm.phone} onChange={e => setAddForm({ ...addForm, phone: e.target.value })} className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="06 XX XX XX XX" />
+                                        <label className="block text-xs font-bold text-slate-500 mb-1">Téléphone <span className="text-red-500">*</span></label>
+                                        <input type="tel" required value={addForm.phone} onChange={e => setAddForm({ ...addForm, phone: e.target.value })} className={`w-full px-4 py-2 bg-slate-50 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 ${!addForm.phone ? 'border-red-300' : 'border-slate-200'}`} placeholder="06 XX XX XX XX" />
                                     </div>
                                     <div>
                                         <label className="block text-xs font-bold text-slate-500 mb-1">Email (Optionnel)</label>
@@ -1118,32 +1899,67 @@ export default function SalesDashboard() {
                                             <option value="NETWORKING">Réseau / Événement</option>
                                         </select>
                                     </div>
+
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-500 mb-1">Service d'intérêt <span className="text-red-500">*</span></label>
+                                        <select value={addForm.interestServiceId} onChange={e => setAddForm({ ...addForm, interestServiceId: e.target.value })} className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                            <option value="" disabled>-- Sélectionnez un service (Obligatoire) --</option>
+                                            {SERVICES_CATALOG.filter(s => s.id !== 'rappel_echeances').map(s => (
+                                                <option key={s.id} value={s.id}>{s.title}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-500 mb-1">Agence de rattachement</label>
+                                        <select value={addForm.agencyId} onChange={e => setAddForm({ ...addForm, agencyId: e.target.value })} className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                            {agencies.map(a => (
+                                                <option key={a.id} value={a.id}>{a.name} ({a.id})</option>
+                                            ))}
+                                            {agencies.length === 0 && <option value="HQ-001">HQ-001 (Par défaut)</option>}
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-500 mb-1">Assigné à (Agent / Juriste) (Optionnel)</label>
+                                        <select value={addForm.assignedToSalesId} onChange={e => setAddForm({ ...addForm, assignedToSalesId: e.target.value })} className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                            <option value="">-- Non assigné --</option>
+                                            {users.map(u => (
+                                                <option key={u.id} value={u.id}>{u.name} ({u.role})</option>
+                                            ))}
+                                        </select>
+                                    </div>
                                 </div>
-                                <div className="mt-8 flex justify-end gap-3">
+                                <div className="mt-8 flex justify-end gap-3 flex-shrink-0">
                                     <button onClick={() => setShowAddModal(false)} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg font-medium transition-colors">Annuler</button>
                                     <button
                                         onClick={() => {
+                                            if (!addForm.firstName.trim() || !addForm.lastName.trim() || !addForm.phone.trim() || !addForm.interestServiceId) {
+                                                return; // Guard against invalid data
+                                            }
                                             SalesStore.addProspect({
-                                                firstName: addForm.firstName || 'Nouveau',
-                                                lastName: addForm.lastName || 'Prospect',
-                                                phone: addForm.phone || '0600000000',
-                                                email: addForm.email || undefined,
-                                                address: addForm.address || undefined,
-                                                city: addForm.city || undefined,
-                                                zipCode: addForm.zipCode || undefined,
+                                                firstName: addForm.firstName.trim(),
+                                                lastName: addForm.lastName.trim(),
+                                                phone: addForm.phone.trim(),
+                                                email: addForm.email.trim() || undefined,
+                                                address: addForm.address.trim() || undefined,
+                                                city: addForm.city.trim() || undefined,
+                                                zipCode: addForm.zipCode.trim() || undefined,
                                                 country: addForm.country || 'France',
+                                                interestServiceId: addForm.interestServiceId,
                                                 source: addForm.source as any,
-                                                agencyId: 'HQ-001',
+                                                agencyId: addForm.agencyId || 'HQ-001',
+                                                assignedToSalesId: addForm.assignedToSalesId || undefined,
                                                 score: 0
                                             }).then((newProspect) => {
                                                 loadProspects();
                                                 setShowAddModal(false);
-                                                setAddForm({ firstName: '', lastName: '', phone: '', email: '', source: 'WEBSITE', address: '', city: '', zipCode: '', country: 'France' });
-                                                // Optionnel : ouvrir directement le prospect créé
+                                                setAddForm({ firstName: '', lastName: '', phone: '', email: '', source: 'WEBSITE', address: '', city: '', zipCode: '', country: 'France', interestServiceId: '', agencyId: currentUserInfo?.agencyId || 'HQ-001', assignedToSalesId: '' });
                                                 if (newProspect) setSelectedProspect(newProspect);
+                                                showToast('Prospect créé avec succès !', 'success', '✅');
                                             });
                                         }}
-                                        disabled={!addForm.firstName && !addForm.lastName && !addForm.phone}
+                                        disabled={!addForm.firstName.trim() || !addForm.lastName.trim() || !addForm.phone.trim() || !addForm.interestServiceId}
                                         className="px-6 py-2 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
                                         Créer le prospect
@@ -1169,9 +1985,102 @@ export default function SalesDashboard() {
                             prospect={selectedProspect}
                             onClose={() => setShowCallCockpit(false)}
                             onSaveNote={handleSaveNote}
+                            onBookAppointment={(appointment) => handleBookAppointment(selectedProspect, appointment)}
                         />
                     )}
                 </>
+            )}
+
+            {/* ─── TOAST NOTIFICATION ─── */}
+            {toast && (
+                <div className={`fixed bottom-6 right-6 z-[100] max-w-sm animate-in slide-in-from-bottom-4 duration-300`}>
+                    <div className={`flex items-start gap-3 px-5 py-4 rounded-2xl shadow-2xl border backdrop-blur-sm ${toast.type === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-800' :
+                        toast.type === 'error' ? 'bg-red-50 border-red-200 text-red-800' :
+                            toast.type === 'warning' ? 'bg-amber-50 border-amber-200 text-amber-800' :
+                                'bg-indigo-50 border-indigo-200 text-indigo-800'
+                        }`}>
+                        {toast.icon && <span className="text-lg flex-shrink-0 mt-0.5">{toast.icon}</span>}
+                        <p className="text-sm font-semibold leading-snug flex-1">{toast.message}</p>
+                        <button
+                            onClick={() => setToast(null)}
+                            className="flex-shrink-0 p-0.5 hover:bg-black/5 rounded-full transition-colors"
+                        >
+                            <X size={14} />
+                        </button>
+                    </div>
+                    {/* Auto-dismiss progress bar */}
+                    <div className="mt-1 mx-4 h-0.5 rounded-full overflow-hidden bg-black/5">
+                        <div
+                            className={`h-full rounded-full ${toast.type === 'success' ? 'bg-emerald-400' :
+                                toast.type === 'error' ? 'bg-red-400' :
+                                    toast.type === 'warning' ? 'bg-amber-400' :
+                                        'bg-indigo-400'
+                                }`}
+                            style={{ animation: 'toast-shrink 3.5s linear forwards', width: '100%' }}
+                        />
+                    </div>
+                    <style jsx>{`
+                        @keyframes toast-shrink {
+                            from { width: 100%; }
+                            to { width: 0%; }
+                        }
+                    `}</style>
+                </div>
+            )}
+
+            {/* ─── CONFIRMATION DIALOG ─── */}
+            {confirmDialog && (
+                <div className="fixed inset-0 z-[90] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={() => setConfirmDialog(null)} />
+                    <div className="relative w-[420px] max-w-full max-h-full flex flex-col bg-white rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+                        {/* Icon */}
+                        <div className="pt-8 pb-4 flex justify-center flex-shrink-0">
+                            <div className={`w-16 h-16 rounded-2xl flex items-center justify-center ${confirmDialog.type === 'danger' ? 'bg-red-100' :
+                                confirmDialog.type === 'warning' ? 'bg-amber-100' :
+                                    'bg-indigo-100'
+                                }`}>
+                                {confirmDialog.type === 'danger' ? (
+                                    <AlertTriangle size={28} className="text-red-600" />
+                                ) : confirmDialog.type === 'warning' ? (
+                                    <AlertTriangle size={28} className="text-amber-600" />
+                                ) : (
+                                    <Info size={28} className="text-indigo-600" />
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Content */}
+                        <div className="px-8 pb-6 text-center overflow-y-auto">
+                            <h3 className="text-lg font-black text-slate-900 mb-2">{confirmDialog.title}</h3>
+                            <div className="text-sm text-slate-500 leading-relaxed">
+                                {confirmDialog.message.split('\n').map((line, i) => (
+                                    <p key={i} className={line === '' ? 'h-2' : ''}>{line}</p>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="px-8 pb-8 flex gap-3 flex-shrink-0">
+                            <button
+                                onClick={() => setConfirmDialog(null)}
+                                className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50 transition-all"
+                            >
+                                {confirmDialog.cancelLabel || 'Annuler'}
+                            </button>
+                            <button
+                                onClick={confirmDialog.onConfirm}
+                                className={`flex-1 py-3 rounded-xl text-white font-bold text-sm transition-all shadow-sm active:scale-[0.97] ${confirmDialog.type === 'danger'
+                                    ? 'bg-red-600 hover:bg-red-700 shadow-red-200'
+                                    : confirmDialog.type === 'warning'
+                                        ? 'bg-amber-600 hover:bg-amber-700 shadow-amber-200'
+                                        : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-200'
+                                    }`}
+                            >
+                                {confirmDialog.confirmLabel}
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );
