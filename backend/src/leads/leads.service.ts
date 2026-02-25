@@ -405,6 +405,22 @@ export class LeadsService {
         this.logger.log(`📎 Document uploaded: ${safeFilename} for Lead ${leadId} / Doc ${docId}`);
 
         // ════════════════════════════════════════════════════════
+        // 🛡️ FIX 2 — Anti-doublons EARLY CHECK (avant OCR pour économiser du compute)
+        // ════════════════════════════════════════════════════════
+        const earlyDocs: any[] = JSON.parse(lead.documents || '[]');
+        const earlyExisting = earlyDocs.find((d: any) => d.id === docId);
+        if (earlyExisting && earlyExisting.status === 'VALID') {
+            this.logger.log(`🛡️ [Anti-doublon] Lead ${leadId}: Document ${docId} déjà validé — skip OCR`);
+            // Supprimer le fichier inutile
+            try { fs.unlinkSync(filePath); } catch { }
+            return {
+                success: true,
+                message: `Ce document est déjà validé ✅. Inutile de le renvoyer.`,
+                ocrResult: { status: 'VALID', confidence: 100, message: 'Déjà validé', extractedData: earlyExisting.ocrData }
+            };
+        }
+
+        // ════════════════════════════════════════════════════════
         // 🤖 AGENT OCR — Vérification automatique du document
         // ════════════════════════════════════════════════════════
         let ocrStatus: 'PENDING' | 'VALID' | 'REJECTED' = 'PENDING';
@@ -482,13 +498,39 @@ export class LeadsService {
             ocrMessage = 'Analyse automatique indisponible. Le document sera vérifié manuellement.';
         }
 
-        // Mettre à jour la checklist du lead
+        // ════════════════════════════════════════════════════════
+        // 🛡️ FIX 2 — Anti-doublons : skip si déjà VALID
+        // ════════════════════════════════════════════════════════
         const documents: any[] = JSON.parse(lead.documents || '[]');
+        const existingDoc = documents.find((d: any) => d.id === docId);
+        if (existingDoc && existingDoc.status === 'VALID') {
+            this.logger.log(`🛡️ [Anti-doublon] Lead ${leadId}: Document ${docId} déjà validé — skip re-upload`);
+            return {
+                success: true,
+                message: `Ce document (${docId}) est déjà validé ✅. Inutile de le renvoyer.`,
+                ocrResult: { status: 'VALID', confidence: 100, message: 'Déjà validé', extractedData: existingDoc.ocrData }
+            };
+        }
 
-        const existingDocIndex = documents.findIndex((d: any) => d.id === docId);
+        // ════════════════════════════════════════════════════════
+        // 🔄 FIX 1 — Réassignation intelligente post-OCR
+        // ════════════════════════════════════════════════════════
+        // Si l'OCR a détecté un type de document différent de celui assigné,
+        // réassigner au bon slot dans la checklist
+        let finalDocId = docId;
+        if (ocrStatus !== 'REJECTED' && ocrData?.documentType) {
+            const requiredDocs = lead.requiredDocs ? JSON.parse(lead.requiredDocs) : [];
+            const betterSlot = this.findBetterDocSlot(ocrData.documentType, docId, requiredDocs, documents);
+            if (betterSlot) {
+                this.logger.log(`🔄 [Smart Reassign] "${docId}" → "${betterSlot.id}" (OCR détecte: ${ocrData.documentType})`);
+                finalDocId = betterSlot.id;
+            }
+        }
+
+        const existingDocIndex = documents.findIndex((d: any) => d.id === finalDocId);
         const docEntry = {
-            id: docId,
-            docType: docId,
+            id: finalDocId,
+            docType: finalDocId,
             status: ocrStatus,
             fileUrl,
             originalFilename,
@@ -498,6 +540,7 @@ export class LeadsService {
             ocrConfidence,
             ocrMessage,
             ocrData,
+            reassignedFrom: finalDocId !== docId ? docId : undefined,
         };
 
         if (existingDocIndex >= 0) {
@@ -584,6 +627,56 @@ export class LeadsService {
         } catch {
             return '';
         }
+    }
+
+    /**
+     * 🔄 FIX 1 — Réassignation intelligente post-OCR
+     *
+     * Si l'OCR a détecté un type de document (ex: "Passeport") mais qu'il a été
+     * assigné au mauvais slot (ex: "justif_domicile"), cette méthode trouve
+     * le bon slot dans la checklist de documents requis.
+     */
+    private findBetterDocSlot(
+        detectedType: string,
+        currentDocId: string,
+        requiredDocs: any[],
+        existingDocs: any[]
+    ): { id: string; name: string } | null {
+        // Mapping type OCR → IDs de documents possibles
+        const typeToDocIds: Record<string, string[]> = {
+            'Passeport': ['passeport', 'passport'],
+            "Carte d'identité": ['carte_identite', 'cni', 'carte_nationale_identite'],
+            'Titre de séjour': ['titre_sejour', 'carte_sejour', 'titre_de_sejour'],
+            'Récépissé': ['recepisse', 'recipisse'],
+            'Acte de naissance': ['acte_naissance', 'acte_de_naissance'],
+            'Acte de mariage': ['acte_mariage', 'acte_de_mariage'],
+            'Justificatif de domicile': ['justif_domicile', 'justificatif_domicile', 'attestation_domicile'],
+            'Quittance de loyer': ['quittance_loyer', 'quittance'],
+            "Avis d'imposition": ['avis_imposition', 'avis_impot'],
+            'Formulaire CERFA': ['cerfa', 'formulaire_cerfa'],
+            'Certificat de nationalité': ['certificat_nationalite'],
+            'Facture': ['facture', 'facture_edf', 'facture_energie'],
+            'Attestation': ['attestation', 'attestation_hebergement'],
+        };
+
+        const possibleDocIds = typeToDocIds[detectedType];
+        if (!possibleDocIds) return null;
+
+        // Vérifier si le docId actuel est déjà un match correct
+        if (possibleDocIds.includes(currentDocId)) return null;
+
+        // Chercher un slot requis non rempli qui correspond au type détecté
+        for (const rd of requiredDocs) {
+            if (possibleDocIds.includes(rd.id)) {
+                // Vérifier que ce slot n'est pas déjà rempli (ou est REJECTED)
+                const already = existingDocs.find((d: any) => d.id === rd.id && d.status !== 'REJECTED');
+                if (!already) {
+                    return { id: rd.id, name: rd.name };
+                }
+            }
+        }
+
+        return null;
     }
 
     /**

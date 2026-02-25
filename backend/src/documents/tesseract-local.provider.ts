@@ -145,11 +145,18 @@ export class TesseractLocalProvider implements OCRProvider {
     // ═══════════════════════════════════════════════════
     private async extractText(buffer: Buffer): Promise<string> {
         try {
-            // Pré-traitement de l'image pour améliorer l'OCR
+            // Pré-traitement de l'image pour améliorer l'OCR des photos smartphone
             const processedBuffer = await sharp(buffer)
-                .greyscale()             // Niveaux de gris
-                .normalise()             // Normaliser le contraste
-                .sharpen({ sigma: 1.5 }) // Accentuer la netteté
+                .rotate()                // 1. Auto-orient via EXIF (crucial pour WhatsApp)
+                .greyscale()             // 2. Niveaux de gris
+                .median(3)               // 3. Réduire le "bruit"/grain de la caméra
+                .clahe({                 // 4. Equalization adaptative locale (ombres/lumière inégale)
+                    width: 100,
+                    height: 100,
+                    maxSlope: 3
+                })
+                .normalise()             // 5. Normaliser le contraste global
+                .sharpen({ sigma: 1.5 }) // 6. Accentuer la netteté des contours de caractères
                 .toBuffer();
 
             const result = await Tesseract.recognize(processedBuffer, 'fra+eng', {

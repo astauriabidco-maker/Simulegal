@@ -294,10 +294,16 @@ export class WhatsappService {
         );
 
         // Notifier le client du résultat directement par WhatsApp
-        const statusEmoji = result.ocrResult?.status === 'VALID' ? '✅'
-            : result.ocrResult?.status === 'REJECTED' ? '❌' : '⏳';
+        let replyMessage = '';
 
-        const replyMessage = `${statusEmoji} *Document reçu* — ${targetDocName}\n\n${result.message}`;
+        // Si c'est complètement rejeté par manque de texte (ex: photo non liée, meme, chat)
+        if (result.ocrResult?.status === 'REJECTED' && result.message.toLowerCase().includes('incomplet')) {
+            replyMessage = `❌ L'image envoyée ne semble pas être un document administratif (texte illisible ou absent).\n\nVeuillez vérifier la photo et réessayer.`;
+        } else {
+            const statusEmoji = result.ocrResult?.status === 'VALID' ? '✅'
+                : result.ocrResult?.status === 'REJECTED' ? '❌' : '⏳';
+            replyMessage = `${statusEmoji} *Document reçu* — ${targetDocName}\n\n${result.message}`;
+        }
 
         await this.notificationsService.sendWhatsApp(
             lead.phone,
