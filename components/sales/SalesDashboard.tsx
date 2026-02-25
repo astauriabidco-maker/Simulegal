@@ -322,6 +322,9 @@ export default function SalesDashboard() {
                 setSelectedProspect((prev: Prospect | null) => prev ? { ...prev, status: 'MEETING_BOOKED', appointment } : null);
             }
             setShowBookingModal(false);
+            showToast('RDV confirmé et juriste assigné automatiquement', 'success', '📅');
+        } else {
+            showToast('Impossible de réserver ce créneau. Il a peut-être été pris entre-temps.', 'error', '⚠️');
         }
     };
 

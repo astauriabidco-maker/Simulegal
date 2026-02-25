@@ -1,8 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException, Inject, forwardRef } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prospect, ProspectStatus } from '@prisma/client';
 import { AssignmentService } from './assignment.service';
 import { ProspectPipelineService } from './prospect-pipeline.service';
+import { AppointmentsService } from '../appointments/appointments.service';
 import { SERVICE_CATALOG, DOCUMENT_CATALOG } from '../config/services-pipeline.config';
 
 @Injectable()
@@ -11,6 +12,8 @@ export class SalesService {
         private prisma: PrismaService,
         private assignmentService: AssignmentService,
         private prospectPipeline: ProspectPipelineService,
+        @Inject(forwardRef(() => AppointmentsService))
+        private appointmentsService: AppointmentsService,
     ) { }
 
     async findAll(params: {
@@ -226,10 +229,11 @@ export class SalesService {
 
     /**
      * Fixer un rendez-vous en agence pour un prospect
-     * - Crée un SalesAppointment dans la DB
-     * - Crée aussi un Appointment (calendrier) pour qu'il apparaisse dans l'agenda
-     * - Met à jour le prospect (status + appointment JSON)
-     * - Retourne le prospect mis à jour
+     * ─── TEMPS RÉEL ───
+     * 1. Vérifie la disponibilité du créneau via AppointmentsService
+     * 2. Auto-assigne un juriste/agent disponible (hostUser)
+     * 3. Crée le SalesAppointment + Appointment calendrier
+     * 4. Met à jour le prospect
      */
     async bookAppointment(prospectId: string, appointmentData: {
         date: string;
@@ -244,25 +248,58 @@ export class SalesService {
 
         const startDate = new Date(appointmentData.date);
         const endDate = new Date(startDate.getTime() + 60 * 60 * 1000); // +1h
+        const serviceId = appointmentData.serviceId || prospect.interestServiceId || undefined;
 
-        // 1. Créer le SalesAppointment (suivi commercial)
+        // ─── 0. Vérifier la disponibilité temps réel ───
+        const availableSlots = await this.appointmentsService.getAvailableSlots(
+            startDate.toISOString().split('T')[0],
+            appointmentData.agencyId,
+            serviceId,
+        );
+
+        // Vérifier que le créneau demandé est dans la liste des slots disponibles
+        const requestedSlotIso = startDate.toISOString();
+        const isSlotAvailable = availableSlots.some(slot => {
+            const slotDate = new Date(slot);
+            return Math.abs(slotDate.getTime() - startDate.getTime()) < 60000; // marge 1 min
+        });
+
+        if (!isSlotAvailable) {
+            throw new BadRequestException(
+                'Ce créneau n\'est plus disponible. Un autre rendez-vous a été pris entre-temps. Veuillez rafraîchir les créneaux.'
+            );
+        }
+
+        // ─── 1. Auto-assigner un juriste/agent disponible ───
+        const hostUserId = await this.appointmentsService.findAvailableHost(
+            requestedSlotIso,
+            appointmentData.agencyId,
+            serviceId,
+        );
+
+        if (!hostUserId) {
+            throw new BadRequestException(
+                'Aucun juriste ou agent disponible sur ce créneau pour le service demandé. Veuillez choisir un autre créneau.'
+            );
+        }
+
+        // ─── 2. Créer le SalesAppointment (suivi commercial) ───
         const salesAppointment = await this.prisma.salesAppointment.create({
             data: {
                 prospectId,
                 date: startDate,
                 agencyId: appointmentData.agencyId,
                 agencyName: appointmentData.agencyName,
-                serviceId: appointmentData.serviceId || prospect.interestServiceId,
+                serviceId: serviceId,
                 status: 'SCHEDULED',
                 confirmationSent: appointmentData.confirmed || false,
                 confirmationSentVia: appointmentData.confirmationSentVia,
             }
         });
 
-        // 2. Créer aussi un Appointment dans le calendrier global (pour l'agenda)
+        // ─── 3. Créer l'Appointment dans le calendrier global (avec hostUser) ───
         let calendarAppointment = null;
         try {
-            // Vérifier si l'agencyId existe dans la table Agency pour la relation
             const agencyExists = await this.prisma.agency.findUnique({
                 where: { id: appointmentData.agencyId }
             });
@@ -276,34 +313,48 @@ export class SalesService {
                     leadName: `${prospect.firstName} ${prospect.lastName}`,
                     leadEmail: prospect.email,
                     prospectId: prospectId,
+                    hostUserId: hostUserId,
                     ...(agencyExists ? { agencyId: appointmentData.agencyId } : {}),
-                    serviceId: appointmentData.serviceId || prospect.interestServiceId,
+                    serviceId: serviceId,
                 }
             });
-            console.log(`[SalesService] 📆 Appointment calendrier créé: ${calendarAppointment.id}`);
+            console.log(`[SalesService] 📆 Appointment créé: ${calendarAppointment.id} — assigné à ${hostUserId}`);
         } catch (calError) {
             console.warn('[SalesService] ⚠️ Impossible de créer le RDV dans le calendrier:', calError);
         }
 
-        // 3. Mettre à jour le prospect
+        // Récupérer le nom du host pour l'afficher dans le prospect
+        let hostName = '';
+        try {
+            const host = await this.prisma.user.findUnique({ where: { id: hostUserId }, select: { name: true } });
+            hostName = host?.name || '';
+        } catch (e) { /* ignore */ }
+
+        // ─── 4. Mettre à jour le prospect ───
         const updatedProspect = await this.prisma.prospect.update({
             where: { id: prospectId },
             data: {
                 status: 'MEETING_BOOKED',
-                appointment: appointmentData as any,
+                appointment: {
+                    ...appointmentData,
+                    hostUserId,
+                    hostName,
+                    calendarAppointmentId: calendarAppointment?.id,
+                } as any,
                 lastContactAt: new Date(),
             }
         });
 
-        // 4. Trigger pipeline automation
+        // ─── 5. Trigger pipeline automation ───
         await this.prospectPipeline.onAppointmentBooked(prospectId, appointmentData.date);
 
-        console.log(`[SalesService] 📅 RDV créé: ${salesAppointment.id} pour prospect ${prospectId} le ${appointmentData.date} à ${appointmentData.agencyName}`);
+        console.log(`[SalesService] 📅 RDV temps-réel: ${salesAppointment.id} — prospect ${prospectId} — ${appointmentData.date} @ ${appointmentData.agencyName} — juriste: ${hostName || hostUserId}`);
 
         return {
             prospect: updatedProspect,
             appointment: salesAppointment,
             calendarAppointmentId: calendarAppointment?.id,
+            assignedHost: { id: hostUserId, name: hostName },
         };
     }
 
