@@ -1,7 +1,8 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { WhatsappGateway } from './whatsapp.gateway';
+import { LeadsService } from '../leads/leads.service';
 import * as fs from 'fs';
 import * as path from 'path';
 import { randomUUID } from 'crypto';
@@ -16,7 +17,9 @@ export class WhatsappService {
     constructor(
         private prisma: PrismaService,
         private notificationsService: NotificationsService,
-        private gateway: WhatsappGateway
+        private gateway: WhatsappGateway,
+        @Inject(forwardRef(() => LeadsService))
+        private leadsService: LeadsService,
     ) {
         // Créer le dossier uploads/whatsapp s'il n'existe pas
         if (!fs.existsSync(MEDIA_UPLOAD_DIR)) {
@@ -98,6 +101,25 @@ export class WhatsappService {
 
                     this.logger.log(`📎 Media saved: ${savedMedia.filename} (${media.contentType})`);
                     results.push(communication);
+
+                    // ════════════════════════════════════════════════════════
+                    // 📎 AUTO-ATTACH : rattacher le média au dossier Lead
+                    // ════════════════════════════════════════════════════════
+                    if (lead && this.isDocumentMedia(media.contentType)) {
+                        try {
+                            const fileBuffer = fs.readFileSync(savedMedia.absolutePath);
+                            await this.attachMediaToLeadDossier(
+                                lead,
+                                fileBuffer,
+                                savedMedia.filename,
+                                media.contentType,
+                                savedMedia.relativePath,
+                                data.body
+                            );
+                        } catch (attachErr: any) {
+                            this.logger.warn(`⚠️ Auto-attach failed: ${attachErr.message}`);
+                        }
+                    }
 
                 } catch (mediaError) {
                     this.logger.error(`❌ Failed to save media: ${mediaError.message}`);
@@ -203,6 +225,132 @@ export class WhatsappService {
             'application/msword': '.doc',
         };
         return map[mimeType] || '.bin';
+    }
+
+    /**
+     * Vérifie si un média est un document (image ou PDF)
+     */
+    private isDocumentMedia(contentType: string): boolean {
+        return contentType.startsWith('image/') || contentType === 'application/pdf';
+    }
+
+    /**
+     * 📎 Rattache un fichier envoyé par WhatsApp au dossier Lead
+     *
+     * Logique intelligente :
+     *   1. Vérifie que le Lead est en étape COLLECTING (ou PAID/NEW)
+     *   2. Tente de matcher le fichier avec un document requis non encore déposé
+     *   3. Lance l'OCR automatique (Tesseract/Ollama) pour validation
+     *   4. Met à jour Lead.documents
+     *   5. Notifie le client du résultat
+     */
+    private async attachMediaToLeadDossier(
+        lead: any,
+        fileBuffer: Buffer,
+        filename: string,
+        mimeType: string,
+        savedPath: string,
+        messageBody?: string
+    ): Promise<void> {
+        // S'assurer que le Lead est en étape de collecte
+        const activeStages = ['NEW', 'PAID', 'COLLECTING'];
+        if (!activeStages.includes(lead.status)) {
+            this.logger.log(`[✋ WhatsApp Attach] Lead ${lead.id} n'est pas en collecte (${lead.status}) — fichier non rattaché au dossier`);
+            return;
+        }
+
+        // Charger les documents requis et déjà déposés
+        const requiredDocs = lead.requiredDocs ? JSON.parse(lead.requiredDocs) : [];
+        const existingDocs: any[] = lead.documents ? JSON.parse(lead.documents) : [];
+
+        // Trouver le prochain document requis non encore déposé
+        const missingDoc = requiredDocs.find((rd: any) => {
+            const already = existingDocs.find((d: any) => d.id === rd.id && d.status !== 'REJECTED');
+            return !already;
+        });
+
+        // Tenter de déduire le type de document depuis le message ou le contexte
+        let targetDocId = missingDoc?.id || `whatsapp_doc_${Date.now()}`;
+        let targetDocName = missingDoc?.name || 'Document envoyé par WhatsApp';
+
+        // Si le client a écrit un message accompagnant le fichier, tenter de matcher
+        if (messageBody && requiredDocs.length > 0) {
+            const matchedByMessage = this.matchDocByMessage(messageBody, requiredDocs, existingDocs);
+            if (matchedByMessage) {
+                targetDocId = matchedByMessage.id;
+                targetDocName = matchedByMessage.name;
+            }
+        }
+
+        this.logger.log(`📎 [WhatsApp → Dossier] Lead ${lead.id}: rattachement à "${targetDocName}" (${targetDocId})`);
+
+        // Utiliser le handleDocumentUpload de LeadsService (avec OCR intégré)
+        const result = await this.leadsService.handleDocumentUpload(
+            lead.id,
+            targetDocId,
+            fileBuffer,
+            filename,
+            mimeType
+        );
+
+        // Notifier le client du résultat directement par WhatsApp
+        const statusEmoji = result.ocrResult?.status === 'VALID' ? '✅'
+            : result.ocrResult?.status === 'REJECTED' ? '❌' : '⏳';
+
+        const replyMessage = `${statusEmoji} *Document reçu* — ${targetDocName}\n\n${result.message}`;
+
+        await this.notificationsService.sendWhatsApp(
+            lead.phone,
+            'document_receipt_confirmation',
+            { name: lead.name, message: replyMessage },
+            { leadId: lead.id }
+        );
+    }
+
+    /**
+     * Tente de matcher un message texte avec un document requis
+     * Ex: "Voici mon passeport" → match avec le doc requis "passeport"
+     */
+    private matchDocByMessage(
+        message: string,
+        requiredDocs: any[],
+        existingDocs: any[]
+    ): { id: string; name: string } | null {
+        const msg = message.toLowerCase();
+
+        // Mots-clés pour chaque type de document
+        const keywords: Record<string, string[]> = {
+            'passeport': ['passeport', 'passport'],
+            'carte_identite': ['carte d\'identité', 'cni', 'carte identite', 'identity card'],
+            'titre_sejour': ['titre de séjour', 'carte de séjour', 'titre sejour', 'residence permit'],
+            'acte_naissance': ['acte de naissance', 'birth certificate', 'naissance'],
+            'acte_mariage': ['acte de mariage', 'mariage', 'marriage'],
+            'justif_domicile': ['justificatif de domicile', 'domicile', 'facture', 'edf', 'quittance'],
+            'photos_identite': ['photo', 'photos d\'identité', 'photos identite'],
+            'recepisse': ['récépissé', 'recepisse', 'récépissé'],
+            'cerfa': ['cerfa', 'formulaire'],
+            'avis_imposition': ['avis d\'imposition', 'avis imposition', 'impôt', 'impot'],
+            'contrat_travail': ['contrat de travail', 'contrat travail', 'emploi'],
+            'attestation_hebergement': ['attestation d\'hébergement', 'hebergement'],
+        };
+
+        for (const rd of requiredDocs) {
+            const alreadyDone = existingDocs.find((d: any) => d.id === rd.id && d.status !== 'REJECTED');
+            if (alreadyDone) continue;
+
+            // Match par l'ID du document
+            const docKeywords = keywords[rd.id] || [];
+
+            // Match aussi par le nom du document
+            const nameWords = (rd.name || '').toLowerCase().split(/\s+/);
+            const allKeywords = [...docKeywords, ...nameWords.filter((w: string) => w.length > 3)];
+
+            if (allKeywords.some(kw => msg.includes(kw))) {
+                return { id: rd.id, name: rd.name };
+            }
+        }
+
+        return null;
     }
 
     /**
