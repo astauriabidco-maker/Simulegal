@@ -17,7 +17,8 @@ function getMediaUrl(mediaUrl: string | undefined | null): string | null {
     if (!mediaUrl) return null;
     if (mediaUrl.startsWith('http')) return mediaUrl;
     const filename = mediaUrl.split('/').pop();
-    return `http://localhost:5000/whatsapp/media/${filename}`;
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:6060';
+    return `${baseUrl}/whatsapp/media/${filename}`;
 }
 
 function isImageType(mediaType: string | undefined | null): boolean {
