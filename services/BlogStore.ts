@@ -71,7 +71,7 @@ export const BlogStore = {
         return res.json();
     },
 
-    postComment: async (slug: string, data: { authorName: string; authorEmail?: string; content: string; honeypot?: string }): Promise<boolean> => {
+    postComment: async (slug: string, data: { authorName: string; authorEmail?: string; content: string; honeypot?: string; parentId?: string }): Promise<boolean> => {
         const res = await fetch(`${API}/public/blog/${slug}/comments`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -144,5 +144,25 @@ export const BlogStore = {
             headers: getAuthHeaders(),
         });
         return res.ok;
+    },
+
+    // ── Image Upload ──
+    uploadImage: async (file: File): Promise<{ url: string; filename: string } | null> => {
+        const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+        const formData = new FormData();
+        formData.append('file', file);
+        const res = await fetch(`${API}/blog/upload`, {
+            method: 'POST',
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+            body: formData,
+        });
+        if (!res.ok) return null;
+        return res.json();
+    },
+
+    listImages: async (): Promise<{ filename: string; url: string; size: number; createdAt: string }[]> => {
+        const res = await fetch(`${API}/blog/upload/list/all`, { headers: getAuthHeaders() });
+        if (!res.ok) return [];
+        return res.json();
     },
 };

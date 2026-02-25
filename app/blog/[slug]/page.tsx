@@ -67,9 +67,10 @@ export default function BlogArticlePage() {
     const [commentName, setCommentName] = useState('');
     const [commentEmail, setCommentEmail] = useState('');
     const [commentContent, setCommentContent] = useState('');
-    const [commentHoneypot, setCommentHoneypot] = useState(''); // honeypot
+    const [commentHoneypot, setCommentHoneypot] = useState('');
     const [isSubmittingComment, setIsSubmittingComment] = useState(false);
     const [commentFeedback, setCommentFeedback] = useState<{ type: 'success' | 'error', msg: string } | null>(null);
+    const [replyingTo, setReplyingTo] = useState<string | null>(null); // parentId for threaded replies
 
     useEffect(() => {
         const load = async () => {
@@ -94,7 +95,7 @@ export default function BlogArticlePage() {
         }
     };
 
-    const submitComment = async (e: React.FormEvent) => {
+    const submitComment = async (e: React.FormEvent, parentId?: string) => {
         e.preventDefault();
         if (!commentContent.trim() || !commentName.trim()) return;
         setIsSubmittingComment(true);
@@ -104,11 +105,13 @@ export default function BlogArticlePage() {
                 authorName: commentName,
                 authorEmail: commentEmail,
                 content: commentContent,
-                honeypot: commentHoneypot
+                honeypot: commentHoneypot,
+                ...(parentId ? { parentId } : {}),
             });
             if (ok) {
                 setCommentFeedback({ type: 'success', msg: 'Votre commentaire a été envoyé et est en attente de modération.' });
                 setCommentContent('');
+                setReplyingTo(null);
             } else {
                 setCommentFeedback({ type: 'error', msg: 'Erreur lors de l\'envoi. Veuillez réessayer.' });
             }
@@ -272,89 +275,128 @@ export default function BlogArticlePage() {
                         <h2 className="text-2xl font-black text-slate-800">Commentaires ({article.comments?.length || 0})</h2>
                     </div>
 
-                    {/* Comment List */}
+                    {/* Threaded Comment List */}
                     <div className="space-y-6 mb-12">
-                        {article.comments && article.comments.length > 0 ? (
-                            article.comments.map(comment => (
-                                <div key={comment.id} className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
-                                    <div className="flex items-center justify-between mb-3">
-                                        <div className="font-bold text-slate-800 flex items-center gap-2">
-                                            <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 text-xs uppercase">
-                                                {comment.authorName.charAt(0)}
+                        {article.comments && article.comments.length > 0 ? (() => {
+                            const rootComments = article.comments.filter(c => !c.parentId);
+                            const replies = article.comments.filter(c => c.parentId);
+                            const getReplies = (parentId: string) => replies.filter(r => r.parentId === parentId);
+
+                            return rootComments.length > 0 ? rootComments.map(comment => (
+                                <div key={comment.id}>
+                                    {/* Root comment */}
+                                    <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+                                        <div className="flex items-center justify-between mb-3">
+                                            <div className="font-bold text-slate-800 flex items-center gap-2">
+                                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center text-indigo-600 text-xs font-black uppercase">
+                                                    {comment.authorName.charAt(0)}
+                                                </div>
+                                                {comment.authorName}
                                             </div>
-                                            {comment.authorName}
+                                            <span className="text-xs font-bold text-slate-400">
+                                                {new Date(comment.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                            </span>
                                         </div>
-                                        <span className="text-xs font-bold text-slate-400">
-                                            {new Date(comment.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}
-                                        </span>
+                                        <p className="text-slate-600 font-medium leading-relaxed pl-10">
+                                            {comment.content}
+                                        </p>
+                                        <div className="pl-10 mt-3">
+                                            <button
+                                                onClick={() => setReplyingTo(replyingTo === comment.id ? null : comment.id)}
+                                                className="text-xs font-bold text-indigo-500 hover:text-indigo-700 transition-colors flex items-center gap-1"
+                                            >
+                                                <MessageCircle size={12} />
+                                                {replyingTo === comment.id ? 'Annuler' : 'Répondre'}
+                                            </button>
+                                        </div>
+
+                                        {/* Inline reply form */}
+                                        {replyingTo === comment.id && (
+                                            <div className="pl-10 mt-4 border-t border-slate-50 pt-4">
+                                                <form onSubmit={(e) => submitComment(e, comment.id)} className="space-y-3">
+                                                    <input type="text" name="honeypot" className="hidden" tabIndex={-1} autoComplete="off" value={commentHoneypot} onChange={e => setCommentHoneypot(e.target.value)} />
+                                                    <div className="grid grid-cols-2 gap-3">
+                                                        <input type="text" required value={commentName} onChange={e => setCommentName(e.target.value)} placeholder="Votre nom" className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all" />
+                                                        <input type="email" value={commentEmail} onChange={e => setCommentEmail(e.target.value)} placeholder="Email (optionnel)" className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all" />
+                                                    </div>
+                                                    <textarea required rows={2} value={commentContent} onChange={e => setCommentContent(e.target.value)} placeholder={`Répondre à ${comment.authorName}...`} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all" />
+                                                    <div className="text-right">
+                                                        <button type="submit" disabled={isSubmittingComment} className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white text-sm font-bold rounded-xl hover:bg-indigo-700 transition-all disabled:opacity-50">
+                                                            {isSubmittingComment ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+                                                            Répondre
+                                                        </button>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                        )}
                                     </div>
-                                    <p className="text-slate-600 font-medium leading-relaxed pl-10 border-l-2 border-transparent">
-                                        {comment.content}
-                                    </p>
+
+                                    {/* Nested replies */}
+                                    {getReplies(comment.id).length > 0 && (
+                                        <div className="ml-8 mt-3 space-y-3 border-l-2 border-indigo-100 pl-4">
+                                            {getReplies(comment.id).map(reply => (
+                                                <div key={reply.id} className="bg-white/80 p-4 rounded-xl border border-slate-50 shadow-sm">
+                                                    <div className="flex items-center justify-between mb-2">
+                                                        <div className="font-bold text-slate-700 flex items-center gap-2 text-sm">
+                                                            <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 text-[10px] font-black uppercase">
+                                                                {reply.authorName.charAt(0)}
+                                                            </div>
+                                                            {reply.authorName}
+                                                        </div>
+                                                        <span className="text-[10px] font-bold text-slate-400">
+                                                            {new Date(reply.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                                                        </span>
+                                                    </div>
+                                                    <p className="text-slate-600 font-medium leading-relaxed text-sm pl-8">
+                                                        {reply.content}
+                                                    </p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
-                            ))
-                        ) : (
+                            )) : (
+                                <div className="text-center py-8 text-slate-400 font-medium bg-white rounded-2xl border border-slate-100 border-dashed">
+                                    Soyez le premier à commenter cet article.
+                                </div>
+                            );
+                        })() : (
                             <div className="text-center py-8 text-slate-400 font-medium bg-white rounded-2xl border border-slate-100 border-dashed">
                                 Soyez le premier à commenter cet article.
                             </div>
                         )}
                     </div>
 
-                    {/* Add Comment Form */}
+                    {/* Global feedback message */}
+                    {commentFeedback && (
+                        <div className={`p-4 rounded-xl mb-6 text-sm font-bold ${commentFeedback.type === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-rose-50 text-rose-700 border border-rose-100'}`}>
+                            {commentFeedback.msg}
+                        </div>
+                    )}
+
+                    {/* Add Comment Form (root level) */}
                     <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm relative overflow-hidden">
                         <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-indigo-500 to-purple-500"></div>
                         <h3 className="text-xl font-black text-slate-800 mb-6">Ajouter un commentaire</h3>
 
-                        {commentFeedback && (
-                            <div className={`p-4 rounded-xl mb-6 text-sm font-bold flex flex-col gap-1 ${commentFeedback.type === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-rose-50 text-rose-700 border border-rose-100'}`}>
-                                {commentFeedback.msg}
-                            </div>
-                        )}
-
-                        <form onSubmit={submitComment} className="space-y-5">
-                            {/* Honeypot field - hidden from users */}
+                        <form onSubmit={(e) => submitComment(e)} className="space-y-5">
                             <input type="text" name="honeypot" className="hidden" tabIndex={-1} autoComplete="off" value={commentHoneypot} onChange={e => setCommentHoneypot(e.target.value)} />
-
                             <div className="grid md:grid-cols-2 gap-5">
                                 <div>
                                     <label className="block text-xs font-black text-slate-500 uppercase tracking-wider mb-2">Nom *</label>
-                                    <input
-                                        type="text"
-                                        required
-                                        value={commentName}
-                                        onChange={e => setCommentName(e.target.value)}
-                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
-                                        placeholder="Votre nom"
-                                    />
+                                    <input type="text" required value={commentName} onChange={e => setCommentName(e.target.value)} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all" placeholder="Votre nom" />
                                 </div>
                                 <div>
                                     <label className="block text-xs font-black text-slate-500 uppercase tracking-wider mb-2">Email (ne sera pas publié)</label>
-                                    <input
-                                        type="email"
-                                        value={commentEmail}
-                                        onChange={e => setCommentEmail(e.target.value)}
-                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
-                                        placeholder="Votre adresse email"
-                                    />
+                                    <input type="email" value={commentEmail} onChange={e => setCommentEmail(e.target.value)} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all" placeholder="Votre adresse email" />
                                 </div>
                             </div>
                             <div>
                                 <label className="block text-xs font-black text-slate-500 uppercase tracking-wider mb-2">Commentaire *</label>
-                                <textarea
-                                    required
-                                    rows={4}
-                                    value={commentContent}
-                                    onChange={e => setCommentContent(e.target.value)}
-                                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all resize-none"
-                                    placeholder="Partagez votre avis..."
-                                />
+                                <textarea required rows={4} value={commentContent} onChange={e => setCommentContent(e.target.value)} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all resize-none" placeholder="Partagez votre avis..." />
                             </div>
                             <div className="text-right">
-                                <button
-                                    type="submit"
-                                    disabled={isSubmittingComment}
-                                    className="inline-flex items-center gap-2 px-6 py-3 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
+                                <button type="submit" disabled={isSubmittingComment} className="inline-flex items-center gap-2 px-6 py-3 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
                                     {isSubmittingComment ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
                                     Publier le commentaire
                                 </button>
