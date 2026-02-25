@@ -40,7 +40,7 @@ export type ArticleCategory = 'GENERAL' | 'IMMIGRATION' | 'NATURALISATION' | 'SE
 export type ArticleStatus = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
 
 function getAuthHeaders(): HeadersInit {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    const token = typeof window !== 'undefined' ? localStorage.getItem('admin_token') : null;
     return {
         'Content-Type': 'application/json',
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -148,7 +148,7 @@ export const BlogStore = {
 
     // ── Image Upload ──
     uploadImage: async (file: File): Promise<{ url: string; filename: string } | null> => {
-        const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+        const token = typeof window !== 'undefined' ? localStorage.getItem('admin_token') : null;
         const formData = new FormData();
         formData.append('file', file);
         const res = await fetch(`${API}/blog/upload`, {
