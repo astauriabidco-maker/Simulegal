@@ -8,6 +8,7 @@ import { PipelineAutomationModule } from '../pipeline-automation/pipeline-automa
 import { SalesModule } from '../sales/sales.module';
 import { PrismaModule } from '../prisma/prisma.module';
 import { InvoicePdfService } from './invoice-pdf.service';
+import { ChecklistPdfService } from './checklist-pdf.service';
 
 @Module({
     imports: [
@@ -18,8 +19,8 @@ import { InvoicePdfService } from './invoice-pdf.service';
         forwardRef(() => SalesModule),
         PrismaModule,
     ],
-    providers: [PaymentsService, InvoicePdfService],
+    providers: [PaymentsService, InvoicePdfService, ChecklistPdfService],
     controllers: [PaymentsController],
-    exports: [PaymentsService, InvoicePdfService]
+    exports: [PaymentsService, InvoicePdfService, ChecklistPdfService]
 })
 export class PaymentsModule { }

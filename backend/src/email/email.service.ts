@@ -20,7 +20,9 @@ export class EmailService {
         requiredDocs?: any[],
         clientSpaceUrl?: string,
         invoicePdf?: Buffer,
-        invoiceFilename?: string
+        invoiceFilename?: string,
+        checklistPdf?: Buffer,
+        checklistFilename?: string,
     ) {
         const subject = `Confirmation de votre commande Simulegal #${transactionRef}`;
 
@@ -37,6 +39,12 @@ export class EmailService {
         }
 
         const clientLink = clientSpaceUrl || 'https://simulegal.fr/client';
+
+        // Build PJ description text
+        const pjLines: string[] = [];
+        if (invoicePdf) pjLines.push('📎 Votre facture');
+        if (checklistPdf) pjLines.push('📎 Votre checklist de documents personnalisée');
+        const pjText = pjLines.length > 0 ? pjLines.join(' et ') + ' sont jointes à cet email au format PDF.\n        ' : '';
 
         const textContent = `
         Bonjour ${clientName},
@@ -62,7 +70,7 @@ export class EmailService {
         ✅ Suivre l'avancement de votre dossier
         ✅ Consulter les pièces validées ou à corriger
         
-        ${invoicePdf ? '📎 Votre facture est jointe à cet email au format PDF.\n        ' : ''}Un juriste va prendre connaissance de votre dossier sous 24h ouvrées.
+        ${pjText}Un juriste va prendre connaissance de votre dossier sous 24h ouvrées.
         
         Cordialement,
         L'équipe Simulegal
@@ -77,6 +85,13 @@ export class EmailService {
                 contentType: 'application/pdf',
             });
         }
+        if (checklistPdf) {
+            attachments.push({
+                filename: checklistFilename || `checklist-documents.pdf`,
+                content: checklistPdf,
+                contentType: 'application/pdf',
+            });
+        }
 
         // Route vers le vrai SMTP via NotificationsService (with attachments)
         await this.notifications.sendEmail(to, subject, textContent, undefined, attachments.length > 0 ? attachments : undefined);
@@ -88,6 +103,7 @@ export class EmailService {
             content: textContent,
             type: 'OrderConfirmation',
             hasInvoicePdf: !!invoicePdf,
+            hasChecklistPdf: !!checklistPdf,
         };
 
         return true;

@@ -8,6 +8,7 @@ import { PipelineAutomationService } from '../pipeline-automation/pipeline-autom
 import { SalesService } from '../sales/sales.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { InvoicePdfService } from './invoice-pdf.service';
+import { ChecklistPdfService } from './checklist-pdf.service';
 import { SERVICE_CATALOG } from '../config/services-pipeline.config';
 
 import { EventEmitter2 } from '@nestjs/event-emitter';
@@ -27,6 +28,7 @@ export class PaymentsService implements OnModuleInit {
         private prisma: PrismaService,
         private eventEmitter: EventEmitter2,
         private invoicePdfService: InvoicePdfService,
+        private checklistPdfService: ChecklistPdfService,
     ) { }
 
     async onModuleInit() {
@@ -317,7 +319,20 @@ export class PaymentsService implements OnModuleInit {
                             this.logger.error(`[❌] Échec génération facture PDF pour ${result.leadId}: ${pdfErr.message}`);
                         }
 
-                        // ── Envoi email de confirmation + facture PDF en PJ + mandat ──
+                        // ── Génération automatique de la checklist PDF ──
+                        let checklistPdfBuffer: Buffer | undefined;
+                        let checklistFilename: string | undefined;
+                        try {
+                            if (leadInfo?.requiredDocs && leadInfo.requiredDocs.length > 0) {
+                                checklistPdfBuffer = await this.checklistPdfService.generateChecklistPdf(result.leadId);
+                                checklistFilename = `checklist-documents-${result.leadId.substring(0, 6)}.pdf`;
+                                this.logger.log(`[📋] Checklist PDF générée : ${checklistFilename} (${checklistPdfBuffer.length} bytes)`);
+                            }
+                        } catch (clErr: any) {
+                            this.logger.error(`[❌] Échec génération checklist PDF pour ${result.leadId}: ${clErr.message}`);
+                        }
+
+                        // ── Envoi email de confirmation + facture PDF + checklist PDF + mandat ──
                         if (leadInfo?.email) {
                             try {
                                 const clientSpaceUrlForEmail = this.leadsService.generateClientSpaceUrl(result.leadId);
@@ -331,9 +346,11 @@ export class PaymentsService implements OnModuleInit {
                                     clientSpaceUrlForEmail,
                                     invoicePdfBuffer,
                                     invoiceFilename,
+                                    checklistPdfBuffer,
+                                    checklistFilename,
                                 );
                                 await this.emailService.sendMandateCopy(leadInfo.email, leadInfo.name);
-                                this.logger.log(`[📧] Email confirmation + facture PDF + mandat envoyé à ${leadInfo.email}`);
+                                this.logger.log(`[📧] Email confirmation + facture + checklist + mandat envoyé à ${leadInfo.email}`);
                             } catch (emailErr) {
                                 this.logger.error(`[❌] Failed to send confirmation email: ${emailErr.message}`);
                             }
@@ -427,6 +444,19 @@ export class PaymentsService implements OnModuleInit {
                             this.logger.error(`[❌] Échec génération facture PDF pour ${leadId}: ${pdfErr.message}`);
                         }
 
+                        // ── Génération automatique de la checklist PDF ──
+                        let checklistPdfBuffer: Buffer | undefined;
+                        let checklistFilename: string | undefined;
+                        try {
+                            if (leadInfo.requiredDocs && leadInfo.requiredDocs.length > 0) {
+                                checklistPdfBuffer = await this.checklistPdfService.generateChecklistPdf(leadId);
+                                checklistFilename = `checklist-documents-${leadId.substring(0, 6)}.pdf`;
+                                this.logger.log(`[📋] Checklist PDF générée : ${checklistFilename} (${checklistPdfBuffer.length} bytes)`);
+                            }
+                        } catch (clErr: any) {
+                            this.logger.error(`[❌] Échec génération checklist PDF pour ${leadId}: ${clErr.message}`);
+                        }
+
                         if (leadInfo.email) {
                             const clientSpaceUrlForEmail = this.leadsService.generateClientSpaceUrl(leadInfo.id);
                             await this.emailService.sendOrderConfirmation(
@@ -439,9 +469,11 @@ export class PaymentsService implements OnModuleInit {
                                 clientSpaceUrlForEmail,
                                 invoicePdfBuffer,
                                 invoiceFilename,
+                                checklistPdfBuffer,
+                                checklistFilename,
                             );
                             await this.emailService.sendMandateCopy(leadInfo.email, leadInfo.name);
-                            this.logger.log(`[📧] Email confirmation + facture PDF + mandat envoyé à ${leadInfo.email}`);
+                            this.logger.log(`[📧] Email confirmation + facture + checklist + mandat envoyé à ${leadInfo.email}`);
                         }
 
                         // Envoi de la checklist WhatsApp avec Boutons Interactifs + lien facture
