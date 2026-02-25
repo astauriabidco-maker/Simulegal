@@ -481,30 +481,141 @@ export class NotificationsService {
     }
 
     /**
-     * Logique de trigger sur changement d'étape
+     * Logique de trigger sur changement d'étape — notifications client multi-canal
      */
     async onStageChange(lead: any, oldStage: string, newStage: string) {
         console.log(`[Backend-NotificationTrigger] Dossier ${lead.id} (${lead.name}): ${oldStage} -> ${newStage}`);
 
-        if (newStage === 'OFII_INVESTIGATION') {
-            await this.sendWhatsApp(lead.phone, 'coach_ofii_alert', {
-                name: lead.name,
-                message: `⚠️ Important : Votre dossier est à l'étape Enquête Logement/OFII. Préparez votre logement. Checklist : simulegal.fr/guide-ofii`
-            }, { leadId: lead.id });
+        const clientSpaceUrl = this.generateClientSpaceUrl(lead.id);
+        const buttons: { title: string; url: string }[] = [];
+        if (clientSpaceUrl) {
+            buttons.push({ title: '📂 Mon espace client', url: clientSpaceUrl });
         }
 
-        if (newStage === 'HUNTING') {
-            await this.sendWhatsApp(lead.phone, 'hunting_start', {
-                name: lead.name,
-                message: `⚡️ Recherche activée. Nous surveillons les créneaux de RDV pour vous.`
-            }, { leadId: lead.id });
+        let whatsappMessage: string | null = null;
+        let emailSubject: string | null = null;
+        let emailBody: string | null = null;
+
+        switch (newStage) {
+            case 'COLLECTING':
+                whatsappMessage = `📎 *Documents attendus*\n\nBonjour ${lead.name},\nVotre dossier est en cours de constitution. ` +
+                    `Merci de déposer vos documents justificatifs via votre espace client.\n\n` +
+                    `Notre équipe examinera chacune de vos pièces sous 48h.`;
+                emailSubject = `📎 Documents attendus — Dossier ${lead.serviceName || 'SimuLegal'}`;
+                emailBody = `Bonjour ${lead.name},\n\nVotre dossier est en cours de constitution.\n` +
+                    `Merci de déposer vos documents justificatifs via votre espace client.\n\n` +
+                    `Accéder à votre espace : ${clientSpaceUrl || 'https://simulegal.fr/client'}\n\n` +
+                    `Cordialement,\nL'équipe SimuLegal`;
+                break;
+
+            case 'REVIEW':
+                whatsappMessage = `🔍 *Dossier en vérification*\n\nBonjour ${lead.name},\n` +
+                    `Vos documents sont en cours de vérification par notre équipe juridique.\n` +
+                    `Vous serez notifié si un document nécessite une correction.`;
+                emailSubject = `🔍 Vérification en cours — ${lead.serviceName || 'Dossier SimuLegal'}`;
+                emailBody = `Bonjour ${lead.name},\n\nVos documents sont en cours de vérification par notre équipe juridique.\n` +
+                    `Durée estimée : 2-3 jours ouvrés.\n\nCordialement,\nL'équipe SimuLegal`;
+                break;
+
+            case 'HUNTING':
+                whatsappMessage = `⚡️ *Recherche de créneaux activée*\n\nBonjour ${lead.name},\n` +
+                    `Nous surveillons activement les créneaux de RDV en préfecture pour vous.\n` +
+                    `Dès qu'un créneau est disponible, nous vous le réservons.`;
+                break;
+
+            case 'BOOKED':
+                whatsappMessage = `✅ *RDV RÉSERVÉ !*\n\nBonjour ${lead.name},\n` +
+                    `Votre rendez-vous a été réservé avec succès.\n` +
+                    `Tous les détails sont disponibles dans votre espace client.`;
+                emailSubject = `✅ RDV réservé — ${lead.serviceName || 'Dossier SimuLegal'}`;
+                emailBody = `Bonjour ${lead.name},\n\nVotre rendez-vous a été réservé avec succès !\n` +
+                    `Consultez les détails dans votre espace client : ${clientSpaceUrl || 'https://simulegal.fr/client'}\n\n` +
+                    `N'oubliez pas de vous munir de tous les originaux de vos documents.\n\nCordialement,\nL'équipe SimuLegal`;
+                break;
+
+            case 'DRAFTING':
+                whatsappMessage = `📝 *Rédaction en cours*\n\nBonjour ${lead.name},\n` +
+                    `Notre équipe juridique constitue votre dossier complet.\n` +
+                    `Les formulaires CERFA et lettres de motivation sont en cours de préparation.`;
+                emailSubject = `📝 Dossier en cours de rédaction — ${lead.serviceName || 'SimuLegal'}`;
+                emailBody = `Bonjour ${lead.name},\n\nBonne nouvelle ! Notre équipe juridique constitue actuellement votre dossier complet.\n` +
+                    `Cette étape comprend la rédaction des formulaires officiels et la préparation des lettres de motivation.\n\n` +
+                    `Durée estimée : 3-5 jours ouvrés.\n\nCordialement,\nL'équipe SimuLegal`;
+                break;
+
+            case 'SUBMITTED':
+                whatsappMessage = `📨 *Dossier déposé !*\n\nBonjour ${lead.name},\n` +
+                    `Votre dossier a été officiellement déposé auprès de l'administration.\n` +
+                    `Nous suivons l'avancement et vous tiendrons informé(e).`;
+                emailSubject = `📨 Dossier déposé auprès de l'administration — ${lead.serviceName || 'SimuLegal'}`;
+                emailBody = `Bonjour ${lead.name},\n\nVotre dossier a été officiellement déposé auprès de l'administration compétente.\n\n` +
+                    `Nous suivons désormais l'avancement de l'instruction de votre demande.\n` +
+                    `Vous recevrez une notification à chaque mise à jour importante.\n\nCordialement,\nL'équipe SimuLegal`;
+                break;
+
+            case 'ANTS_SUBMISSION':
+                whatsappMessage = `🏛️ *Soumission ANTS*\n\nBonjour ${lead.name},\n` +
+                    `Votre dossier a été soumis via la plateforme ANTS (Agence Nationale des Titres Sécurisés).\n` +
+                    `Délai de traitement habituel : 2-4 semaines.`;
+                break;
+
+            case 'INSTRUCTION':
+                whatsappMessage = `⏳ *Dossier en instruction*\n\nBonjour ${lead.name},\n` +
+                    `Votre dossier est actuellement en cours d'instruction par l'administration.\n` +
+                    `Cette étape peut prendre plusieurs semaines. Nous vous contacterons dès que nous aurons des nouvelles.`;
+                emailSubject = `⏳ Dossier en instruction — ${lead.serviceName || 'SimuLegal'}`;
+                emailBody = `Bonjour ${lead.name},\n\nVotre dossier est désormais en cours d'instruction par l'administration.\n\n` +
+                    `Nous assurons le suivi et vous tiendrons informé(e) de toute évolution.\n` +
+                    `En cas de demande de pièces complémentaires, nous vous contacterons immédiatement.\n\nCordialement,\nL'équipe SimuLegal`;
+                break;
+
+            case 'OFII_INVESTIGATION':
+                whatsappMessage = `⚠️ *Enquête OFII / Logement*\n\nBonjour ${lead.name},\n` +
+                    `Votre dossier est à l'étape Enquête Logement/OFII.\n` +
+                    `Préparez votre logement pour la visite.\n\n` +
+                    `📋 Checklist : simulegal.fr/guide-ofii`;
+                break;
+
+            case 'DECISION_WAIT':
+                whatsappMessage = `🔔 *En attente de décision*\n\nBonjour ${lead.name},\n` +
+                    `Votre dossier est complet et en attente de la décision finale de l'administration.\n` +
+                    `Nous vous contacterons dès réception de la réponse.`;
+                emailSubject = `🔔 En attente de décision — ${lead.serviceName || 'SimuLegal'}`;
+                emailBody = `Bonjour ${lead.name},\n\nVotre dossier est complet et en attente de la décision finale.\n\n` +
+                    `Nous vous contacterons dès réception de la réponse officielle.\n\nCordialement,\nL'équipe SimuLegal`;
+                break;
+
+            case 'SCHEDULING':
+                whatsappMessage = `📅 *Planification en cours*\n\nBonjour ${lead.name},\n` +
+                    `Nous organisons votre prochain rendez-vous.\n` +
+                    `Vous recevrez une confirmation dès qu'un créneau sera réservé.`;
+                break;
+
+            case 'DONE':
+                whatsappMessage = `🎉 *Dossier terminé avec succès !*\n\nBonjour ${lead.name},\n` +
+                    `Nous avons le plaisir de vous informer que votre dossier « ${lead.serviceName || ''} » est clôturé avec succès.\n\n` +
+                    `Merci de votre confiance ! N'hésitez pas à nous recommander. 🙏`;
+                emailSubject = `🎉 Dossier terminé avec succès — ${lead.serviceName || 'SimuLegal'}`;
+                emailBody = `Bonjour ${lead.name},\n\nNous avons le plaisir de vous informer que votre dossier « ${lead.serviceName || ''} » est clôturé avec succès !\n\n` +
+                    `Au nom de toute l'équipe SimuLegal, nous vous remercions de votre confiance.\n\n` +
+                    `Si vous avez d'autres démarches à effectuer, n'hésitez pas à nous contacter.\n\nÀ bientôt,\nL'équipe SimuLegal`;
+                break;
         }
 
-        if (newStage === 'BOOKED') {
-            await this.sendWhatsApp(lead.phone, 'booking_success', {
-                name: lead.name,
-                message: `✅ RDV RÉSERVÉ ! Détails disponibles dans votre espace client.`
-            }, { leadId: lead.id });
+        // Envoyer WhatsApp si message disponible
+        if (whatsappMessage && lead.phone) {
+            await this.sendWhatsApp(
+                lead.phone,
+                `stage_${newStage.toLowerCase()}`,
+                { name: lead.name, message: whatsappMessage },
+                { leadId: lead.id },
+                buttons
+            );
+        }
+
+        // Envoyer Email si template disponible
+        if (emailSubject && emailBody && lead.email) {
+            await this.sendEmail(lead.email, emailSubject, emailBody);
         }
     }
 

@@ -51,6 +51,16 @@ export class LeadsController {
         return this.invoicesService.generatePdf(id);
     }
 
+    @Get('my-portfolio')
+    findMyPortfolio(@Request() req: any) {
+        return this.leadsService.findByAssignedUser(req.user.id);
+    }
+
+    @Get(':id/history')
+    getHistory(@Param('id') id: string) {
+        return this.leadsService.getStageHistory(id);
+    }
+
     @Get(':id')
     findOne(@Param('id') id: string) {
         return this.leadsService.findOne(id);

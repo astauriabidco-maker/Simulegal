@@ -52,29 +52,127 @@ export class LeadsService {
     }
 
     private mapLead(lead: any) {
+        const stageHistory = lead.stageHistory ? JSON.parse(lead.stageHistory) : [];
+        const stageEnteredAt = lead.stageEnteredAt || lead.createdAt;
+        const daysInStage = Math.floor((Date.now() - new Date(stageEnteredAt).getTime()) / (1000 * 60 * 60 * 24));
+        const slaLimit = this.getSlaLimit(lead.status);
+
         return {
             ...lead,
             documents: lead.documents ? JSON.parse(lead.documents) : [],
             contract: lead.contract ? JSON.parse(lead.contract) : null,
-            requiredDocs: lead.requiredDocs ? JSON.parse(lead.requiredDocs) : null
+            requiredDocs: lead.requiredDocs ? JSON.parse(lead.requiredDocs) : null,
+            stageHistory,
+            stageEnteredAt,
+            daysInStage,
+            sla: {
+                limitDays: slaLimit,
+                daysInStage,
+                isOverdue: slaLimit > 0 && daysInStage > slaLimit,
+                isWarning: slaLimit > 0 && daysInStage > slaLimit * 0.7,
+                remainingDays: slaLimit > 0 ? Math.max(0, slaLimit - daysInStage) : null,
+            }
         };
+    }
+
+    // ── SLA LIMITS par étape (en jours) ──
+    private getSlaLimit(status: string): number {
+        const SLA_LIMITS: Record<string, number> = {
+            'COLLECTING': 7,    // 7 jours pour envoyer les docs
+            'REVIEW': 3,        // 3 jours pour vérifier
+            'HUNTING': 14,      // 14 jours pour trouver un créneau
+            'DRAFTING': 5,      // 5 jours pour rédiger
+            'SUBMITTED': 0,     // Pas de SLA (dépend de l'administration)
+            'INSTRUCTION': 0,
+            'DECISION_WAIT': 0,
+            'SCHEDULING': 5,
+        };
+        return SLA_LIMITS[status] || 0;
+    }
+
+    // ── VALIDATION MÉTIER avant transition ──
+    private validateTransition(lead: any, newStatus: string): { valid: boolean; reason?: string } {
+        const docs = lead.documents ? JSON.parse(lead.documents) : [];
+        const requiredDocs = lead.requiredDocs ? JSON.parse(lead.requiredDocs) : [];
+
+        // Impossible de quitter COLLECTING sans documents requis validés
+        if (lead.status === 'COLLECTING' && ['REVIEW', 'DRAFTING', 'HUNTING'].includes(newStatus)) {
+            if (requiredDocs.length > 0) {
+                const allRequired = requiredDocs.filter((r: any) => r.required !== false);
+                const allValid = allRequired.every((r: any) => {
+                    const uploaded = docs.find((d: any) => d.id === r.id);
+                    return uploaded && (uploaded.status === 'VALID' || uploaded.status === 'PENDING');
+                });
+                if (!allValid) {
+                    return { valid: false, reason: 'Tous les documents requis doivent être déposés avant de passer à l\'étape suivante.' };
+                }
+            }
+        }
+
+        // Impossible de quitter REVIEW sans juriste assigné
+        if (lead.status === 'REVIEW' && !['COLLECTING', 'NEW', 'PAID'].includes(newStatus)) {
+            if (!lead.assignedUserId) {
+                return { valid: false, reason: 'Un juriste doit être assigné au dossier avant de passer à l\'étape suivante.' };
+            }
+        }
+
+        return { valid: true };
     }
 
     async updateStatus(id: string, status: any) {
         const lead = await this.prisma.lead.findUnique({ where: { id } });
-        if (lead) {
-            console.log(`[LeadsService] Updating lead ${id} status from ${lead.status} to ${status}`);
-            await this.notifications.onStageChange(lead, lead.status, status);
-            // Trigger dynamic pipeline automations
-            await this.pipelineAutomation.onStageChange(lead, lead.status, status);
+        if (!lead) throw new Error('Lead not found');
+
+        // Validation métier
+        const validation = this.validateTransition(lead, status);
+        if (!validation.valid) {
+            this.logger.warn(`[BLOCKED] ${lead.name}: ${lead.status} → ${status} — ${validation.reason}`);
+            throw new Error(validation.reason);
         }
+
+        const oldStatus = lead.status;
+        this.logger.log(`[LeadsService] ${lead.name}: ${oldStatus} → ${status}`);
+
+        // Notifications + automations
+        await this.notifications.onStageChange(lead, oldStatus, status);
+        await this.pipelineAutomation.onStageChange(lead, oldStatus, status);
+
+        // Construire l'historique
+        const history = lead.stageHistory ? JSON.parse(lead.stageHistory) : [];
+        history.push({
+            from: oldStatus,
+            to: status,
+            at: new Date().toISOString(),
+            daysInPreviousStage: Math.floor((Date.now() - new Date(lead.stageEnteredAt || lead.createdAt).getTime()) / (1000 * 60 * 60 * 24)),
+        });
 
         const updatedLead = await this.prisma.lead.update({
             where: { id },
-            data: { status }
+            data: {
+                status,
+                stageEnteredAt: new Date(),
+                stageHistory: JSON.stringify(history),
+            }
         });
 
         return this.mapLead(updatedLead);
+    }
+
+    // ── PORTEFEUILLE JURISTE ──
+    async findByAssignedUser(userId: string) {
+        const leads = await this.prisma.lead.findMany({
+            where: { assignedUserId: userId },
+            include: { notes: true, originAgency: true },
+            orderBy: { updatedAt: 'desc' }
+        });
+        return leads.map(l => this.mapLead(l));
+    }
+
+    // ── HISTORIQUE D'ÉTAPES ──
+    async getStageHistory(id: string) {
+        const lead = await this.prisma.lead.findUnique({ where: { id } });
+        if (!lead) return null;
+        return JSON.parse(lead.stageHistory || '[]');
     }
 
     async assignUser(id: string, userId: string) {

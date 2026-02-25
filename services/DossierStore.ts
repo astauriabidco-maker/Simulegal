@@ -2,7 +2,7 @@ import { CRM, Lead, LeadDocument } from './crmStore';
 import { AuthStore } from './authStore';
 import { WorkflowStage } from './WorkflowService';
 
-const API_URL = 'http://localhost:5000/leads';
+const API_URL = 'http://localhost:4000/leads';
 
 const getHeaders = () => {
     const token = AuthStore.getToken();
@@ -86,6 +86,39 @@ export const DossierStore = {
             authorName: currentUser?.name || 'Staff'
         });
         return updated ? mapLead(updated) : null;
+    },
+
+    /**
+     * Mon portefeuille (dossiers assignés au juriste connecté)
+     */
+    getMyPortfolio: async (): Promise<Lead[]> => {
+        try {
+            const response = await fetch(`${API_URL}/my-portfolio`, {
+                headers: getHeaders()
+            });
+            if (!response.ok) return [];
+            const leads = await response.json();
+            return leads.map(mapLead);
+        } catch (error) {
+            console.error('[DossierStore] Erreur portefeuille:', error);
+            return [];
+        }
+    },
+
+    /**
+     * Historique des transitions d'étape d'un dossier
+     */
+    getHistory: async (id: string): Promise<any[]> => {
+        try {
+            const response = await fetch(`${API_URL}/${id}/history`, {
+                headers: getHeaders()
+            });
+            if (!response.ok) return [];
+            return response.json();
+        } catch (error) {
+            console.error('[DossierStore] Erreur historique:', error);
+            return [];
+        }
     }
 };
 
@@ -103,5 +136,8 @@ function mapLead(lead: any): Lead {
             ipAddress: '',
             consentVersion: ''
         }),
+        stageHistory: lead.stageHistory || [],
+        daysInStage: lead.daysInStage || 0,
+        sla: lead.sla || null,
     };
 }

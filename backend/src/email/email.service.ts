@@ -1,14 +1,17 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class EmailService {
     private readonly logger = new Logger(EmailService.name);
     private lastEmailSent: any = null; // Debugging purpose
 
-    async sendOrderConfirmation(to: string, clientName: string, serviceName: string, amount: number, transactionRef: string, requiredDocs?: any[], clientSpaceUrl?: string) {
-        // En vrai (TODO: Configurer SMTP/SendGrid ici)
-        // await transporter.sendMail(...)
+    constructor(
+        @Inject(forwardRef(() => NotificationsService))
+        private notifications: NotificationsService
+    ) { }
 
+    async sendOrderConfirmation(to: string, clientName: string, serviceName: string, amount: number, transactionRef: string, requiredDocs?: any[], clientSpaceUrl?: string) {
         const subject = `Confirmation de votre commande Simulegal #${transactionRef}`;
 
         let checklistText = '';
@@ -55,8 +58,8 @@ export class EmailService {
         L'équipe Simulegal
         `;
 
-        this.logger.log(`📧 [MOCK EMAIL] To: ${to} | Subject: ${subject}`);
-        this.logger.log(`Content:\n${textContent}`);
+        // Route vers le vrai SMTP via NotificationsService
+        await this.notifications.sendEmail(to, subject, textContent);
 
         // Debug storage
         this.lastEmailSent = {
@@ -71,18 +74,18 @@ export class EmailService {
 
     async sendMandateCopy(to: string, clientName: string) {
         const subject = `Votre copie du Mandat de Représentation - Simulegal`;
-        this.logger.log(`📧 [MOCK EMAIL] To: ${to} | Subject: ${subject}`);
-        this.logger.log(`[Pièce jointe simulée: mandat_signe.pdf]`);
+        const body = `Bonjour ${clientName},\n\nVeuillez trouver ci-joint votre copie du Mandat de Représentation signé.\n\nCordialement,\nL'équipe Simulegal`;
 
-        // Debug storage - only if we don't have a confirmation stored (or if this is the only action)
-        if (!this.lastEmailSent || this.lastEmailSent.type !== 'OrderConfirmation') {
-            this.lastEmailSent = {
-                to,
-                subject,
-                content: "[Pièce jointe simulée: mandat_signe.pdf]",
-                type: 'MandateCopy'
-            };
-        }
+        // Route vers le vrai SMTP
+        await this.notifications.sendEmail(to, subject, body);
+
+        // Debug storage
+        this.lastEmailSent = {
+            to,
+            subject,
+            content: body,
+            type: 'MandateCopy'
+        };
 
         return true;
     }

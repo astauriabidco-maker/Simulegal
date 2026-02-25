@@ -31,9 +31,54 @@ model Prospect {
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
   lastContactAt     DateTime?
-  callLogs          CallLog[]
-  notes             ProspectNote[]
-  communications    Communication[]
+
+  // ── Suivi des tentatives d'appel ──
+  callAttempts         Int       @default(0)
+  noAnswerCount        Int       @default(0)
+  callbackCount        Int       @default(0)
+  callbackRequestedAt  DateTime?
+  callbackScheduledAt  DateTime?    // Date+heure du prochain rappel programmé
+  lastCallOutcome      String?
+
+  // ── Pipeline tracking ──
+  noShowCount          Int       @default(0)  // Nombre de RDV non honorés
+  qualifiedAt          DateTime?              // Date de qualification
+  stageEnteredAt       DateTime? @default(now()) // Date d'entrée dans l'étape actuelle
+  lostReason           String?                // Raison de la perte
+
+  // ── Rendez-vous ──
+  appointment          Json?        // Données de RDV (date, agence, etc.)
+
+  // ── Résultat de simulation d'éligibilité ──
+  eligibilityResult    Json?        // Résultat complet du simulateur (isEligible, score, matchedProcedures, etc.)
+
+  callLogs             CallLog[]
+  notes                ProspectNote[]
+  communications       Communication[]
+  appointments         SalesAppointment[]
+  calendarAppointments Appointment[]
+}
+
+// ── Rendez-vous commercial en agence ──
+model SalesAppointment {
+  id              String    @id @default(cuid())
+  prospectId      String
+  prospect        Prospect  @relation(fields: [prospectId], references: [id])
+  
+  date            DateTime
+  agencyId        String
+  agencyName      String
+  serviceId       String?
+  
+  status          String    @default("SCHEDULED")  // SCHEDULED, CONFIRMED, COMPLETED, NO_SHOW, CANCELLED
+  meetingLink     String?
+  
+  confirmationSent    Boolean   @default(false)
+  confirmationSentVia String?   // SMS, WHATSAPP
+  
+  notes           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 }
 
 model CallLog {
@@ -148,6 +193,8 @@ model Lead {
   documents      String        @default("[]")
   requiredDocs   String?
   assignedUserId String?
+  stageEnteredAt DateTime      @default(now())
+  stageHistory   String        @default("[]")
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
   data           String        @default("{}")
@@ -248,9 +295,10 @@ model Appointment {
   end                DateTime
   type               AppointmentType
   status             AppointmentStatus @default(SCHEDULED)
-  leadId             String
+  leadId             String?           // Optionnel: peut être un prospect
   leadName           String
   leadEmail          String?
+  prospectId         String?           // Lien vers un prospect (quand pas encore lead)
   agencyId           String?
   hostUserId         String?
   meetingLink        String?
@@ -260,7 +308,8 @@ model Appointment {
   updatedAt          DateTime          @updatedAt
   agency             Agency?           @relation(fields: [agencyId], references: [id])
   hostUser           User?             @relation(fields: [hostUserId], references: [id])
-  lead               Lead              @relation(fields: [leadId], references: [id])
+  lead               Lead?             @relation(fields: [leadId], references: [id])
+  prospect           Prospect?         @relation(fields: [prospectId], references: [id])
 }
 
 model AppointmentSlot {
@@ -284,6 +333,7 @@ model SystemSettings {
   integrations     String   @default("{}")
   storage          String   @default("{}")
   servicePricing   String   @default("{}")   // Prix dynamiques par service { serviceId: { price: number, promoPrice?: number, promoUntil?: string } }
+  servicePricingHistory String @default("[]") // Historique des modifications de prix (audit trail)
   legalDocuments   String   @default("{}")   // CGV, contrat de représentation, mentions légales (HTML/Markdown)
   catalogOverrides    String   @default("{}")   // Surcharges du catalogue (enable/disable services, durées custom, etc.)
   pipelineAutomations String   @default("{}")   // Règles d'automatisation pipeline (relances, escalades, transitions, etc.)
