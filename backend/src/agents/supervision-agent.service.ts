@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { OllamaTextService } from './ollama-text.service';
 
 @Injectable()
 export class SupervisionAgentService {
@@ -9,8 +10,46 @@ export class SupervisionAgentService {
 
     constructor(
         private prisma: PrismaService,
-        private notifications: NotificationsService
+        private notifications: NotificationsService,
+        private ollamaText: OllamaTextService
     ) { }
+
+    /**
+     * Agent réveillé par la réception d'un message textuel WhatsApp
+     */
+    @OnEvent('whatsapp.message.received', { async: true })
+    async handleIncomingWhatsApp(payload: { leadId?: string, prospectId?: string, message: string, senderName: string, senderPhone: string }) {
+        this.logger.log(`🤖 [Supervision Agent] Analyse sémantique demandée pour le message de ${payload.senderName}`);
+
+        const analysis = await this.ollamaText.analyzeCustomerMessage(payload.message);
+        if (!analysis) return;
+
+        this.logger.log(`🤖 [Supervision Agent] Intention: ${analysis.intent} | Urgence: ${analysis.urngecy}`);
+
+        // Si le message nécessite une attention (urgent ou actionable)
+        if (analysis.actionable || analysis.urngecy === 'HIGH') {
+            const warningMessage = `🤖 **Résumé Agent IA** :\n${analysis.summary}\n\n**Intention** : ${analysis.intent}\n**Urgence** : ${analysis.urngecy}\n\n💡 *Conseil* : ${analysis.reasoning}`;
+            const authorSignature = '🤖 Assistant IA';
+
+            if (payload.leadId) {
+                await this.prisma.leadNote.create({
+                    data: {
+                        content: warningMessage,
+                        author: authorSignature,
+                        leadId: payload.leadId,
+                    }
+                });
+            } else if (payload.prospectId) {
+                await this.prisma.prospectNote.create({
+                    data: {
+                        text: warningMessage,
+                        authorId: authorSignature,
+                        prospectId: payload.prospectId,
+                    }
+                });
+            }
+        }
+    }
 
     /**
      * Agent réveillé par l'événement de validation d'un nouveau document

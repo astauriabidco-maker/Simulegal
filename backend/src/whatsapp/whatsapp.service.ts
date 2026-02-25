@@ -1,4 +1,5 @@
 import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { WhatsappGateway } from './whatsapp.gateway';
@@ -18,6 +19,7 @@ export class WhatsappService {
         private prisma: PrismaService,
         private notificationsService: NotificationsService,
         private gateway: WhatsappGateway,
+        private eventEmitter: EventEmitter2,
         @Inject(forwardRef(() => LeadsService))
         private leadsService: LeadsService,
     ) {
@@ -158,9 +160,20 @@ export class WhatsappService {
             results.push(communication);
         }
 
-        // 🔌 Émettre chaque message en temps réel via WebSocket
+        // 🔌 Émettre chaque message en temps réel via WebSocket et à l'Agent IA local
         for (const comm of results) {
             this.gateway.emitNewMessage(comm);
+
+            // 🤖 Déclencher l'Agent QA si c'est un message textuel significatif
+            if (comm.content && comm.content.length > 5 && !comm.content.includes('📎 Pièce jointe')) {
+                this.eventEmitter.emit('whatsapp.message.received', {
+                    leadId: lead?.id,
+                    prospectId: prospect?.id,
+                    message: comm.content,
+                    senderName,
+                    senderPhone: cleanPhone
+                });
+            }
         }
 
         // Mettre à jour la liste des conversations en temps réel
