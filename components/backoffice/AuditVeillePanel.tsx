@@ -20,7 +20,10 @@ import {
     ExternalLink,
     Edit3,
     ChevronDown,
-    Send
+    Send,
+    Radar,
+    Bot,
+    Loader2
 } from 'lucide-react';
 import ServiceConfigPanel from './ServiceConfigPanel';
 import EligibilityConfigPanel from './EligibilityConfigPanel';
@@ -204,10 +207,11 @@ export default function AuditVeillePanel() {
     const [showArchives, setShowArchives] = useState(false);
     const [notification, setNotification] = useState('');
     const [loading, setLoading] = useState(true);
+    const [scanning, setScanning] = useState(false);
 
     const showNotif = useCallback((msg: string) => {
         setNotification(msg);
-        setTimeout(() => setNotification(''), 3000);
+        setTimeout(() => setNotification(''), 4000);
     }, []);
 
     // ─── Load notes (sync from backend on mount) ──────────────
@@ -222,10 +226,25 @@ export default function AuditVeillePanel() {
         setLoading(false);
     }, []);
 
+    // ─── Scan RSS sources ─────────────────────────────────────
+    const handleScan = useCallback(async () => {
+        setScanning(true);
+        try {
+            const result = await VeilleStore.triggerScan();
+            showNotif(result.created > 0
+                ? `📡 ${result.created} nouvelle(s) note(s) détectée(s) depuis ${result.sourcesUsed.join(', ')}`
+                : '📡 Aucune nouvelle note détectée — vos sources sont à jour');
+            if (result.created > 0) await loadNotes();
+        } catch (err) {
+            showNotif('❌ Erreur lors du scan des sources');
+        }
+        setScanning(false);
+    }, [loadNotes, showNotif]);
+
     const initialLoadDone = React.useRef(false);
 
     useEffect(() => {
-        VeilleStore.seedBackendIfEmpty().then(loadNotes);
+        loadNotes();
     }, [loadNotes]);
 
     useEffect(() => {
@@ -304,11 +323,12 @@ export default function AuditVeillePanel() {
             )}
 
             {/* Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                 {[
                     { icon: <History size={22} />, color: 'indigo', label: 'Dernière note', value: stats.lastUpdateLabel },
                     { icon: <AlertTriangle size={22} />, color: 'amber', label: 'À appliquer', value: `${stats.pendingCount} en attente` },
                     { icon: <CheckCircle size={22} />, color: 'emerald', label: 'Appliquées', value: `${stats.appliedCount} / ${stats.totalCount}` },
+                    { icon: <Bot size={22} />, color: 'cyan', label: 'Auto-détectées', value: `${stats.autoDetectedCount || 0} notes` },
                     { icon: <Scale size={22} />, color: 'violet', label: 'Conformité', value: `${stats.conformityPercent}%` },
                 ].map((stat, i) => (
                     <div key={i} className={`bg-white p-5 rounded-3xl border border-slate-200 shadow-sm flex items-center gap-4 group hover:border-${stat.color}-500 transition-all`}>
@@ -333,6 +353,11 @@ export default function AuditVeillePanel() {
                         <button onClick={() => setShowArchives(!showArchives)}
                             className={`text-sm font-bold transition-colors ${showArchives ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}>
                             {showArchives ? '🔍 Masquer les appliquées' : '📂 Voir toutes les archives'}
+                        </button>
+                        <button onClick={handleScan} disabled={scanning}
+                            className="flex items-center gap-2 px-4 py-2.5 bg-cyan-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-cyan-700 transition-all shadow-lg shadow-cyan-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
+                            {scanning ? <Loader2 size={16} className="animate-spin" /> : <Radar size={16} />}
+                            {scanning ? 'Scan en cours...' : 'Scanner les sources'}
                         </button>
                         <button onClick={() => { setEditingNote(undefined); setComposerOpen(true); }}
                             className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 active:scale-95">
@@ -366,9 +391,14 @@ export default function AuditVeillePanel() {
                                 <div className={`w-1 font-black rounded-full ${severityColor(note.severity)}`} />
                                 <div className="flex-1 space-y-2">
                                     <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-2">
+                                        <div className="flex items-center gap-2 flex-wrap">
                                             <span className="text-[10px] font-black uppercase tracking-widest px-2 py-1 bg-slate-100 text-slate-500 rounded-lg">{note.category}</span>
                                             <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-lg ${badge.bg} ${badge.text}`}>{badge.label}</span>
+                                            {note.isAutoDetected && (
+                                                <span className="text-[10px] font-black uppercase tracking-widest px-2 py-1 bg-cyan-100 text-cyan-700 rounded-lg flex items-center gap-1">
+                                                    <Bot size={10} /> Auto
+                                                </span>
+                                            )}
                                             {note.applied && (
                                                 <span className="text-[10px] font-black uppercase tracking-widest px-2 py-1 bg-emerald-100 text-emerald-700 rounded-lg flex items-center gap-1">
                                                     <CheckCircle size={10} /> Appliquée

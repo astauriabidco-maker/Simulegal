@@ -7,7 +7,7 @@ import { AuthGuard } from '@nestjs/passport';
 export class VeilleController {
     constructor(private readonly veilleService: VeilleService) { }
 
-    // ─── Lecture (audit.view) ─────────────────────────────────
+    // ─── Lecture (tout utilisateur authentifié) ───────────────
 
     @Get()
     findAll() {
@@ -24,7 +24,21 @@ export class VeilleController {
         return this.veilleService.getStats();
     }
 
-    // ─── Écriture (réservée au siège / admins) ───────────────
+    // ─── Scan automatique (admin / juristes) ─────────────────
+
+    @Post('scan')
+    async triggerScan(@Request() req: any) {
+        this.requireWriteAccess(req);
+        const result = await this.veilleService.scanSources();
+        return {
+            message: result.created > 0
+                ? `${result.created} nouvelle(s) note(s) détectée(s) depuis ${result.sourcesUsed.join(', ')}`
+                : 'Aucune nouvelle note détectée',
+            ...result,
+        };
+    }
+
+    // ─── Écriture (réservée au siège / juristes) ─────────────
 
     @Post()
     create(@Request() req: any, @Body() body: {

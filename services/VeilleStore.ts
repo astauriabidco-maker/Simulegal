@@ -15,6 +15,7 @@ export interface VeilleNote {
     applied: boolean;
     appliedAt?: string;
     linkedRuleIds?: string[];  // IDs des règles impactées
+    isAutoDetected?: boolean;  // true if detected by RSS scanner
 }
 
 const STORAGE_KEY = 'v2_veille_juridique';
@@ -22,41 +23,15 @@ const API_URL = typeof window !== 'undefined'
     ? (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000')
     : 'http://localhost:4000';
 
-const SEED_DATA: VeilleNote[] = [
-    {
-        id: 'seed_1',
-        date: '2026-01-17T10:00:00Z',
-        title: 'Nouveau décret sur le Passeport Talent (Salarié qualifié)',
-        summary: 'Le seuil de rémunération annuelle a été relevé. Vérifiez la mise à jour des seuils financiers.',
-        category: 'Immigration Professionnelle',
-        severity: 'high',
-        sourceUrl: 'https://www.legifrance.gouv.fr',
-        applied: false,
-    },
-    {
-        id: 'seed_2',
-        date: '2026-01-15T09:00:00Z',
-        title: 'Simplification du regroupement familial (Algériens)',
-        summary: 'Assouplissement des critères de logement pour les dossiers déposés en IDF.',
-        category: 'Regroupement Familial',
-        severity: 'medium',
-        sourceUrl: '',
-        applied: false,
-    },
-    {
-        id: 'seed_3',
-        date: '2026-01-10T14:30:00Z',
-        title: 'Jurisprudence : Notion de communauté de vie',
-        summary: 'Nouvelle décision du Conseil d\'État sur la preuve de cohabitation continue.',
-        category: 'VPF',
-        severity: 'low',
-        sourceUrl: '',
-        applied: true,
-        appliedAt: '2026-01-12T08:00:00Z',
-    },
-];
-
 // ─── Helpers ──────────────────────────────────────────────────────
+
+function getAuthHeaders(): Record<string, string> {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('admin_token') : null;
+    return {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+    };
+}
 
 function mapBackendToNote(item: any): VeilleNote {
     let linkedRuleIds: string[] = [];
@@ -75,17 +50,17 @@ function mapBackendToNote(item: any): VeilleNote {
         applied: !!item.applied,
         appliedAt: item.appliedAt || undefined,
         linkedRuleIds,
+        isAutoDetected: item.authorName?.startsWith('🤖') || false,
     };
 }
 
 function loadFromLocalStorage(): VeilleNote[] {
-    if (typeof window === 'undefined') return SEED_DATA;
+    if (typeof window === 'undefined') return [];
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
-        try { return JSON.parse(saved); } catch { return SEED_DATA; }
+        try { return JSON.parse(saved); } catch { return []; }
     }
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(SEED_DATA));
-    return SEED_DATA;
+    return [];
 }
 
 function saveToLocalStorage(notes: VeilleNote[]) {
@@ -98,7 +73,6 @@ function saveToLocalStorage(notes: VeilleNote[]) {
 export const VeilleStore = {
     /**
      * Liste toutes les notes triées par date (plus récentes d'abord)
-     * Tente le backend, fallback localStorage
      */
     getAll: (): VeilleNote[] => {
         return loadFromLocalStorage().sort(
@@ -111,20 +85,38 @@ export const VeilleStore = {
      */
     syncFromBackend: async (): Promise<VeilleNote[]> => {
         try {
-            const res = await fetch(`${API_URL}/veille`);
+            const res = await fetch(`${API_URL}/veille`, { headers: getAuthHeaders() });
             if (res.ok) {
                 const data = await res.json();
-                if (data && data.length > 0) {
-                    const notes = data.map(mapBackendToNote);
-                    saveToLocalStorage(notes);
-                    console.log(`[VEILLE] ✅ Synced ${notes.length} notes from backend`);
-                    return notes;
-                }
+                const notes = data.map(mapBackendToNote);
+                saveToLocalStorage(notes);
+                console.log(`[VEILLE] ✅ Synced ${notes.length} notes from backend`);
+                return notes;
             }
         } catch (err) {
             console.warn('[VEILLE] ⚠️ Backend sync failed, using localStorage', err);
         }
         return loadFromLocalStorage();
+    },
+
+    /**
+     * Déclenche un scan manuel des sources RSS
+     */
+    triggerScan: async (): Promise<{ created: number; errors: number; sourcesUsed: string[]; message: string }> => {
+        try {
+            const res = await fetch(`${API_URL}/veille/scan`, {
+                method: 'POST',
+                headers: getAuthHeaders(),
+            });
+            if (res.ok) {
+                return await res.json();
+            }
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.message || `Scan failed (${res.status})`);
+        } catch (err) {
+            console.error('[VEILLE] ⚠️ Scan failed:', err);
+            throw err;
+        }
     },
 
     /**
@@ -134,17 +126,15 @@ export const VeilleStore = {
         try {
             const res = await fetch(`${API_URL}/veille`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: getAuthHeaders(),
                 body: JSON.stringify(note),
             });
             if (res.ok) {
                 const created = await res.json();
                 const mapped = mapBackendToNote(created);
-                // Update localStorage
                 const notes = loadFromLocalStorage();
                 notes.push(mapped);
                 saveToLocalStorage(notes);
-                console.log(`[VEILLE] ✅ Note créée (backend): "${mapped.title}"`);
                 return mapped;
             }
         } catch (err) {
@@ -160,7 +150,6 @@ export const VeilleStore = {
         };
         notes.push(newNote);
         saveToLocalStorage(notes);
-        console.log(`[VEILLE] ✅ Note créée (local): "${newNote.title}"`);
         return newNote;
     },
 
@@ -171,7 +160,7 @@ export const VeilleStore = {
         try {
             const res = await fetch(`${API_URL}/veille/${id}`, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers: getAuthHeaders(),
                 body: JSON.stringify(changes),
             });
             if (res.ok) {
@@ -185,7 +174,6 @@ export const VeilleStore = {
         } catch (err) {
             console.warn('[VEILLE] ⚠️ Backend update failed', err);
         }
-        // Fallback
         const notes = loadFromLocalStorage();
         const index = notes.findIndex(n => n.id === id);
         if (index === -1) return null;
@@ -199,7 +187,7 @@ export const VeilleStore = {
      */
     remove: async (id: string): Promise<boolean> => {
         try {
-            await fetch(`${API_URL}/veille/${id}`, { method: 'DELETE' });
+            await fetch(`${API_URL}/veille/${id}`, { method: 'DELETE', headers: getAuthHeaders() });
         } catch (err) {
             console.warn('[VEILLE] ⚠️ Backend delete failed', err);
         }
@@ -215,7 +203,10 @@ export const VeilleStore = {
      */
     markAsApplied: async (id: string): Promise<VeilleNote | null> => {
         try {
-            const res = await fetch(`${API_URL}/veille/${id}/apply`, { method: 'PUT' });
+            const res = await fetch(`${API_URL}/veille/${id}/apply`, {
+                method: 'PUT',
+                headers: getAuthHeaders(),
+            });
             if (res.ok) {
                 const updated = await res.json();
                 const mapped = mapBackendToNote(updated);
@@ -234,7 +225,7 @@ export const VeilleStore = {
     },
 
     /**
-     * Stats dynamiques
+     * Stats dynamiques — from backend with fallback
      */
     getStats: () => {
         const notes = loadFromLocalStorage();
@@ -243,6 +234,8 @@ export const VeilleStore = {
         const pending = notes.filter(n => !n.applied).length;
         const applied = notes.filter(n => n.applied).length;
         const total = notes.length;
+        const autoDetected = notes.filter(n => n.isAutoDetected).length;
+        const pendingHigh = notes.filter(n => !n.applied && n.severity === 'high').length;
 
         let lastUpdateLabel = 'Aucune';
         if (lastUpdate) {
@@ -263,40 +256,21 @@ export const VeilleStore = {
             pendingCount: pending,
             appliedCount: applied,
             totalCount: total,
+            autoDetectedCount: autoDetected,
+            pendingHighCount: pendingHigh,
             conformityPercent: total > 0 ? Math.round((applied / total) * 100) : 100,
         };
     },
 
     /**
-     * Seed le backend avec les données par défaut si la DB est vide
+     * Stats backend enrichies
      */
-    seedBackendIfEmpty: async () => {
+    fetchBackendStats: async () => {
         try {
-            const res = await fetch(`${API_URL}/veille`);
-            if (res.ok) {
-                const data = await res.json();
-                if (data.length === 0) {
-                    console.log('[VEILLE] 🌱 Seeding backend with default notes...');
-                    for (const note of SEED_DATA) {
-                        await fetch(`${API_URL}/veille`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                title: note.title,
-                                summary: note.summary,
-                                category: note.category,
-                                severity: note.severity,
-                                sourceUrl: note.sourceUrl,
-                                authorName: note.authorName,
-                            }),
-                        });
-                    }
-                    console.log('[VEILLE] ✅ Backend seeded');
-                }
-            }
-        } catch (err) {
-            console.warn('[VEILLE] ⚠️ Backend seed failed', err);
-        }
+            const res = await fetch(`${API_URL}/veille/stats`, { headers: getAuthHeaders() });
+            if (res.ok) return await res.json();
+        } catch { /* fallback */ }
+        return null;
     },
 
     CATEGORIES: [
