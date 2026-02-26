@@ -390,6 +390,15 @@ export class NotificationsService {
     }
 
     /**
+     * Send password reset email with new temporary credentials
+     */
+    async sendPasswordResetEmail(user: { name: string; email: string }, tempPassword: string) {
+        const template = this.emailTemplates.renderPasswordReset(user.name, user.email, tempPassword);
+        console.log(`[Transactional] 📧 Sending PASSWORD RESET email to ${user.email}`);
+        return this.sendEmail(user.email, template.subject, `${user.name}, votre mot de passe a été réinitialisé. Nouveau: ${tempPassword}`, template.html);
+    }
+
+    /**
      * Send diagnostic invitation with magic link
      */
     async sendDiagnosticInvitation(prospect: { name: string; email: string }, magicLink: string) {

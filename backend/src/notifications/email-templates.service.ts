@@ -117,6 +117,51 @@ export class EmailTemplatesService {
     }
 
     /**
+     * Password reset email with new temporary credentials
+     */
+    renderPasswordReset(name: string, email: string, tempPassword: string): { subject: string; html: string } {
+        const content = `
+            <h2 style="margin: 0 0 20px; color: ${this.textColor}; font-size: 22px;">
+                Mot de passe réinitialisé 🔑
+            </h2>
+            <p style="margin: 0 0 20px; color: ${this.textColor}; font-size: 16px; line-height: 1.6;">
+                Bonjour ${name}, votre mot de passe a été réinitialisé par un administrateur. Voici vos nouveaux accès :
+            </p>
+            
+            <div style="background-color: #f1f5f9; border-radius: 8px; padding: 20px; margin: 25px 0;">
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                    <tr>
+                        <td style="padding: 8px 0;">
+                            <span style="color: #64748b; font-size: 14px;">Email :</span><br>
+                            <strong style="color: ${this.textColor}; font-size: 16px;">${email}</strong>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px 0;">
+                            <span style="color: #64748b; font-size: 14px;">Nouveau mot de passe :</span><br>
+                            <strong style="color: ${this.brandColor}; font-size: 18px; font-family: monospace;">${tempPassword}</strong>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            
+            <p style="margin: 0 0 25px; color: #64748b; font-size: 14px;">
+                ⚠️ Pour votre sécurité, changez votre mot de passe dès votre prochaine connexion.
+            </p>
+            
+            <a href="https://simulegal.fr/connexion" 
+               style="display: inline-block; background-color: ${this.brandColor}; color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 8px; font-weight: 600; font-size: 16px;">
+                Se connecter →
+            </a>
+        `;
+
+        return {
+            subject: 'SimuLegal - Mot de passe réinitialisé',
+            html: this.getBaseTemplate(content, `${name}, votre mot de passe SimuLegal a été réinitialisé.`)
+        };
+    }
+
+    /**
      * Diagnostic invitation email with magic link
      */
     renderDiagnosticInvitation(name: string, magicLink: string): { subject: string; html: string } {

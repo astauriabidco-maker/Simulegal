@@ -1,11 +1,17 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 
 @Injectable()
 export class UsersService {
-    constructor(private prisma: PrismaService) { }
+    private readonly logger = new Logger(UsersService.name);
+
+    constructor(
+        private prisma: PrismaService,
+        private notifications: NotificationsService
+    ) { }
 
     /**
      * Génère un mot de passe temporaire aléatoire sécurisé (12 caractères)
@@ -117,7 +123,13 @@ export class UsersService {
         });
 
         const mapped = this.mapUser(user);
-        console.log(`[USERS] 👤 Nouvel utilisateur créé: ${user.name} (${user.email}) — rôle: ${user.role}`);
+        this.logger.log(`👤 Nouvel utilisateur créé: ${user.name} (${user.email}) — rôle: ${user.role}`);
+
+        // Envoyer l'email de bienvenue avec le mot de passe temporaire
+        this.notifications.sendWelcomeEmail(
+            { name: user.name, email: user.email },
+            tempPassword
+        ).catch(err => this.logger.warn(`⚠️ Échec envoi email de bienvenue à ${user.email}: ${err.message}`));
 
         // Retourner le mot de passe temporaire une seule fois
         return { ...mapped, tempPassword };
@@ -174,7 +186,14 @@ export class UsersService {
             data: { password: hashedPassword }
         });
 
-        console.log(`[USERS] 🔑 Mot de passe réinitialisé pour ${user.name}`);
+        this.logger.log(`🔑 Mot de passe réinitialisé pour ${user.name}`);
+
+        // Envoyer l'email avec le nouveau mot de passe
+        this.notifications.sendPasswordResetEmail(
+            { name: user.name, email: user.email },
+            tempPassword
+        ).catch(err => this.logger.warn(`⚠️ Échec envoi email reset à ${user.email}: ${err.message}`));
+
         return { ...this.mapUser(user), tempPassword };
     }
 
