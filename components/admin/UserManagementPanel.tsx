@@ -9,12 +9,18 @@ import {
     Building2,
     CheckCircle2,
     XCircle,
-    MoreVertical,
     Edit2,
     Trash2,
     X,
-    Lock,
-    Save
+    Save,
+    Key,
+    Power,
+    Copy,
+    Search,
+    RefreshCw,
+    AlertTriangle,
+    Eye,
+    EyeOff
 } from 'lucide-react';
 import { AgencyStore } from '../../services/AgencyStore';
 import { Agency } from '../../types/backoffice';
@@ -28,21 +34,37 @@ export default function UserManagementPanel() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingUser, setEditingUser] = useState<StaffUser | null>(null);
     const [accessDenied, setAccessDenied] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [loading, setLoading] = useState(true);
 
-    // État local pour le type de staff (UI only)
+    // Toast notification
+    const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+
+    // Temp password modal
+    const [tempPasswordModal, setTempPasswordModal] = useState<{ name: string; email: string; password: string } | null>(null);
+    const [showTempPassword, setShowTempPassword] = useState(false);
+
+    // Confirm dialog
+    const [confirmDialog, setConfirmDialog] = useState<{ title: string; message: string; onConfirm: () => void } | null>(null);
+
+    // Staff type toggle
     const [staffType, setStaffType] = useState<'AGENCY' | 'HQ'>('AGENCY');
 
     const [formData, setFormData] = useState<Partial<StaffUser>>({
         name: '',
         email: '',
         role: 'CASE_WORKER',
-        isActive: true, // Note: StaffUser n'a pas isActive dans l'interface, on assume que le backend le gère ou que l'interface est incomplète
+        isActive: true,
         homeAgencyId: '',
-        scopeAgencyIds: [] // Pour le siège
+        scopeAgencyIds: []
     });
 
+    const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
+        setToast({ message, type });
+        setTimeout(() => setToast(null), 4000);
+    };
+
     useEffect(() => {
-        // Check role before loading
         const currentUser = AuthStore.getCurrentUser();
         if (!currentUser || !['SUPERADMIN', 'SUPER_ADMIN', 'HQ', 'HQ_ADMIN'].includes(currentUser.role)) {
             setAccessDenied(true);
@@ -52,6 +74,7 @@ export default function UserManagementPanel() {
     }, []);
 
     const loadData = async () => {
+        setLoading(true);
         try {
             const [allUsers, allAgencies] = await Promise.all([
                 UserStore.getAllUsers(),
@@ -62,6 +85,7 @@ export default function UserManagementPanel() {
         } catch (error) {
             console.error('[UserManagement] Erreur chargement:', error);
         }
+        setLoading(false);
     };
 
     const handleOpenModal = (user: StaffUser | null = null) => {
@@ -69,7 +93,6 @@ export default function UserManagementPanel() {
             setEditingUser(user);
             const isHQ = !user.homeAgencyId || user.homeAgencyId === 'HQ';
             setStaffType(isHQ ? 'HQ' : 'AGENCY');
-
             setFormData({
                 name: user.name,
                 email: user.email,
@@ -97,25 +120,84 @@ export default function UserManagementPanel() {
         try {
             if (editingUser) {
                 await UserStore.updateUser(editingUser.id, formData as any);
+                showToast(`${formData.name} mis à jour avec succès`);
             } else {
-                await UserStore.createUser(formData as any);
+                const result = await UserStore.createUser(formData as any);
+                if (result?.tempPassword) {
+                    setTempPasswordModal({
+                        name: result.name,
+                        email: result.email,
+                        password: result.tempPassword
+                    });
+                    setShowTempPassword(false);
+                }
+                showToast(`${formData.name} créé avec succès`);
             }
             await loadData();
             setIsModalOpen(false);
         } catch (error) {
-            console.error('[UserManagement] Erreur sauvegarde:', error);
+            showToast('Erreur lors de la sauvegarde', 'error');
         }
     };
 
-    const handleDelete = async (id: string) => {
-        if (confirm('Voulez-vous vraiment désactiver cet utilisateur ?')) {
-            try {
-                await UserStore.deleteUser(id);
-                await loadData();
-            } catch (error) {
-                console.error('[UserManagement] Erreur suppression:', error);
+    const handleToggleActive = (user: StaffUser) => {
+        const isActive = (user as any).isActive !== false;
+        setConfirmDialog({
+            title: isActive ? 'Désactiver le compte' : 'Réactiver le compte',
+            message: isActive
+                ? `${user.name} ne pourra plus se connecter. Voulez-vous continuer ?`
+                : `${user.name} pourra à nouveau accéder au système. Voulez-vous continuer ?`,
+            onConfirm: async () => {
+                const result = await UserStore.toggleActive(user.id);
+                if (result) {
+                    showToast(`Compte ${result.isActive ? 'activé' : 'désactivé'} : ${user.name}`);
+                    await loadData();
+                } else {
+                    showToast('Erreur lors du changement de statut', 'error');
+                }
+                setConfirmDialog(null);
             }
-        }
+        });
+    };
+
+    const handleResetPassword = (user: StaffUser) => {
+        setConfirmDialog({
+            title: 'Réinitialiser le mot de passe',
+            message: `Un nouveau mot de passe temporaire sera généré pour ${user.name}. L'ancien mot de passe sera invalidé.`,
+            onConfirm: async () => {
+                const result = await UserStore.resetPassword(user.id);
+                if (result?.tempPassword) {
+                    setTempPasswordModal({
+                        name: user.name,
+                        email: user.email,
+                        password: result.tempPassword
+                    });
+                    setShowTempPassword(false);
+                    showToast('Mot de passe réinitialisé', 'info');
+                } else {
+                    showToast('Erreur lors de la réinitialisation', 'error');
+                }
+                setConfirmDialog(null);
+            }
+        });
+    };
+
+    const handleDelete = (user: StaffUser) => {
+        setConfirmDialog({
+            title: 'Désactiver cet utilisateur',
+            message: `Le compte de ${user.name} sera désactivé. Cette action ne supprime pas les données.`,
+            onConfirm: async () => {
+                await UserStore.deleteUser(user.id);
+                showToast(`${user.name} désactivé`, 'info');
+                await loadData();
+                setConfirmDialog(null);
+            }
+        });
+    };
+
+    const copyToClipboard = (text: string) => {
+        navigator.clipboard.writeText(text);
+        showToast('Copié dans le presse-papiers', 'info');
     };
 
     const getRoleBadgeColor = (role: string) => {
@@ -141,7 +223,17 @@ export default function UserManagementPanel() {
 
     const isGlobalScope = !formData.scopeAgencyIds || formData.scopeAgencyIds.length === 0;
 
-    // Access denied UI
+    // Filtered users
+    const filteredUsers = users.filter(u =>
+        u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        u.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        u.role.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+    // Stats
+    const activeCount = users.filter(u => (u as any).isActive !== false).length;
+    const inactiveCount = users.length - activeCount;
+
     if (accessDenied) {
         return (
             <div className="p-8 flex items-center justify-center min-h-[400px]">
@@ -153,294 +245,327 @@ export default function UserManagementPanel() {
                     <p className="text-slate-500 max-w-md">
                         Cette fonctionnalité est réservée aux <strong>Administrateurs du Siège</strong> (HQ_ADMIN ou SUPER_ADMIN).
                     </p>
-                    <button
-                        onClick={() => window.location.href = '/staff-login'}
-                        className="px-6 py-3 bg-slate-900 text-white rounded-2xl font-black text-sm"
-                    >
-                        Se reconnecter
-                    </button>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="p-8">
+        <div className="p-8 max-w-[1400px] mx-auto">
+            {/* Header */}
             <div className="flex items-center justify-between mb-8">
                 <div>
-                    <h1 className="text-3xl font-black text-slate-900 tracking-tighter uppercase">Gestion des Équipes</h1>
-                    <p className="text-slate-500 font-medium">Contrôlez les accès du personnel et des partenaires</p>
+                    <h1 className="text-3xl font-black text-slate-900 tracking-tight">Gestion des Équipes</h1>
+                    <p className="text-slate-500 text-sm mt-1">
+                        {users.length} membres · <span className="text-emerald-600">{activeCount} actifs</span>
+                        {inactiveCount > 0 && <span className="text-rose-500"> · {inactiveCount} inactifs</span>}
+                    </p>
                 </div>
-                <button
-                    onClick={() => handleOpenModal()}
-                    className="bg-slate-900 hover:bg-slate-800 text-white px-6 py-3 rounded-2xl font-black flex items-center gap-2 transition-all shadow-xl hover:scale-105"
-                >
-                    <UserPlus size={20} />
-                    Ajouter un membre
-                </button>
+                <div className="flex gap-3">
+                    <button onClick={loadData} className="p-3 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl transition">
+                        <RefreshCw size={18} />
+                    </button>
+                    <button
+                        onClick={() => handleOpenModal()}
+                        className="bg-slate-900 hover:bg-slate-800 text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 transition shadow-lg"
+                    >
+                        <UserPlus size={18} />
+                        Nouveau membre
+                    </button>
+                </div>
             </div>
 
-            {/* Liste des utilisateurs */}
-            <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
-                <table className="w-full">
-                    <thead className="bg-slate-50 border-b border-slate-100">
-                        <tr>
-                            <th className="text-left p-6 text-xs font-black text-slate-400 uppercase tracking-widest">Utilisateur</th>
-                            <th className="text-left p-6 text-xs font-black text-slate-400 uppercase tracking-widest">Rôle</th>
-                            <th className="text-left p-6 text-xs font-black text-slate-400 uppercase tracking-widest">Rattachement</th>
-                            <th className="text-left p-6 text-xs font-black text-slate-400 uppercase tracking-widest">Statut</th>
-                            <th className="text-right p-6 text-xs font-black text-slate-400 uppercase tracking-widest">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                        {users.map((user) => (
-                            <tr key={user.id} className="hover:bg-slate-50/50 transition-colors">
-                                <td className="p-6">
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-10 h-10 bg-slate-900 text-white rounded-full flex items-center justify-center font-black">
-                                            {user.name.charAt(0)}
-                                        </div>
-                                        <div>
-                                            <p className="font-bold text-slate-900">{user.name}</p>
-                                            <p className="text-xs text-slate-400 flex items-center gap-1">
-                                                <Mail size={12} /> {user.email}
-                                            </p>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td className="p-6">
-                                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase border ${getRoleBadgeColor(user.role)}`}>
-                                        <Shield size={12} />
-                                        {ROLE_LABELS[user.role as UserRole] || user.role}
-                                    </span>
-                                </td>
-                                <td className="p-6">
-                                    {user.homeAgencyId && user.homeAgencyId !== 'HQ' ? (
-                                        <div className="flex items-center gap-2 text-sm text-slate-600 font-medium">
-                                            <Building2 size={16} className="text-slate-400" />
-                                            {(user as any).homeAgencyName || agencies.find(a => a.id === user.homeAgencyId)?.name || `Agence ${user.homeAgencyId}`}
-                                        </div>
-                                    ) : (
-                                        <div className="flex flex-col gap-1">
-                                            <span className="text-xs font-black text-indigo-600 uppercase tracking-wider flex items-center gap-1">
-                                                <Building2 size={12} /> Siège (HQ)
-                                            </span>
-                                            {(!user.scopeAgencyIds || user.scopeAgencyIds.length === 0) ? (
-                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-500 border border-slate-200 w-fit">
-                                                    🌍 Accès Global
-                                                </span>
-                                            ) : (
-                                                <div className="group relative w-fit">
-                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-600 border border-amber-100 cursor-help">
-                                                        🔍 {user.scopeAgencyIds.length} Agences
-                                                    </span>
-                                                    {/* Tooltip simple */}
-                                                    <div className="absolute left-0 bottom-full mb-1 hidden group-hover:block bg-slate-900 text-white text-[10px] p-2 rounded w-48 z-10">
-                                                        {user.scopeAgencyIds.map(id => agencies.find(a => a.id === id)?.name).join(', ')}
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-                                </td>
-                                <td className="p-6">
-                                    {user.isActive ? (
-                                        <span className="inline-flex items-center gap-1 text-emerald-600 text-xs font-bold">
-                                            <CheckCircle2 size={14} /> Actif
-                                        </span>
-                                    ) : (
-                                        <span className="inline-flex items-center gap-1 text-red-400 text-xs font-bold">
-                                            <XCircle size={14} /> Inactif
-                                        </span>
-                                    )}
-                                </td>
-                                <td className="p-6 text-right">
-                                    <div className="flex items-center justify-end gap-2">
-                                        <button
-                                            onClick={() => handleOpenModal(user)}
-                                            className="p-2 hover:bg-indigo-50 text-slate-400 hover:text-indigo-600 rounded-lg transition-colors"
-                                        >
-                                            <Edit2 size={18} />
-                                        </button>
-                                        <button
-                                            onClick={() => handleDelete(user.id)}
-                                            className="p-2 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-lg transition-colors"
-                                        >
-                                            <Trash2 size={18} />
-                                        </button>
-                                    </div>
-                                </td>
+            {/* Search */}
+            <div className="mb-6 relative">
+                <Search size={18} className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400" />
+                <input
+                    type="text"
+                    placeholder="Rechercher par nom, email ou rôle..."
+                    className="w-full h-12 pl-12 pr-4 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-900 outline-none focus:border-indigo-400 transition"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                />
+            </div>
+
+            {/* Users Table */}
+            {loading ? (
+                <div className="flex items-center justify-center h-40">
+                    <RefreshCw size={24} className="animate-spin text-indigo-500" />
+                </div>
+            ) : (
+                <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                    <table className="w-full">
+                        <thead className="bg-slate-50 border-b border-slate-100">
+                            <tr>
+                                <th className="text-left p-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Utilisateur</th>
+                                <th className="text-left p-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Rôle</th>
+                                <th className="text-left p-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Rattachement</th>
+                                <th className="text-center p-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Statut</th>
+                                <th className="text-right p-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Actions</th>
                             </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
+                        </thead>
+                        <tbody className="divide-y divide-slate-50">
+                            {filteredUsers.map((user) => {
+                                const isActive = (user as any).isActive !== false;
+                                return (
+                                    <tr key={user.id} className={`transition-colors ${isActive ? 'hover:bg-slate-50/50' : 'opacity-50 bg-slate-50/30'}`}>
+                                        <td className="p-5">
+                                            <div className="flex items-center gap-3">
+                                                <div className={`w-9 h-9 rounded-full flex items-center justify-center font-black text-sm ${isActive ? 'bg-slate-900 text-white' : 'bg-slate-300 text-slate-500'}`}>
+                                                    {user.name.charAt(0)}
+                                                </div>
+                                                <div>
+                                                    <p className="font-bold text-slate-900 text-sm">{user.name}</p>
+                                                    <p className="text-[11px] text-slate-400 flex items-center gap-1">
+                                                        <Mail size={10} /> {user.email}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="p-5">
+                                            <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase border ${getRoleBadgeColor(user.role)}`}>
+                                                <Shield size={10} />
+                                                {ROLE_LABELS[user.role as UserRole] || user.role}
+                                            </span>
+                                        </td>
+                                        <td className="p-5">
+                                            {user.homeAgencyId && user.homeAgencyId !== 'HQ' ? (
+                                                <div className="flex items-center gap-1.5 text-xs text-slate-600 font-medium">
+                                                    <Building2 size={14} className="text-slate-400" />
+                                                    {(user as any).homeAgencyName || agencies.find(a => a.id === user.homeAgencyId)?.name || 'Agence'}
+                                                </div>
+                                            ) : (
+                                                <span className="text-[10px] font-black text-indigo-600 uppercase flex items-center gap-1">
+                                                    <Building2 size={10} /> Siège
+                                                    {user.scopeAgencyIds && user.scopeAgencyIds.length > 0 && (
+                                                        <span className="text-slate-400 font-bold normal-case"> · {user.scopeAgencyIds.length} agences</span>
+                                                    )}
+                                                </span>
+                                            )}
+                                        </td>
+                                        <td className="p-5 text-center">
+                                            <button
+                                                onClick={() => handleToggleActive(user)}
+                                                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-[10px] font-bold transition cursor-pointer ${isActive
+                                                    ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100 border border-emerald-100'
+                                                    : 'bg-rose-50 text-rose-500 hover:bg-rose-100 border border-rose-100'
+                                                    }`}
+                                            >
+                                                {isActive ? <><CheckCircle2 size={12} /> Actif</> : <><XCircle size={12} /> Inactif</>}
+                                            </button>
+                                        </td>
+                                        <td className="p-5 text-right">
+                                            <div className="flex items-center justify-end gap-1">
+                                                <button onClick={() => handleOpenModal(user)} title="Éditer"
+                                                    className="p-2 hover:bg-indigo-50 text-slate-400 hover:text-indigo-600 rounded-lg transition">
+                                                    <Edit2 size={16} />
+                                                </button>
+                                                <button onClick={() => handleResetPassword(user)} title="Réinitialiser MDP"
+                                                    className="p-2 hover:bg-amber-50 text-slate-400 hover:text-amber-600 rounded-lg transition">
+                                                    <Key size={16} />
+                                                </button>
+                                                <button onClick={() => handleDelete(user)} title="Désactiver"
+                                                    className="p-2 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-lg transition">
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                            {filteredUsers.length === 0 && (
+                                <tr><td colSpan={5} className="p-12 text-center text-slate-400">Aucun utilisateur trouvé</td></tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            )}
 
-            {/* Modal de Gestion */}
+            {/* ═══ CREATE/EDIT MODAL ═══ */}
             {isModalOpen && (
-                <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-[32px] shadow-2xl w-full max-w-lg overflow-hidden border border-white/20 animate-in fade-in zoom-in duration-200">
-                        {/* Modal Header */}
-                        <div className="bg-slate-900 p-8 text-white flex justify-between items-center">
+                <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
+                        <div className="bg-slate-900 p-6 text-white flex justify-between items-center">
                             <div className="flex items-center gap-3">
-                                <div className="w-12 h-12 bg-indigo-500 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-500/30">
-                                    <UserPlus size={24} />
+                                <div className="w-10 h-10 bg-indigo-500 rounded-xl flex items-center justify-center">
+                                    <UserPlus size={20} />
                                 </div>
                                 <div>
-                                    <h2 className="text-2xl font-black tracking-tighter uppercase">
-                                        {editingUser ? 'Éditer Membre' : 'Nouveau Membre'}
-                                    </h2>
-                                    <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">IAM Configuration</p>
+                                    <h2 className="text-lg font-black">{editingUser ? 'Éditer' : 'Nouveau'} membre</h2>
+                                    <p className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">
+                                        {editingUser ? 'Modifier les informations' : 'Un mot de passe temporaire sera généré'}
+                                    </p>
                                 </div>
                             </div>
-                            <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-white transition-colors p-2">
-                                <X size={24} />
-                            </button>
+                            <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-white/10 rounded-lg"><X size={20} /></button>
                         </div>
 
-                        {/* Modal Body */}
-                        <div className="p-8 space-y-6">
-                            <div className="space-y-4">
-                                <div>
-                                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Nom Complet</label>
-                                    <input
-                                        type="text"
-                                        className="w-full h-14 bg-slate-50 border-2 border-slate-100 rounded-2xl px-4 font-bold text-slate-900 focus:border-indigo-500 outline-none transition-all"
-                                        placeholder="ex: Jean de la Fontaine"
-                                        value={formData.name}
-                                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                    />
+                        <div className="p-6 space-y-5">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="col-span-2">
+                                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Nom complet</label>
+                                    <input type="text" className="w-full h-12 bg-slate-50 border border-slate-200 rounded-xl px-4 font-bold text-slate-900 focus:border-indigo-500 outline-none"
+                                        placeholder="Jean Dupont" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
+                                </div>
+                                <div className="col-span-2">
+                                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Email</label>
+                                    <input type="email" className="w-full h-12 bg-slate-50 border border-slate-200 rounded-xl px-4 font-bold text-slate-900 focus:border-indigo-500 outline-none"
+                                        placeholder="jean@simulegal.fr" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
                                 </div>
                                 <div>
-                                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Email Professionnel</label>
-                                    <input
-                                        type="email"
-                                        className="w-full h-14 bg-slate-50 border-2 border-slate-100 rounded-2xl px-4 font-bold text-slate-900 focus:border-indigo-500 outline-none transition-all"
-                                        placeholder="contact@simulegal.fr"
-                                        value={formData.email}
-                                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                    />
-                                </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Rôle Système</label>
-                                        <select
-                                            className="w-full h-14 bg-slate-50 border-2 border-slate-100 rounded-2xl px-4 font-bold text-slate-900 focus:border-indigo-500 outline-none transition-all appearance-none"
-                                            value={formData.role}
-                                            onChange={(e) => setFormData({ ...formData, role: e.target.value as StaffUser['role'] })}
-                                        >
-                                            {Object.entries(ROLE_LABELS).map(([val, label]) => (
-                                                <option key={val} value={val}>{label}</option>
-                                            ))}
-                                        </select>
-                                    </div>
+                                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Rôle</label>
+                                    <select className="w-full h-12 bg-slate-50 border border-slate-200 rounded-xl px-4 font-bold text-slate-900 outline-none appearance-none"
+                                        value={formData.role} onChange={(e) => setFormData({ ...formData, role: e.target.value as StaffUser['role'] })}>
+                                        {Object.entries(ROLE_LABELS).map(([val, label]) => (
+                                            <option key={val} value={val}>{label}</option>
+                                        ))}
+                                    </select>
                                 </div>
                                 <div>
-                                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Statut</label>
-                                    <select
-                                        className="w-full h-14 bg-slate-50 border-2 border-slate-100 rounded-2xl px-4 font-bold text-slate-900 focus:border-indigo-500 outline-none transition-all appearance-none"
-                                        value={(formData as any).isActive ? '1' : '0'}
-                                        onChange={(e) => setFormData({ ...formData, isActive: e.target.value === '1' })}
-                                    >
-                                        <option value="1">Actif</option>
-                                        <option value="0">Inactif</option>
+                                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Statut</label>
+                                    <select className="w-full h-12 bg-slate-50 border border-slate-200 rounded-xl px-4 font-bold text-slate-900 outline-none appearance-none"
+                                        value={(formData as any).isActive ? '1' : '0'} onChange={(e) => setFormData({ ...formData, isActive: e.target.value === '1' })}>
+                                        <option value="1">✅ Actif</option>
+                                        <option value="0">🚫 Inactif</option>
                                     </select>
                                 </div>
                             </div>
 
-                            {/* Sélecteur de Type de Staff */}
-                            <div className="bg-slate-100 p-1 rounded-xl flex">
-                                <button
-                                    onClick={() => {
-                                        setStaffType('AGENCY');
-                                        setFormData({ ...formData, homeAgencyId: agencies[0]?.id || '', role: 'CASE_WORKER' });
-                                    }}
-                                    className={`flex-1 py-2 text-xs font-black uppercase tracking-wider rounded-lg transition-all ${staffType === 'AGENCY' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
-                                >
+                            {/* Staff type toggle */}
+                            <div className="bg-slate-100 p-1 rounded-lg flex">
+                                <button onClick={() => { setStaffType('AGENCY'); setFormData({ ...formData, homeAgencyId: agencies[0]?.id || '' }); }}
+                                    className={`flex-1 py-2 text-xs font-bold rounded-md transition ${staffType === 'AGENCY' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400'}`}>
                                     Staff Agence
                                 </button>
-                                <button
-                                    onClick={() => {
-                                        setStaffType('HQ');
-                                        setFormData({ ...formData, homeAgencyId: 'HQ', role: 'HQ_ADMIN', scopeAgencyIds: [] });
-                                    }}
-                                    className={`flex-1 py-2 text-xs font-black uppercase tracking-wider rounded-lg transition-all ${staffType === 'HQ' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
-                                >
+                                <button onClick={() => { setStaffType('HQ'); setFormData({ ...formData, homeAgencyId: 'HQ', scopeAgencyIds: [] }); }}
+                                    className={`flex-1 py-2 text-xs font-bold rounded-md transition ${staffType === 'HQ' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400'}`}>
                                     Staff Siège
                                 </button>
                             </div>
 
-                            {/* Formulaire Conditionnel */}
-                            <div className="animate-in slide-in-from-top-2 duration-300">
-                                {staffType === 'AGENCY' ? (
-                                    <div>
-                                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Agence de Rattachement</label>
-                                        <select
-                                            className="w-full h-14 bg-indigo-50 border-2 border-indigo-100 rounded-2xl px-4 font-bold text-indigo-900 focus:border-indigo-500 outline-none transition-all appearance-none"
-                                            value={formData.homeAgencyId}
-                                            onChange={(e) => setFormData({ ...formData, homeAgencyId: e.target.value })}
-                                        >
-                                            <option value="">Sélectionner une agence...</option>
-                                            {agencies.map(agency => (
-                                                <option key={agency.id} value={agency.id}>{agency.name} ({agency.type})</option>
-                                            ))}
-                                        </select>
+                            {staffType === 'AGENCY' ? (
+                                <div>
+                                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Agence</label>
+                                    <select className="w-full h-12 bg-indigo-50 border border-indigo-200 rounded-xl px-4 font-bold text-indigo-900 outline-none appearance-none"
+                                        value={formData.homeAgencyId} onChange={(e) => setFormData({ ...formData, homeAgencyId: e.target.value })}>
+                                        <option value="">Sélectionner...</option>
+                                        {agencies.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                                    </select>
+                                </div>
+                            ) : (
+                                <div className="p-4 bg-slate-50 border border-slate-100 rounded-xl">
+                                    <div className="flex items-center justify-between mb-3">
+                                        <span className="text-[10px] font-black text-slate-900 uppercase">Périmètre</span>
+                                        <label className="flex items-center gap-2 cursor-pointer">
+                                            <input type="checkbox" checked={isGlobalScope}
+                                                onChange={(e) => setFormData({ ...formData, scopeAgencyIds: e.target.checked ? [] : [agencies[0]?.id] })}
+                                                className="w-4 h-4 rounded border-slate-300 text-indigo-600" />
+                                            <span className="text-xs font-bold text-slate-600">🌍 Global</span>
+                                        </label>
                                     </div>
-                                ) : (
-                                    <div className="space-y-4">
-                                        {/* Rôle Siège Spécifique */}
-                                        <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl">
-                                            <div className="flex items-center justify-between mb-4">
-                                                <span className="text-xs font-black text-slate-900 uppercase">Périmètre de Supervision</span>
-                                                <label className="flex items-center gap-2 cursor-pointer">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={isGlobalScope}
-                                                        onChange={(e) => setFormData({ ...formData, scopeAgencyIds: e.target.checked ? [] : [agencies[0]?.id] })}
-                                                        className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-                                                    />
-                                                    <span className="text-xs font-bold text-slate-600">🌍 Accès Global</span>
+                                    {!isGlobalScope && (
+                                        <div className="grid grid-cols-2 gap-2 max-h-36 overflow-y-auto">
+                                            {agencies.map(a => (
+                                                <label key={a.id} className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer text-xs font-bold transition ${formData.scopeAgencyIds?.includes(a.id) ? 'bg-indigo-50 border-indigo-200 text-indigo-700' : 'bg-white border-slate-100 text-slate-600'}`}>
+                                                    <input type="checkbox" checked={formData.scopeAgencyIds?.includes(a.id)} onChange={() => toggleScopeAgency(a.id)} className="rounded border-slate-300 text-indigo-600" />
+                                                    {a.name}
                                                 </label>
-                                            </div>
-
-                                            {!isGlobalScope && (
-                                                <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto">
-                                                    {agencies.map(agency => (
-                                                        <label key={agency.id} className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition-all ${formData.scopeAgencyIds?.includes(agency.id) ? 'bg-indigo-50 border-indigo-200' : 'bg-white border-slate-100 hover:border-slate-300'}`}>
-                                                            <input
-                                                                type="checkbox"
-                                                                checked={formData.scopeAgencyIds?.includes(agency.id)}
-                                                                onChange={() => toggleScopeAgency(agency.id)}
-                                                                className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-                                                            />
-                                                            <span className="text-xs font-bold text-slate-700 truncate">{agency.name}</span>
-                                                        </label>
-                                                    ))}
-                                                </div>
-                                            )}
+                                            ))}
                                         </div>
-                                    </div>
-                                )}
-                            </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="p-6 bg-slate-50 border-t border-slate-100 flex gap-3">
+                            <button onClick={() => setIsModalOpen(false)} className="flex-1 h-12 bg-white border border-slate-200 text-slate-500 rounded-xl font-bold hover:bg-slate-50 transition">
+                                Annuler
+                            </button>
+                            <button onClick={handleSave} className="flex-1 h-12 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition flex items-center justify-center gap-2">
+                                <Save size={16} /> Sauvegarder
+                            </button>
                         </div>
                     </div>
+                </div>
+            )}
 
-                    {/* Modal Footer */}
-                    <div className="p-8 bg-slate-50 border-t border-slate-100 flex gap-4">
-                        <button
-                            onClick={() => setIsModalOpen(false)}
-                            className="flex-1 h-14 bg-white border-2 border-slate-200 text-slate-400 rounded-2xl font-black uppercase tracking-widest hover:bg-slate-50 transition-all"
-                        >
-                            Annuler
-                        </button>
-                        <button
-                            onClick={handleSave}
-                            className="flex-1 h-14 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-xl flex items-center justify-center gap-2"
-                        >
-                            <Save size={20} />
-                            Sauvegarder
-                        </button>
+            {/* ═══ TEMP PASSWORD MODAL ═══ */}
+            {tempPasswordModal && (
+                <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+                        <div className="bg-amber-500 p-6 text-white">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center"><Key size={20} /></div>
+                                <div>
+                                    <h2 className="text-lg font-black">Mot de passe temporaire</h2>
+                                    <p className="text-amber-100 text-xs font-bold">⚠️ Ce mot de passe ne sera affiché qu'une seule fois</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="p-6 space-y-4">
+                            <div>
+                                <p className="text-xs text-slate-400 font-bold mb-1">Utilisateur</p>
+                                <p className="font-bold text-slate-900">{tempPasswordModal.name}</p>
+                                <p className="text-xs text-slate-500">{tempPasswordModal.email}</p>
+                            </div>
+                            <div>
+                                <p className="text-xs text-slate-400 font-bold mb-2">Mot de passe temporaire</p>
+                                <div className="flex items-center gap-2">
+                                    <div className="flex-1 h-12 bg-slate-900 text-white rounded-xl px-4 flex items-center font-mono font-bold text-lg tracking-wider">
+                                        {showTempPassword ? tempPasswordModal.password : '••••••••••••'}
+                                    </div>
+                                    <button onClick={() => setShowTempPassword(!showTempPassword)}
+                                        className="p-3 bg-slate-100 hover:bg-slate-200 rounded-xl transition">
+                                        {showTempPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                    </button>
+                                    <button onClick={() => copyToClipboard(tempPasswordModal.password)}
+                                        className="p-3 bg-indigo-100 hover:bg-indigo-200 text-indigo-600 rounded-xl transition">
+                                        <Copy size={18} />
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="p-3 bg-amber-50 border border-amber-100 rounded-xl">
+                                <p className="text-xs text-amber-700 font-bold flex items-center gap-1.5">
+                                    <AlertTriangle size={14} />
+                                    Communiquez ce mot de passe à l'utilisateur de manière sécurisée. Il devra le changer à sa première connexion.
+                                </p>
+                            </div>
+                        </div>
+                        <div className="p-6 bg-slate-50 border-t border-slate-100">
+                            <button onClick={() => setTempPasswordModal(null)}
+                                className="w-full h-12 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition">
+                                J'ai noté le mot de passe
+                            </button>
+                        </div>
                     </div>
+                </div>
+            )}
+
+            {/* ═══ CONFIRM DIALOG ═══ */}
+            {confirmDialog && (
+                <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4">
+                        <h3 className="text-lg font-black text-slate-900">{confirmDialog.title}</h3>
+                        <p className="text-sm text-slate-500">{confirmDialog.message}</p>
+                        <div className="flex gap-3">
+                            <button onClick={() => setConfirmDialog(null)} className="flex-1 h-11 bg-slate-100 text-slate-600 rounded-xl font-bold hover:bg-slate-200 transition">
+                                Annuler
+                            </button>
+                            <button onClick={confirmDialog.onConfirm} className="flex-1 h-11 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition">
+                                Confirmer
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ═══ TOAST ═══ */}
+            {toast && (
+                <div className={`fixed bottom-6 right-6 z-[70] px-6 py-3 rounded-xl shadow-lg font-bold text-sm flex items-center gap-2 animate-in slide-in-from-bottom-4 duration-300
+                    ${toast.type === 'success' ? 'bg-emerald-600 text-white' : toast.type === 'error' ? 'bg-red-600 text-white' : 'bg-slate-900 text-white'}`}>
+                    {toast.type === 'success' && <CheckCircle2 size={16} />}
+                    {toast.type === 'error' && <XCircle size={16} />}
+                    {toast.message}
                 </div>
             )}
         </div>

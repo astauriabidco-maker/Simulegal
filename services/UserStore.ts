@@ -79,11 +79,39 @@ export const UserStore = {
                 headers: getHeaders()
             });
             if (!response.ok) throw new Error('Erreur de suppression');
-            console.log(`[IAM] 🚫 Utilisateur ${id} supprimé via API`);
+            console.log(`[IAM] 🚫 Utilisateur ${id} désactivé via API`);
             return true;
         } catch (error) {
             console.error('[IAM] ❌ Erreur API suppression:', error);
             return false;
+        }
+    },
+
+    toggleActive: async (id: string) => {
+        try {
+            const response = await fetch(`${API_URL}/${id}/toggle-active`, {
+                method: 'PATCH',
+                headers: getHeaders()
+            });
+            if (!response.ok) throw new Error('Erreur toggle active');
+            return await response.json();
+        } catch (error) {
+            console.error('[IAM] ❌ Erreur toggle active:', error);
+            return null;
+        }
+    },
+
+    resetPassword: async (id: string) => {
+        try {
+            const response = await fetch(`${API_URL}/${id}/reset-password`, {
+                method: 'POST',
+                headers: getHeaders()
+            });
+            if (!response.ok) throw new Error('Erreur reset password');
+            return await response.json();
+        } catch (error) {
+            console.error('[IAM] ❌ Erreur reset password:', error);
+            return null;
         }
     }
 };

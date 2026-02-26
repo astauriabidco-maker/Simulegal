@@ -66,4 +66,20 @@ export class UsersController {
         }
         return this.usersService.delete(id);
     }
+
+    @Patch(':id/toggle-active')
+    toggleActive(@Request() req: any, @Param('id') id: string) {
+        if (req.user.role !== 'SUPER_ADMIN' && req.user.role !== 'HQ_ADMIN') {
+            throw new ForbiddenException('Action réservée au siège');
+        }
+        return this.usersService.toggleActive(id);
+    }
+
+    @Post(':id/reset-password')
+    resetPassword(@Request() req: any, @Param('id') id: string) {
+        if (req.user.role !== 'SUPER_ADMIN' && req.user.role !== 'HQ_ADMIN') {
+            throw new ForbiddenException('Action réservée au siège');
+        }
+        return this.usersService.resetPassword(id);
+    }
 }
