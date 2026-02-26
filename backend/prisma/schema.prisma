@@ -337,6 +337,8 @@ model SystemSettings {
   servicePricingHistory String @default("[]") // Historique des modifications de prix (audit trail)
   legalDocuments   String   @default("{}")   // CGV, contrat de représentation, mentions légales (HTML/Markdown)
   catalogOverrides    String   @default("{}")   // Surcharges du catalogue (enable/disable services, durées custom, etc.)
+  documentCatalog     String   @default("{}")   // Catalogue exhaustif des pièces (DOC_CATALOG)
+  serviceTemplates    String   @default("{}")   // Association services <-> pièces (SERVICE_TEMPLATES)
   pipelineAutomations String   @default("{}")   // Règles d'automatisation pipeline (relances, escalades, transitions, etc.)
   updatedAt           DateTime @updatedAt
 }

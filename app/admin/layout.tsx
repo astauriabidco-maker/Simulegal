@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import DashboardLayout from '../../components/admin/DashboardLayout';
 import { usePermission } from '../../hooks/usePermission';
 import { AuthStore } from '../../services/authStore';
@@ -11,13 +11,42 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     const router = useRouter();
     const { user, isLoading } = usePermission();
 
+    const searchParams = useSearchParams();
+
     // Map pathname to activeMenuItem
     const getActiveMenu = (path: string) => {
         if (path === '/admin') return 'overview';
-        // Extract the second segment: /admin/network -> network
         const parts = path.split('/');
-        // parts[0] = "", parts[1] = "admin", parts[2] = "network"
-        return parts[2] || 'overview'; // Default to overview
+        const base = parts[2] || 'overview';
+
+        const tab = searchParams.get('tab');
+        const view = searchParams.get('view');
+
+        if (base === 'audit' && tab) {
+            return `audit-veille-${tab}`;
+        }
+        if (base === 'blog' && tab) {
+            return `blog-${tab}`;
+        }
+        if (base === 'sales' && view) {
+            return `sales-${view}`;
+        }
+        if (base === 'franchise-leads' && view) {
+            return `franchise-leads-${view}`;
+        }
+        if (base === 'settings' && tab) {
+            if (tab === 'SERVICE_PRICING') return 'settings-pricing';
+            if (tab === 'DOCUMENTS') return 'settings-docs';
+            if (tab === 'LEGAL_DOCS') return 'settings-legal';
+        }
+        if (base === 'settings') return 'settings-general';
+        if (base === 'staff') return 'management-staff';
+        if (base === 'rbac') return 'management-roles';
+        if (base === 'finances' && parts[3]) {
+            return `finances-${parts[3]}`;
+        }
+
+        return base;
     };
 
     const handleLogout = () => {

@@ -259,4 +259,46 @@ export class SettingsController {
         if (!doc) return { error: 'Document not found' };
         return doc;
     }
+
+    // ═══════════════════════════════════════════════════
+    // RÉFÉRENTIEL DES DOCUMENTS & MAPPAGE SERVICES
+    // ═══════════════════════════════════════════════════
+
+    /**
+     * GET /settings/document-catalog
+     */
+    @Get('document-catalog')
+    async getDocumentCatalog() {
+        return this.settingsService.getDocumentCatalog();
+    }
+
+    /**
+     * PATCH /settings/document-catalog
+     */
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles('SUPER_ADMIN', 'SUPERADMIN')
+    @Patch('document-catalog')
+    async updateDocumentCatalog(@Body('catalog') catalog: Record<string, any>) {
+        const updated = await this.settingsService.updateDocumentCatalog(catalog);
+        return { success: true, catalog: updated };
+    }
+
+    /**
+     * GET /settings/service-templates
+     */
+    @Get('service-templates')
+    async getServiceTemplates() {
+        return this.settingsService.getServiceTemplates();
+    }
+
+    /**
+     * PATCH /settings/service-templates
+     */
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles('SUPER_ADMIN', 'SUPERADMIN')
+    @Patch('service-templates')
+    async updateServiceTemplates(@Body('templates') templates: Record<string, string[]>) {
+        const updated = await this.settingsService.updateServiceTemplates(templates);
+        return { success: true, templates: updated };
+    }
 }

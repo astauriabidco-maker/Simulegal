@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { FranchiseLead, FranchiseLeadStore, FranchiseLeadStatus } from '../../../services/FranchiseLeadStore';
 import {
     Plus, Search, MoreHorizontal, MapPin, Mail, Phone, CheckCircle, FileText,
@@ -46,8 +47,21 @@ interface Analytics {
 
 export default function FranchiseLeadsPage() {
     const [leads, setLeads] = useState<FranchiseLead[]>([]);
+    const searchParams = useSearchParams();
+    const initialView = searchParams.get('view')?.toUpperCase() as any;
+
+    const [viewMode, setViewMode] = useState<ViewMode>(
+        ['KANBAN', 'LIST', 'ANALYTICS', 'MAP', 'COMPARE'].includes(initialView) ? initialView : 'KANBAN'
+    );
+
+    useEffect(() => {
+        const view = searchParams.get('view')?.toUpperCase() as any;
+        if (['KANBAN', 'LIST', 'ANALYTICS', 'MAP', 'COMPARE'].includes(view)) {
+            setViewMode(view);
+        }
+    }, [searchParams]);
+
     const [loading, setLoading] = useState(true);
-    const [viewMode, setViewMode] = useState<ViewMode>('KANBAN');
     const [analytics, setAnalytics] = useState<Analytics | null>(null);
     const [enhancedAnalytics, setEnhancedAnalytics] = useState<any>(null);
     const [mapData, setMapData] = useState<any[]>([]);

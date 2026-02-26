@@ -55,7 +55,9 @@ export class SettingsService implements OnModuleInit {
                         region: 'eu-west-3',
                         accessKey: 'key_sample',
                         secretKey: 'secret_sample'
-                    })
+                    }),
+                    documentCatalog: JSON.stringify({}),
+                    serviceTemplates: JSON.stringify({})
                 }
             });
             console.log('[Settings] ⚙️ Global settings initialized in DB');
@@ -87,6 +89,8 @@ export class SettingsService implements OnModuleInit {
             notifications: JSON.parse(settings.notifications),
             integrations: JSON.parse(settings.integrations),
             storage: JSON.parse(settings.storage),
+            documentCatalog: JSON.parse(settings.documentCatalog || '{}'),
+            serviceTemplates: JSON.parse(settings.serviceTemplates || '{}'),
             updatedAt: settings.updatedAt
         };
     }
@@ -479,6 +483,60 @@ Conformément au RGPD, vous disposez d'un droit d'accès, de rectification et de
 
         console.log(`[Settings] ⚙️ Catalog overrides updated`);
         return merged;
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // RÉFÉRENTIEL DES DOCUMENTS (DOC_CATALOG)
+    // ═══════════════════════════════════════════════════════
+
+    async getDocumentCatalog(): Promise<Record<string, any>> {
+        const settings = await this.prisma.systemSettings.findUnique({ where: { id: 'GLOBAL' } });
+        if (!settings || !settings.documentCatalog || settings.documentCatalog === '{}') {
+            // Fallback: Si vide, on pourrait initialiser depuis DocumentTemplates.ts
+            // Mais pour l'instant on retourne un objet vide ou on attend l'init manuelle
+            return {};
+        }
+        try {
+            return JSON.parse(settings.documentCatalog);
+        } catch {
+            return {};
+        }
+    }
+
+    async updateDocumentCatalog(catalog: Record<string, any>): Promise<Record<string, any>> {
+        await this.prisma.systemSettings.update({
+            where: { id: 'GLOBAL' },
+            data: { documentCatalog: JSON.stringify(catalog) }
+        });
+
+        console.log(`[Settings] 📂 Document catalog updated (${Object.keys(catalog).length} docs)`);
+        return catalog;
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // MAPPAGE SERVICES <-> PIÈCES (SERVICE_TEMPLATES)
+    // ═══════════════════════════════════════════════════════
+
+    async getServiceTemplates(): Promise<Record<string, string[]>> {
+        const settings = await this.prisma.systemSettings.findUnique({ where: { id: 'GLOBAL' } });
+        if (!settings || !settings.serviceTemplates || settings.serviceTemplates === '{}') {
+            return {};
+        }
+        try {
+            return JSON.parse(settings.serviceTemplates);
+        } catch {
+            return {};
+        }
+    }
+
+    async updateServiceTemplates(templates: Record<string, string[]>): Promise<Record<string, string[]>> {
+        await this.prisma.systemSettings.update({
+            where: { id: 'GLOBAL' },
+            data: { serviceTemplates: JSON.stringify(templates) }
+        });
+
+        console.log(`[Settings] 🔗 Service templates updated (${Object.keys(templates).length} services mapped)`);
+        return templates;
     }
 }
 

@@ -353,10 +353,192 @@ const ConditionBuilder: React.FC<ConditionBuilderProps> = ({ condition, onChange
     );
 };
 
+// ============================================
+// SANDBOX COMPONENT
+// ============================================
+
+interface SandboxTabProps {
+    rulesMap: Record<string, ProcedureRule[]>;
+    thresholds: any;
+}
+
+const SandboxTab: React.FC<SandboxTabProps> = ({ rulesMap, thresholds }) => {
+    const [profile, setProfile] = useState<any>({
+        identity: { age: 30, nationality_group: 'NON_UE', born_in_france: false },
+        timeline: { years_continuous_residence: 5, age_at_entry: 25, resides_in_france: true },
+        admin: { current_visa_type: 'TALENT', entered_legally: true, has_valid_visa_or_permit: true },
+        family: { marriage_duration_years: 0, has_french_child: false },
+        work: { salary_monthly_gross: 3000, has_work_authorization: true },
+        financial: { resources_stable_sufficient: true },
+        integration: { french_level: 'B1' },
+        civic: { clean_criminal_record: true, no_expulsion_order: true },
+    });
+
+    const [results, setResults] = useState<ProcedureRule[]>([]);
+    const [evaluating, setEvaluating] = useState(false);
+    const [activeCat, setActiveCat] = useState('sejour');
+
+    const runSimulation = async () => {
+        setEvaluating(true);
+        try {
+            const matched = await EligibilityStore.evaluateEligibility(profile, activeCat);
+            setResults(matched);
+        } catch (err) {
+            console.error(err);
+        }
+        setEvaluating(false);
+    };
+
+    const updateProfile = (path: string, val: any) => {
+        const [section, field] = path.split('.');
+        setProfile((prev: any) => ({
+            ...prev,
+            [section]: { ...prev[section], [field]: val }
+        }));
+    };
+
+    return (
+        <div className="flex gap-6 h-[calc(100vh-250px)] overflow-hidden">
+            {/* Formulaire Profile */}
+            <div className="w-1/3 bg-white rounded-3xl border border-slate-200 shadow-sm flex flex-col overflow-hidden">
+                <div className="p-4 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+                    <h3 className="font-black text-slate-800 flex items-center gap-2">
+                        <User size={18} className="text-indigo-600" />
+                        Profil du Candidat
+                    </h3>
+                    <button
+                        onClick={() => window.location.reload()} // Quick reset
+                        className="text-xs font-bold text-slate-400 hover:text-indigo-600 transition-colors"
+                    >
+                        Réinitialiser
+                    </button>
+                </div>
+                <div className="flex-1 overflow-auto p-6 space-y-6">
+                    {VARIABLE_GROUPS.map(group => (
+                        <div key={group.label} className="space-y-3">
+                            <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-widest border-b border-slate-50 pb-1">
+                                {group.label}
+                            </h4>
+                            <div className="space-y-2">
+                                {Object.entries(VARIABLE_LABELS)
+                                    .filter(([key]) => group.prefix.some(p => key.startsWith(p)))
+                                    .map(([key, label]) => {
+                                        const [section, field] = key.split('.');
+                                        const currentVal = profile[section]?.[field];
+                                        if (currentVal === undefined) return null;
+
+                                        return (
+                                            <div key={key} className="flex flex-col gap-1">
+                                                <label className="text-[11px] font-bold text-slate-500">{label}</label>
+                                                {typeof currentVal === 'boolean' ? (
+                                                    <div className="flex bg-slate-100 p-1 rounded-lg w-fit">
+                                                        <button
+                                                            onClick={() => updateProfile(key, true)}
+                                                            className={`px-3 py-1 text-[10px] font-black rounded ${currentVal ? 'bg-white shadow text-indigo-600' : 'text-slate-400'}`}
+                                                        >
+                                                            OUI
+                                                        </button>
+                                                        <button
+                                                            onClick={() => updateProfile(key, false)}
+                                                            className={`px-3 py-1 text-[10px] font-black rounded ${!currentVal ? 'bg-white shadow text-red-600' : 'text-slate-400'}`}
+                                                        >
+                                                            NON
+                                                        </button>
+                                                    </div>
+                                                ) : (
+                                                    <input
+                                                        type={typeof currentVal === 'number' ? 'number' : 'text'}
+                                                        value={currentVal}
+                                                        onChange={(e) => updateProfile(key, typeof currentVal === 'number' ? parseFloat(e.target.value) : e.target.value)}
+                                                        className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold"
+                                                    />
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            {/* Résultats Simulation */}
+            <div className="flex-1 flex flex-col gap-4 overflow-hidden">
+                <div className="bg-indigo-900 rounded-3xl p-6 text-white shadow-xl flex items-center justify-between shrink-0">
+                    <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center text-emerald-400">
+                            <Brain size={24} />
+                        </div>
+                        <div>
+                            <h3 className="text-xl font-black">Simulation en Temps Réel</h3>
+                            <p className="text-white/60 text-sm font-medium">Testez l'éligibilité pour les règles de la catégorie sélectionnée.</p>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                        <select
+                            value={activeCat}
+                            onChange={(e) => setActiveCat(e.target.value)}
+                            className="bg-white/10 border border-white/20 rounded-xl px-4 py-2 text-sm font-bold text-white outline-none"
+                        >
+                            <option value="sejour" className="text-slate-900">🛂 Séjour</option>
+                            <option value="naturalisation" className="text-slate-900">🇫🇷 Nat.</option>
+                            <option value="family" className="text-slate-900">👨‍👩‍👧 Famille</option>
+                        </select>
+
+                        <button
+                            onClick={runSimulation}
+                            disabled={evaluating}
+                            className="px-6 py-3 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white rounded-xl font-black flex items-center gap-2 transition-all shadow-lg shadow-emerald-900/20 active:scale-95"
+                        >
+                            {evaluating ? <RotateCcw size={18} className="animate-spin" /> : <Zap size={18} />}
+                            {evaluating ? 'ANALYSE...' : 'SIMULER'}
+                        </button>
+                    </div>
+                </div>
+
+                <div className="flex-1 bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
+                    <div className="p-4 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+                        <h3 className="font-black text-slate-800 flex items-center gap-2 text-sm">
+                            <Binary size={18} className="text-indigo-600" />
+                            Règles Matchées ({results.length})
+                        </h3>
+                    </div>
+                    <div className="flex-1 overflow-auto p-6 space-y-3">
+                        {results.length === 0 && !evaluating && (
+                            <div className="h-full flex flex-col items-center justify-center text-slate-400 italic">
+                                <Search size={48} className="mb-4 opacity-20" />
+                                <p>Cliquez sur "SIMULER" pour voir le résultat.</p>
+                                <p className="text-xs">Aucune règle matchée pour le moment avec ce profil.</p>
+                            </div>
+                        )}
+
+                        {results.map(rule => (
+                            <div key={rule.id} className="p-4 bg-emerald-50 border-l-4 border-emerald-500 rounded-r-xl flex items-center justify-between">
+                                <div>
+                                    <h4 className="font-black text-emerald-900 text-sm">{rule.name}</h4>
+                                    <p className="text-[10px] text-emerald-700 font-mono uppercase opacity-60">{rule.id}</p>
+                                </div>
+                                <div className="px-3 py-1 bg-white rounded-full text-emerald-600 text-[10px] font-black border border-emerald-100 shadow-sm">
+                                    MATCH !
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    <div className="p-4 bg-slate-50 border-t border-slate-100 text-[10px] text-slate-400 font-medium">
+                        💡 Les règles sont triées par priorité. La règle avec la priorité la plus basse (souvent 1) est celle qui prévaut.
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 export default function EligibilityConfigPanel() {
     const [thresholds, setThresholds] = useState<any>(null);
     const [rulesMap, setRulesMap] = useState<Record<string, ProcedureRule[]>>({});
-    const [category, setCategory] = useState<'thresholds' | 'rules' | 'audit' | 'diagnostic'>('thresholds');
+    const [category, setCategory] = useState<'thresholds' | 'rules' | 'audit' | 'diagnostic' | 'sandbox'>('thresholds');
     const [subCategory, setSubCategory] = useState<string>('sejour');
     const [showNotification, setShowNotification] = useState(false);
     const [notificationMessage, setNotificationMessage] = useState('');
@@ -487,34 +669,45 @@ export default function EligibilityConfigPanel() {
                 <div className="flex bg-white p-1 rounded-xl shadow-sm border border-slate-200">
                     <button
                         onClick={() => setCategory('thresholds')}
-                        className={`px-4 py-2 rounded-lg font-bold text-sm transition-all ${category === 'thresholds' ? 'bg-indigo-600 text-white' : 'text-slate-600 hover:text-slate-900'
+                        className={`px-4 py-2 rounded-lg font-bold text-sm transition-all ${category === 'thresholds' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-600 hover:text-slate-900'
                             }`}
                     >
                         💰 Seuils
                     </button>
                     <button
                         onClick={() => setCategory('rules')}
-                        className={`px-4 py-2 rounded-lg font-bold text-sm transition-all ${category === 'rules' ? 'bg-indigo-600 text-white' : 'text-slate-600 hover:text-slate-900'
+                        className={`px-4 py-2 rounded-lg font-bold text-sm transition-all ${category === 'rules' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-600 hover:text-slate-900'
                             }`}
                     >
                         🧠 Règles
                     </button>
                     <button
+                        onClick={() => setCategory('sandbox')}
+                        className={`px-4 py-2 rounded-lg font-bold text-sm transition-all flex items-center gap-1.5 ${category === 'sandbox' ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-600 hover:text-slate-900'
+                            }`}
+                    >
+                        <Zap size={16} /> Bac à sable
+                    </button>
+                    <button
                         onClick={() => { setCategory('audit'); loadAuditLog(); }}
-                        className={`px-4 py-2 rounded-lg font-bold text-sm transition-all flex items-center gap-1.5 ${category === 'audit' ? 'bg-indigo-600 text-white' : 'text-slate-600 hover:text-slate-900'
+                        className={`px-4 py-2 rounded-lg font-bold text-sm transition-all flex items-center gap-1.5 ${category === 'audit' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-600 hover:text-slate-900'
                             }`}
                     >
                         <History size={16} /> Audit
                     </button>
                     <button
                         onClick={() => { setCategory('diagnostic'); loadDiagnostic(); }}
-                        className={`px-4 py-2 rounded-lg font-bold text-sm transition-all ${category === 'diagnostic' ? 'bg-indigo-600 text-white' : 'text-slate-600 hover:text-slate-900'
+                        className={`px-4 py-2 rounded-lg font-bold text-sm transition-all ${category === 'diagnostic' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-600 hover:text-slate-900'
                             }`}
                     >
                         🩺 Diagnostic
                     </button>
                 </div>
             </div>
+
+            {category === 'sandbox' && (
+                <SandboxTab rulesMap={rulesMap} thresholds={thresholds} />
+            )}
 
             {category === 'thresholds' && (
                 <div className="space-y-6 max-w-4xl">

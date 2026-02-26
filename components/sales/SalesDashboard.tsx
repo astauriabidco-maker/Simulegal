@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { SalesStore, Prospect, ProspectNote, ProspectStatus, AppointmentInfo } from '../../services/SalesStore';
 import CallCockpit from './CallCockpit';
 import {
@@ -124,7 +124,20 @@ function ServicePriceDisplay({ serviceId, fetchPrice }: {
 
 export default function SalesDashboard() {
     const [prospects, setProspects] = useState<Prospect[]>([]);
-    const [viewMode, setViewMode] = useState<'KANBAN' | 'ANALYTICS'>('KANBAN');
+    const searchParams = useSearchParams();
+    const initialView = searchParams.get('view')?.toUpperCase() as any;
+
+    const [viewMode, setViewMode] = useState<'KANBAN' | 'ANALYTICS'>(
+        ['KANBAN', 'ANALYTICS'].includes(initialView) ? initialView : 'KANBAN'
+    );
+
+    useEffect(() => {
+        const view = searchParams.get('view')?.toUpperCase() as any;
+        if (['KANBAN', 'ANALYTICS'].includes(view)) {
+            setViewMode(view);
+        }
+    }, [searchParams]);
+
     const [isLoading, setIsLoading] = useState(true);
     const [selectedProspect, setSelectedProspect] = useState<Prospect | null>(null);
     const [showImportModal, setShowImportModal] = useState(false);

@@ -27,9 +27,11 @@ import {
     AlertTriangle,
     Lightbulb,
     ShieldAlert,
-    TrendingUp
+    TrendingUp,
+    Mail
 } from 'lucide-react';
 import EligibilityStore from '../../services/EligibilityStore';
+import { SalesStore, Prospect } from '../../services/SalesStore';
 import { RuleCondition, ProcedureRule } from '../../types';
 import { DOC_CATALOG } from '../../config/DocumentTemplates';
 
@@ -72,6 +74,111 @@ export default function LegalMatrixModule() {
     const [showGraph, setShowGraph] = useState(false);
     const [selectedProcedureId, setSelectedProcedureId] = useState<string | null>(null);
     const [showAlerts, setShowAlerts] = useState(false);
+    const [showEvaluator, setShowEvaluator] = useState(false);
+    const [reportText, setReportText] = useState<string | null>(null);
+    const [prospects, setProspects] = useState<Prospect[]>([]);
+    const [selectedProspectId, setSelectedProspectId] = useState<string | null>(null);
+    const [isSavingToCRM, setIsSavingToCRM] = useState(false);
+
+    // ─── Profil Client pour Évaluation Temps Réel ─────────
+    const [profile, setProfile] = useState<{
+        'identity.age'?: number;
+        'identity.nationality_group'?: string;
+        'work.annual_gross_salary'?: number;
+        'timeline.years_continuous_residence'?: number;
+        'integration.french_level'?: string;
+        'civic.clean_criminal_record'?: boolean;
+        'civic.no_expulsion_order'?: boolean;
+        'admin.has_valid_visa_or_permit'?: boolean;
+        'family.marriage_duration_years'?: number;
+        'family.is_polygamous'?: boolean;
+    }>({
+        'identity.age': 25,
+        'civic.clean_criminal_record': true,
+        'civic.no_expulsion_order': true,
+        'family.is_polygamous': false,
+        'admin.has_valid_visa_or_permit': true,
+    });
+
+    // ─── Moteur d'Évaluation de Condition (Strict) ────────
+    const evaluateCondition = (condition: RuleCondition, data: any): {
+        result: boolean;
+        missingVars: string[];
+        failingVars: string[];
+    } => {
+        if (!condition) return { result: true, missingVars: [], failingVars: [] };
+
+        if (condition.AND) {
+            const results = condition.AND.map(c => evaluateCondition(c, data));
+            const failing = results.flatMap(r => r.failingVars);
+            const missing = results.flatMap(r => r.missingVars);
+            const allTrue = results.every(r => r.result) && missing.length === 0 && failing.length === 0;
+            return { result: allTrue, missingVars: missing, failingVars: failing };
+        }
+
+        if (condition.OR) {
+            const results = condition.OR.map(c => evaluateCondition(c, data));
+            const existsSuccess = results.find(r => r.result && r.missingVars.length === 0 && r.failingVars.length === 0);
+
+            if (existsSuccess) {
+                return { result: true, missingVars: [], failingVars: [] };
+            }
+
+            // Si aucun succès strict, on cherche si c'est "potentiellement" vrai
+            const failing = results.flatMap(r => r.failingVars);
+            const missing = results.flatMap(r => r.missingVars);
+            return { result: false, missingVars: missing, failingVars: failing };
+        }
+
+        if (condition.var) {
+            const val = data[condition.var];
+            // SI VARIABLE INCONNUE : C'est une information manquante
+            if (val === undefined || val === '') {
+                return { result: false, missingVars: [condition.var], failingVars: [] };
+            }
+
+            let success = false;
+            let target = condition.val;
+
+            if (typeof target === 'string' && target.startsWith('@config:')) {
+                const path = target.replace('@config:', '');
+                const config = EligibilityStore.getThresholds();
+                target = path.split('.').reduce((obj: any, key: string) => obj && obj[key], config);
+            }
+
+            const frenchWeights: Record<string, number> = { 'A1': 1, 'A2': 2, 'B1': 3, 'B2': 4, 'C1': 5, 'C2': 6 };
+            const isFrenchComp = condition.var === 'integration.french_level';
+
+            const compare = (v: any, t: any, op: string) => {
+                if (isFrenchComp && frenchWeights[v] && frenchWeights[t]) {
+                    const vW = frenchWeights[v];
+                    const tW = frenchWeights[t];
+                    if (op === 'EQ') return vW === tW;
+                    if (op === 'GTE') return vW >= tW;
+                    if (op === 'LTE') return vW <= tW;
+                }
+                switch (op) {
+                    case 'EQ': return v === t;
+                    case 'NEQ': return v !== t;
+                    case 'GT': return Number(v) > Number(t);
+                    case 'GTE': return Number(v) >= Number(t);
+                    case 'LT': return Number(v) < Number(t);
+                    case 'LTE': return Number(v) <= Number(t);
+                    case 'IN': return Array.isArray(t) && t.includes(v);
+                    default: return true;
+                }
+            };
+
+            success = compare(val, target, condition.op || 'EQ');
+            return {
+                result: success,
+                missingVars: [],
+                failingVars: success ? [] : [condition.var]
+            };
+        }
+
+        return { result: true, missingVars: [], failingVars: [] };
+    };
 
     // ─── Charger TOUTES les catégories ─────────────────────────
     const allProcedures = useMemo(() => {
@@ -102,18 +209,39 @@ export default function LegalMatrixModule() {
     };
 
     const matrixMetadata = useMemo(() => {
-        return allProcedures.map(proc => ({
-            id: proc.id,
-            name: proc.name,
-            variables: extractVariables(proc.conditions),
-            conditionCount: extractConditionCount(proc.conditions),
-            category: proc._category,
-            tier: proc.tier || 'STANDARD',
-            hasDocs: (proc.documents?.length || 0) > 0,
-            duration: proc.duration_years,
-            worksRight: proc.gives_work_right,
-        }));
-    }, [allProcedures]);
+        return allProcedures.map(proc => {
+            const evalResult = evaluateCondition(proc.conditions, profile);
+            const totalVars = extractVariables(proc.conditions);
+
+            // Calcul du status d'éligibilité pour ce profil
+            let eligibilityStatus: 'ELIGIBLE' | 'POTENTIAL' | 'INELIGIBLE' = 'INELIGIBLE';
+
+            if (evalResult.failingVars.length > 0) {
+                // S'il y a un échec flagrant (ex: mauvaise nationalité) -> INELIGIBLE
+                eligibilityStatus = 'INELIGIBLE';
+            } else if (evalResult.missingVars.length === 0 && evalResult.result) {
+                // Si tout est présent et valide -> ELIGIBLE
+                eligibilityStatus = 'ELIGIBLE';
+            } else {
+                // S'il n'y a pas d'échec mais des variables manquantes -> POTENTIAL
+                eligibilityStatus = 'POTENTIAL';
+            }
+
+            return {
+                id: proc.id,
+                name: proc.name,
+                variables: totalVars,
+                conditionCount: extractConditionCount(proc.conditions),
+                category: proc._category,
+                tier: proc.tier || 'STANDARD',
+                hasDocs: (proc.documents?.length || 0) > 0,
+                duration: proc.duration_years,
+                worksRight: proc.gives_work_right,
+                eval: evalResult,
+                status: eligibilityStatus
+            };
+        });
+    }, [allProcedures, profile]);
 
     // ─── Filtrage ──────────────────────────────────────────────
     const filteredProcedures = useMemo(() => {
@@ -306,6 +434,113 @@ export default function LegalMatrixModule() {
         link.click();
     };
 
+    // ─── CRM Connection ───────────────────────────────────────
+    const loadProspects = async () => {
+        const { data } = await SalesStore.getProspects(1, 100);
+        setProspects(data);
+    };
+
+    const handleProspectSelect = (id: string) => {
+        setSelectedProspectId(id);
+        const p = prospects.find(x => x.id === id);
+        if (p) {
+            // 1. Détection de la nationalité via le pays
+            const countryGroup = (p.country === 'France' || !p.country) ? 'EU' : 'NON_EU';
+
+            // 2. Restauration du profil complet si une simulation précédente existe
+            const prevResult = p.eligibilityResult as any;
+            if (prevResult && prevResult.profileSnapshot) {
+                setProfile({
+                    ...profile,
+                    ...prevResult.profileSnapshot,
+                });
+            } else {
+                setProfile(prev => ({
+                    ...prev,
+                    'identity.nationality_group': countryGroup,
+                }));
+            }
+        }
+    };
+
+    const handleSaveToCRM = async () => {
+        if (!selectedProspectId) return;
+        setIsSavingToCRM(true);
+        const eligible = matrixMetadata.filter(m => m.status === 'ELIGIBLE');
+        const potential = matrixMetadata.filter(m => m.status === 'POTENTIAL');
+
+        try {
+            await SalesStore.saveEligibilityResult(selectedProspectId, {
+                isEligible: eligible.length > 0,
+                matchedProcedures: [
+                    ...eligible.map(m => m.id),
+                    ...potential.map(m => m.id)
+                ],
+                evaluatedAt: new Date().toISOString(),
+                evaluatedBy: 'IA_MATRIX',
+                profileSnapshot: profile
+            } as any);
+
+            // Note ultra-détaillée pour le CRM
+            let noteText = `📊 ÉVALUATION JURIDIQUE IA\n`;
+            noteText += `----------------------------\n`;
+            noteText += `✅ Éligible : ${eligible.length > 0 ? eligible.map(e => e.name).join(', ') : 'Aucune'}\n`;
+            noteText += `🟡 Potentiel : ${potential.length > 0 ? potential.map(e => e.name).join(', ') : 'Aucun'}\n`;
+            if (potential.length > 0) {
+                const globalMissing = Array.from(new Set(potential.flatMap(p => p.eval.missingVars)));
+                const labels = globalMissing.map(v => CRITERIA.find(c => c.id === v)?.label || v);
+                noteText += `⚠️ Manquant : ${labels.join(', ')}\n`;
+            }
+            noteText += `----------------------------\n`;
+            noteText += `Profil : Salaire ${profile['work.annual_gross_salary'] || 0}€, ${profile['timeline.years_continuous_residence'] || 0} ans en France, Français ${profile['integration.french_level'] || 'N/A'}`;
+
+            await SalesStore.addNote(selectedProspectId, noteText);
+
+            alert('✅ Dossier CRM mis à jour avec les résultats de simulation.');
+        } catch (e) {
+            alert('❌ Erreur lors de la sauvegarde.');
+        } finally {
+            setIsSavingToCRM(false);
+        }
+    };
+
+    // ─── Génération Rapport Synthèse ──────────────────────────
+    const generateSynthesisReport = () => {
+        const eligible = matrixMetadata.filter(m => m.status === 'ELIGIBLE');
+        const potential = matrixMetadata.filter(m => m.status === 'POTENTIAL');
+
+        let report = `OBJET : Synthèse de votre étude d'éligibilité juridique - SimuLegal\n\n`;
+        report += `Bonjour,\n\nSuite à notre analyse de votre profil, voici les résultats concernant vos possibilités de séjour en France :\n\n`;
+
+        if (eligible.length > 0) {
+            report += `✅ PROCÉDURES ACCESSIBLES IMMÉDIATEMENT :\n`;
+            eligible.forEach(p => {
+                report += `- ${p.name}\n`;
+            });
+            report += `\n`;
+        }
+
+        if (potential.length > 0) {
+            report += `🟡 PROCÉDURES POTENTIELLES (À COURT TERME) :\n`;
+            potential.forEach(p => {
+                const missingLabels = p.eval.missingVars.map(v => CRITERIA.find(c => c.id === v)?.label || v.split('.').pop());
+                report += `- ${p.name} (Bloqué par : ${missingLabels.join(', ')})\n`;
+            });
+            report += `\n`;
+        }
+
+        report += `CONSEILS PERSONNALISÉS :\n`;
+        if (potential.length > 0) {
+            report += `- Nous vous recommandons de vous concentrer sur la régularisation des critères bloquants listés ci-dessus.\n`;
+        }
+        report += `- Préparez dès maintenant vos justificatifs pour les procédures identifiées comme accessibles.\n\n`;
+
+        report += `Cordialement,\nL'équipe SimuLegal`;
+
+        setReportText(report);
+        navigator.clipboard.writeText(report);
+    };
+
     // ─── Alert colors ─────────────────────────────────────────
     const alertStyle = (type: string) => {
         switch (type) {
@@ -329,7 +564,7 @@ export default function LegalMatrixModule() {
         <div className="flex flex-col h-full bg-slate-50 animate-in fade-in duration-500">
             {/* IA Alerts Panel (slide-over) */}
             {showAlerts && (
-                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex justify-end" onClick={() => setShowAlerts(false)}>
+                <div className="fixed inset-0 bg-slate-900/10 z-50 flex justify-end" onClick={() => setShowAlerts(false)}>
                     <div className="w-full max-w-lg bg-white h-full overflow-auto p-8 shadow-2xl animate-in slide-in-from-right duration-300"
                         onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-between mb-6">
@@ -388,6 +623,225 @@ export default function LegalMatrixModule() {
                                     </div>
                                 );
                             })}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Profile Evaluator Panel (slide-over) */}
+            {showEvaluator && (
+                <div className="fixed inset-0 bg-transparent z-50 flex justify-end pointer-events-none" onClick={() => setShowEvaluator(false)}>
+                    <div className="w-full max-w-lg bg-white h-full overflow-auto p-8 shadow-2xl animate-in slide-in-from-right duration-300 pointer-events-auto"
+                        onClick={e => { e.stopPropagation(); if (prospects.length === 0) loadProspects(); }}>
+                        <div className="flex items-center justify-between mb-8">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-emerald-600 rounded-2xl flex items-center justify-center text-white">
+                                    <Search size={20} />
+                                </div>
+                                <div>
+                                    <h3 className="text-lg font-black text-slate-900">Simulateur Connecté</h3>
+                                    <p className="text-xs text-slate-400 font-bold">Lien direct avec le CRM Client</p>
+                                </div>
+                            </div>
+                            <button onClick={() => setShowEvaluator(false)} className="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center hover:bg-slate-200">
+                                <X size={16} />
+                            </button>
+                        </div>
+
+                        <div className="space-y-6 pb-20">
+                            {/* CRM Selector */}
+                            <div className="p-4 bg-indigo-50 rounded-2xl border border-indigo-100 mb-6">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-indigo-400 mb-2 block">Dossier CRM (Optionnel)</label>
+                                <select
+                                    className="w-full p-3 bg-white border border-indigo-200 rounded-xl font-bold text-xs"
+                                    value={selectedProspectId || ''}
+                                    onChange={(e) => handleProspectSelect(e.target.value)}
+                                >
+                                    <option value="">-- Nouveau Profil --</option>
+                                    {prospects.map(p => (
+                                        <option key={p.id} value={p.id}>{p.firstName} {p.lastName} ({p.id})</option>
+                                    ))}
+                                </select>
+                            </div>
+                            {/* Nationality & Age */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Nat. Group</label>
+                                    <select
+                                        className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs outline-none focus:border-indigo-500 transition-all"
+                                        value={profile['identity.nationality_group'] || ''}
+                                        onChange={e => setProfile({ ...profile, 'identity.nationality_group': e.target.value })}
+                                    >
+                                        <option value="">Sélectionner...</option>
+                                        <option value="NON_EU">Hors UE</option>
+                                        <option value="EU">Union Européenne</option>
+                                        <option value="ALGERIAN">Algérien</option>
+                                        <option value="TUNISIAN">Tunisien</option>
+                                        <option value="MOROCCAN">Marocain</option>
+                                        <option value="REFUGEE">Réfugié</option>
+                                    </select>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Âge du client</label>
+                                    <input
+                                        type="number"
+                                        className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs outline-none focus:border-indigo-500 transition-all"
+                                        value={profile['identity.age'] || ''}
+                                        onChange={e => setProfile({ ...profile, 'identity.age': Number(e.target.value) })}
+                                        placeholder="Ex: 28"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Current Status */}
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Titre / Visa Actuel</label>
+                                <select
+                                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs outline-none focus:border-indigo-500 transition-all"
+                                    value={profile['admin.has_valid_visa_or_permit'] ? 'VALID' : 'EXPIRED'}
+                                    onChange={e => setProfile({ ...profile, 'admin.has_valid_visa_or_permit': e.target.value === 'VALID' })}
+                                >
+                                    <option value="VALID">Visa / Titre en cours de validité</option>
+                                    <option value="EXPIRED">Sénégal de fait / Expiré</option>
+                                </select>
+                            </div>
+
+                            {/* Salary & Residence */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Salaire Brut Annuel</label>
+                                    <div className="relative">
+                                        <input
+                                            type="number"
+                                            className="w-full p-3 pl-8 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs outline-none"
+                                            value={profile['work.annual_gross_salary'] || ''}
+                                            onChange={e => setProfile({ ...profile, 'work.annual_gross_salary': Number(e.target.value) })}
+                                            placeholder="45000"
+                                        />
+                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">€</span>
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Années en France</label>
+                                    <input
+                                        type="number"
+                                        className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs outline-none"
+                                        value={profile['timeline.years_continuous_residence'] || ''}
+                                        onChange={e => setProfile({ ...profile, 'timeline.years_continuous_residence': Number(e.target.value) })}
+                                        placeholder="Ex: 5"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* French Level */}
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Niveau de Français</label>
+                                <div className="grid grid-cols-5 gap-2">
+                                    {['A1', 'A2', 'B1', 'B2', 'C1'].map(lvl => (
+                                        <button
+                                            key={lvl}
+                                            onClick={() => setProfile({ ...profile, 'integration.french_level': lvl })}
+                                            className={`p-2 rounded-lg text-[10px] font-black transition-all ${profile['integration.french_level'] === lvl ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}`}
+                                        >
+                                            {lvl}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Checklist Situations */}
+                            <div className="space-y-3 pt-4 border-t border-slate-100">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Points de vigilance</label>
+                                <div className="grid grid-cols-1 gap-2">
+                                    {[
+                                        { id: 'civic.clean_criminal_record', label: 'Casier Judiciaire Vierge' },
+                                        { id: 'civic.no_expulsion_order', label: 'Aucune mesure d\'éloignement' },
+                                        { id: 'family.is_polygamous', label: 'Non polygame', reverse: true },
+                                    ].map(item => (
+                                        <button
+                                            key={item.id}
+                                            onClick={() => setProfile({ ...profile, [item.id]: !profile[item.id as keyof typeof profile] })}
+                                            className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${profile[item.id as keyof typeof profile] ? 'bg-emerald-50 border-emerald-100 text-emerald-700' : 'bg-slate-50 border-slate-100 text-slate-400'}`}
+                                        >
+                                            <div className={`w-4 h-4 rounded flex items-center justify-center ${profile[item.id as keyof typeof profile] ? 'bg-emerald-500 text-white' : 'bg-slate-200'}`}>
+                                                {profile[item.id as keyof typeof profile] && <CheckCircle size={12} />}
+                                            </div>
+                                            <span className="text-[11px] font-bold">{item.label}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Reset & Report & CRM Sync */}
+                            <div className="flex flex-col gap-3 pt-4 border-t border-slate-100">
+                                {selectedProspectId && (
+                                    <button
+                                        onClick={handleSaveToCRM}
+                                        disabled={isSavingToCRM}
+                                        className="w-full py-4 bg-emerald-600 text-white rounded-2xl font-black flex items-center justify-center gap-2 hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200 pointer-events-auto disabled:opacity-50"
+                                    >
+                                        {isSavingToCRM ? 'Synchronisation...' : 'Enregistrer dans le CRM Client'}
+                                    </button>
+                                )}
+                                <button
+                                    onClick={generateSynthesisReport}
+                                    className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black flex items-center justify-center gap-2 hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 pointer-events-auto"
+                                >
+                                    <Mail size={18} /> Générer Rapport Client
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setProfile({ 'identity.age': 25, 'civic.clean_criminal_record': true, 'civic.no_expulsion_order': true, 'family.is_polygamous': false, 'admin.has_valid_visa_or_permit': true });
+                                        setSelectedProspectId(null);
+                                    }}
+                                    className="w-full py-2 text-[10px] font-black uppercase text-slate-400 hover:text-red-500 transition-colors pointer-events-auto"
+                                >
+                                    Réinitialiser tout
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Rapport Modal */}
+            {reportText && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[60] flex items-center justify-center p-8 animate-in fade-in duration-300">
+                    <div className="bg-white rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
+                        <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-100">
+                                    <Mail size={20} />
+                                </div>
+                                <h3 className="text-xl font-black text-slate-900">Rapport de Synthèse</h3>
+                            </div>
+                            <button onClick={() => setReportText(null)} className="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center hover:bg-slate-50 transition-all">
+                                <X size={20} />
+                            </button>
+                        </div>
+                        <div className="p-8">
+                            <div className="bg-slate-50 rounded-2xl p-6 border border-slate-200 font-mono text-sm text-slate-700 whitespace-pre-wrap max-h-[400px] overflow-auto mb-6">
+                                {reportText}
+                            </div>
+                            <div className="flex items-center gap-4">
+                                <button
+                                    onClick={() => {
+                                        window.open(`mailto:?subject=Etude d'éligibilité SimuLegal&body=${encodeURIComponent(reportText)}`);
+                                    }}
+                                    className="flex-1 py-4 bg-indigo-600 text-white rounded-2xl font-black hover:bg-indigo-700 transition-all"
+                                >
+                                    Ouvrir dans Mail
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        navigator.clipboard.writeText(reportText);
+                                        setReportText(null);
+                                    }}
+                                    className="flex-1 py-4 bg-slate-900 text-white rounded-2xl font-black hover:bg-slate-800 transition-all"
+                                >
+                                    Copier & Fermer
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -502,6 +956,11 @@ export default function LegalMatrixModule() {
                 </div>
 
                 <div className="flex items-center gap-2">
+                    <button onClick={() => setShowEvaluator(true)}
+                        className={`px-4 py-3 rounded-2xl font-black flex items-center gap-2 text-xs transition-all active:scale-95 shadow-lg ${Object.keys(profile).length > 2 ? 'bg-emerald-600 text-white shadow-emerald-200' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}`}>
+                        <Search size={18} /> Simulateur Profil
+                        {Object.keys(profile).length > 2 && <span className="w-2 h-2 rounded-full bg-white animate-pulse" />}
+                    </button>
                     <button onClick={() => setShowAlerts(true)}
                         className={`relative px-4 py-3 rounded-2xl font-black flex items-center gap-2 text-xs transition-all active:scale-95 ${iaScore.errors > 0 ? 'bg-red-50 text-red-600 hover:bg-red-100' : iaScore.warnings > 0 ? 'bg-amber-50 text-amber-600 hover:bg-amber-100' : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'}`}>
                         <BrainCircuit size={18} /> Audit IA
@@ -530,12 +989,14 @@ export default function LegalMatrixModule() {
                             <table className="w-full border-separate border-spacing-0">
                                 <thead className="sticky top-0 z-40">
                                     <tr>
-                                        <th className="p-6 text-left bg-slate-800 text-white border-b border-white/10 sticky left-0 z-50 rounded-tl-3xl min-w-[280px]">
+                                        <th className="p-6 text-left bg-slate-800 text-white border-b border-white/10 sticky left-0 z-50 rounded-tl-3xl min-w-[300px]">
                                             <div className="flex items-center gap-3">
                                                 <Grid3X3 size={22} className="text-indigo-400" />
                                                 <div>
-                                                    <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Analyse IA</p>
-                                                    <h3 className="text-lg font-black uppercase tracking-tighter">{filteredProcedures.length} procedures</h3>
+                                                    <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Statut Client</p>
+                                                    <h3 className="text-lg font-black uppercase tracking-tighter">
+                                                        {Object.keys(profile).length > 2 ? 'Evaluation Profil' : 'Matrice Globale'}
+                                                    </h3>
                                                 </div>
                                             </div>
                                         </th>
@@ -553,53 +1014,75 @@ export default function LegalMatrixModule() {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {filteredProcedures.map(proc => (
-                                        <tr key={proc.id}
-                                            onMouseEnter={() => setHoveredRow(proc.id)}
-                                            onMouseLeave={() => setHoveredRow(null)}
-                                            onClick={() => setSelectedProcedureId(proc.id)}
-                                            className={`group transition-all cursor-pointer ${selectedProcedureId === proc.id ? 'bg-indigo-50' : hoveredRow === proc.id ? 'bg-slate-50' : 'bg-white'}`}>
-                                            <td className={`p-4 sticky left-0 z-30 border-r border-slate-50 transition-all ${selectedProcedureId === proc.id ? 'bg-indigo-100/50' : hoveredRow === proc.id ? 'bg-slate-100/80' : 'bg-white'}`}>
-                                                <div className="flex items-center gap-3">
-                                                    <span className={`text-sm ${CATEGORIES.find(c => c.key === proc.category)?.color || 'bg-slate-300'} w-1 h-6 rounded-full`} />
-                                                    <div>
-                                                        <p className={`font-black uppercase tracking-tighter text-xs ${selectedProcedureId === proc.id ? 'text-indigo-600' : 'text-slate-800'}`}>
-                                                            {proc.name}
-                                                        </p>
-                                                        <div className="flex items-center gap-2 mt-0.5">
-                                                            <span className="text-[9px] font-mono text-slate-400">{proc.id}</span>
-                                                            <span className={`text-[8px] font-black px-1.5 py-0.5 rounded-md uppercase ${proc.tier === 'PREMIUM' ? 'bg-amber-100 text-amber-700' : proc.tier === 'FALLBACK' ? 'bg-slate-100 text-slate-400' : 'bg-slate-50 text-slate-400'}`}>
-                                                                {proc.tier}
-                                                            </span>
-                                                            {proc.conditionCount === 0 && (
-                                                                <span className="text-[8px] font-black px-1.5 py-0.5 rounded-md bg-red-100 text-red-600">⚠ 0 COND</span>
-                                                            )}
+                                    {filteredProcedures.map(proc => {
+                                        const isSelected = selectedProcedureId === proc.id;
+                                        const isHovered = hoveredRow === proc.id;
+                                        const profileActive = Object.keys(profile).length > 2;
+
+                                        return (
+                                            <tr key={proc.id}
+                                                onMouseEnter={() => setHoveredRow(proc.id)}
+                                                onMouseLeave={() => setHoveredRow(null)}
+                                                onClick={() => setSelectedProcedureId(proc.id)}
+                                                className={`group transition-all cursor-pointer ${isSelected ? 'bg-indigo-50' : isHovered ? 'bg-slate-50' : 'bg-white'}`}>
+                                                <td className={`p-4 sticky left-0 z-30 border-r border-slate-50 transition-all ${isSelected ? 'bg-indigo-100/50' : isHovered ? 'bg-slate-100/80' : 'bg-white'}`}>
+                                                    <div className="flex items-center gap-3">
+                                                        <div className={`w-1 h-10 rounded-full ${profileActive
+                                                            ? (proc.status === 'ELIGIBLE' ? 'bg-emerald-500' : proc.status === 'POTENTIAL' ? 'bg-amber-500' : 'bg-red-500')
+                                                            : (CATEGORIES.find(c => c.key === proc.category)?.color || 'bg-slate-300')
+                                                            }`} />
+                                                        <div className="flex-1">
+                                                            <div className="flex items-center justify-between">
+                                                                <p className={`font-black uppercase tracking-tighter text-xs ${isSelected ? 'text-indigo-600' : 'text-slate-800'}`}>
+                                                                    {proc.name}
+                                                                </p>
+                                                                {profileActive && (
+                                                                    <span className={`text-[8px] font-black px-1.5 py-0.5 rounded-md ${proc.status === 'ELIGIBLE' ? 'bg-emerald-100 text-emerald-700' :
+                                                                        proc.status === 'POTENTIAL' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'
+                                                                        }`}>
+                                                                        {proc.status}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <div className="flex items-center gap-2 mt-0.5">
+                                                                <span className="text-[9px] font-mono text-slate-400">{proc.id}</span>
+                                                                {proc.conditionCount === 0 && <span className="text-[8px] font-black text-red-600">⚠ ERREUR</span>}
+                                                            </div>
                                                         </div>
                                                     </div>
-                                                </div>
-                                            </td>
+                                                </td>
 
-                                            {CRITERIA.map(c => {
-                                                const isActive = proc.variables.has(c.id);
-                                                const isCrossed = hoveredRow === proc.id || hoveredCol === c.id;
-                                                return (
-                                                    <td key={c.id}
-                                                        onMouseEnter={() => setHoveredCol(c.id)}
-                                                        className={`p-3 transition-all text-center relative ${isCrossed ? (isActive ? 'bg-indigo-100/40' : 'bg-slate-50/50') : ''}`}>
-                                                        <div className="flex justify-center items-center">
-                                                            {isActive ? (
-                                                                <div className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all shadow-sm ${selectedProcedureId === proc.id ? 'bg-indigo-600 text-white' : isCrossed ? 'bg-indigo-500 text-white scale-110' : 'bg-indigo-50 text-indigo-400'}`}>
-                                                                    <CheckCircle size={16} />
-                                                                </div>
-                                                            ) : (
-                                                                <div className={`w-1.5 h-1.5 rounded-full transition-all ${isCrossed ? 'bg-slate-300 scale-150' : 'bg-slate-100 opacity-50'}`} />
-                                                            )}
-                                                        </div>
-                                                    </td>
-                                                );
-                                            })}
-                                        </tr>
-                                    ))}
+                                                {CRITERIA.map(c => {
+                                                    const isActive = proc.variables.has(c.id);
+                                                    const isCrossed = hoveredRow === proc.id || hoveredCol === c.id;
+                                                    const isBlocker = profileActive && proc.eval.failingVars.includes(c.id);
+                                                    const isMissing = profileActive && proc.eval.missingVars.includes(c.id);
+                                                    const isValid = profileActive && isActive && !isBlocker && !isMissing;
+
+                                                    return (
+                                                        <td key={c.id}
+                                                            onMouseEnter={() => setHoveredCol(c.id)}
+                                                            className={`p-3 transition-all text-center relative ${isCrossed ? (isActive ? 'bg-indigo-100/40' : 'bg-slate-50/50') : ''}`}>
+                                                            <div className="flex justify-center items-center">
+                                                                {isActive ? (
+                                                                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all shadow-sm ${profileActive
+                                                                        ? (isValid ? 'bg-emerald-500 text-white shadow-emerald-100' :
+                                                                            isBlocker ? 'bg-red-500 text-white animate-pulse' :
+                                                                                'bg-amber-100 text-amber-500 border border-amber-200')
+                                                                        : (isSelected ? 'bg-indigo-600 text-white' : isCrossed ? 'bg-indigo-500 text-white scale-110' : 'bg-indigo-50 text-indigo-400')
+                                                                        }`}>
+                                                                        {isBlocker ? <X size={16} /> : isMissing ? <Info size={14} /> : <CheckCircle size={16} />}
+                                                                    </div>
+                                                                ) : (
+                                                                    <div className={`w-1.5 h-1.5 rounded-full transition-all ${isCrossed ? 'bg-slate-300 scale-150' : 'bg-slate-100 opacity-50'}`} />
+                                                                )}
+                                                            </div>
+                                                        </td>
+                                                    );
+                                                })}
+                                            </tr>
+                                        );
+                                    })}
                                 </tbody>
                             </table>
                         </div>

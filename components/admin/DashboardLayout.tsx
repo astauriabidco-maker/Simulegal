@@ -29,7 +29,10 @@ import {
     UserCog,
     Gauge,
     Newspaper,
-    LayoutGrid
+    LayoutGrid,
+    Brain,
+    Zap,
+    FileStack
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePermission } from '../../hooks/usePermission';
@@ -65,14 +68,49 @@ const DEFAULT_MENU: MenuItem[] = [
 
     // ─── BLOC 2: ACTIVITÉ ─── Opérations quotidiennes (agences + siège)
     { id: 'calendar', label: 'Agenda & RDV', icon: <CalendarIcon size={20} />, href: '/admin/calendar', permission: 'calendar.view', category: 'ACTIVITE' },
-    { id: 'sales', label: 'Pipeline Ventes', icon: <TrendingUp size={20} />, href: '/admin/sales', permission: 'sales.view', category: 'ACTIVITE' },
+    {
+        id: 'sales',
+        label: 'Pipeline Ventes',
+        icon: <TrendingUp size={20} />,
+        href: '/admin/sales',
+        permission: 'sales.view',
+        category: 'ACTIVITE',
+        subItems: [
+            { id: 'sales-kanban', label: 'Vue Kanban', icon: <LayoutGrid size={16} />, href: '/admin/sales?view=kanban', permission: 'sales.view' },
+            { id: 'sales-analytics', label: 'Analytiques', icon: <BarChart3 size={16} />, href: '/admin/sales?view=analytics', permission: 'sales.view' },
+        ]
+    },
     { id: 'sales-tracking', label: 'Suivi Commercial', icon: <BarChart3 size={20} />, href: '/admin/sales-tracking', permission: 'sales.tracking', category: 'ACTIVITE' },
     { id: 'dossiers', label: 'Dossiers Clients', icon: <FolderKanban size={20} />, href: '/admin/dossiers', permission: 'crm.view_agency', category: 'ACTIVITE' },
     { id: 'inbox', label: 'Messagerie', icon: <MessageSquare size={20} />, href: '/admin/inbox', permission: 'inbox.view', category: 'ACTIVITE' },
-    { id: 'blog', label: 'Blog & Insights', icon: <Newspaper size={20} />, href: '/admin/blog', permission: 'blog.view', category: 'ACTIVITE' },
+    {
+        id: 'blog',
+        label: 'Blog & Insights',
+        icon: <Newspaper size={20} />,
+        href: '/admin/blog',
+        permission: 'blog.view',
+        category: 'ACTIVITE',
+        subItems: [
+            { id: 'blog-articles', label: 'Articles', icon: <FileText size={16} />, href: '/admin/blog?tab=articles', permission: 'blog.view' },
+            { id: 'blog-comments', label: 'Modération', icon: <MessageSquare size={16} />, href: '/admin/blog?tab=comments', permission: 'blog.view' },
+            { id: 'blog-veille', label: 'Veille IA', icon: <Brain size={16} />, href: '/admin/blog?tab=veille', permission: 'blog.view' },
+        ]
+    },
 
     // ─── BLOC 3: RÉSEAU & FRANCHISE ─── Gestion du réseau d'agences
-    { id: 'franchise-leads', label: 'CRM Franchise', icon: <Handshake size={20} />, href: '/admin/franchise-leads', permission: 'franchise.manage', category: 'RESEAU' },
+    {
+        id: 'franchise-leads',
+        label: 'CRM Franchise',
+        icon: <Handshake size={20} />,
+        href: '/admin/franchise-leads',
+        permission: 'franchise.manage',
+        category: 'RESEAU',
+        subItems: [
+            { id: 'franchise-leads-kanban', label: 'Pipeline', icon: <TrendingUp size={16} />, href: '/admin/franchise-leads?view=kanban', permission: 'franchise.manage' },
+            { id: 'franchise-leads-analytics', label: 'Analytiques', icon: <BarChart3 size={16} />, href: '/admin/franchise-leads?view=analytics', permission: 'franchise.manage' },
+            { id: 'franchise-leads-map', label: 'Carte Implantation', icon: <Eye size={16} />, href: '/admin/franchise-leads?view=map', permission: 'franchise.manage' },
+        ]
+    },
     { id: 'network', label: 'Agences & Points', icon: <Network size={20} />, href: '/admin/network', permission: 'network.manage', category: 'RESEAU' },
     { id: 'devices', label: 'Flotte Terminaux', icon: <Tablet size={20} />, href: '/admin/devices', permission: 'fleet.manage', category: 'RESEAU' },
     { id: 'commissions', label: 'Commissions Réseau', icon: <ArrowRightLeft size={20} />, href: '/admin/finances/payouts', permission: 'finance.view_global', category: 'RESEAU' },
@@ -93,9 +131,31 @@ const DEFAULT_MENU: MenuItem[] = [
     },
 
     // ─── BLOC 5: ADMINISTRATION ─── Configuration & système
-    { id: 'staff', label: 'Utilisateurs', icon: <UserCog size={20} />, href: '/admin/staff', permission: 'users.manage', category: 'ADMIN' },
-    { id: 'roles', label: 'Rôles & Droits', icon: <Shield size={20} />, href: '/admin/rbac', permission: 'roles.manage', category: 'ADMIN' },
-    { id: 'audit-veille', label: 'Audit & Veille', icon: <Eye size={20} />, href: '/admin/audit', permission: 'audit.view', category: 'ADMIN' },
+    {
+        id: 'management',
+        label: 'Équipe & Droits',
+        icon: <UserCog size={20} />,
+        permission: 'users.manage',
+        category: 'ADMIN',
+        subItems: [
+            { id: 'management-staff', label: 'Gestion Utilisateurs', icon: <Users size={16} />, href: '/admin/staff', permission: 'users.manage' },
+            { id: 'management-roles', label: 'Rôles & Permissions', icon: <Shield size={16} />, href: '/admin/rbac', permission: 'roles.manage' },
+        ]
+    },
+    {
+        id: 'audit-veille',
+        label: 'Audit & Veille',
+        icon: <Scale size={20} />,
+        href: '/admin/audit',
+        permission: 'audit.view',
+        category: 'ADMIN',
+        subItems: [
+            { id: 'audit-veille-feed', label: 'Flux de Veille', icon: <Eye size={16} />, href: '/admin/audit?tab=veille', permission: 'audit.view' },
+            { id: 'audit-veille-matrix', label: 'Matrice Juridique', icon: <Brain size={16} />, href: '/admin/audit?tab=matrix', permission: 'audit.view' },
+            { id: 'audit-veille-services', label: 'Services & Docs', icon: <Settings size={16} />, href: '/admin/audit?tab=services', permission: 'audit.view' },
+            { id: 'audit-veille-eligibility', label: 'Règles Éligibilité', icon: <Zap size={16} />, href: '/admin/audit?tab=eligibility', permission: 'audit.view' },
+        ]
+    },
     {
         id: 'settings',
         label: 'Paramètres',
@@ -105,6 +165,7 @@ const DEFAULT_MENU: MenuItem[] = [
         subItems: [
             { id: 'settings-general', label: 'Général', icon: <Settings size={16} />, href: '/admin/settings', permission: 'settings.manage' },
             { id: 'settings-pricing', label: 'Tarifs Services', icon: <DollarSign size={16} />, href: '/admin/settings?tab=SERVICE_PRICING', permission: 'settings.manage' },
+            { id: 'settings-docs', label: 'Référentiel Pièces', icon: <FileStack size={16} />, href: '/admin/settings?tab=DOCUMENTS', permission: 'settings.manage' },
             { id: 'settings-legal', label: 'CGV & Contrats', icon: <Scale size={16} />, href: '/admin/settings?tab=LEGAL_DOCS', permission: 'settings.manage' },
         ]
     },

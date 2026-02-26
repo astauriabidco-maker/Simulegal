@@ -9,6 +9,7 @@ import {
     Bot, Sparkles, TrendingUp, AlertTriangle, ExternalLink, RotateCcw,
     Bold, Heading2, Heading3, List, ListOrdered, Quote, Code, Link, Image, Upload
 } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
 import { BlogStore, Article, ArticleCategory, ArticleStatus, ArticleComment, BlogAutoTopic, BlogAutoConfig, BlogAutoStats } from '../../../services/BlogStore';
 
 const CATEGORIES: { id: ArticleCategory | 'ALL'; label: string; icon: string }[] = [
@@ -137,13 +138,25 @@ function MarkdownToolbar({
 }
 
 export default function BlogAdminPage() {
-    const [activeTab, setActiveTab] = useState<'ARTICLES' | 'COMMENTS' | 'VEILLE'>('ARTICLES');
+    const searchParams = useSearchParams();
+    const initialTab = searchParams.get('tab')?.toUpperCase() as any;
+
+    const [activeTab, setActiveTab] = useState<'ARTICLES' | 'COMMENTS' | 'VEILLE'>(
+        ['ARTICLES', 'COMMENTS', 'VEILLE'].includes(initialTab) ? initialTab : 'ARTICLES'
+    );
     const [articles, setArticles] = useState<Article[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [filterStatus, setFilterStatus] = useState<string>('ALL');
     const [searchQuery, setSearchQuery] = useState('');
     const [pendingComments, setPendingComments] = useState<ArticleComment[]>([]);
     const [isLoadingComments, setIsLoadingComments] = useState(false);
+
+    useEffect(() => {
+        const tab = searchParams.get('tab')?.toUpperCase() as any;
+        if (['ARTICLES', 'COMMENTS', 'VEILLE'].includes(tab)) {
+            setActiveTab(tab);
+        }
+    }, [searchParams]);
 
     // ── Veille Auto state ──
     const [autoTopics, setAutoTopics] = useState<BlogAutoTopic[]>([]);

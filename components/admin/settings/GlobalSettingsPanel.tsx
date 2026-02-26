@@ -5,7 +5,7 @@ import {
     Building2, CreditCard, Bell, Cpu, Save,
     RefreshCcw, Eye, EyeOff, ShieldAlert,
     Mail, MessageSquare, HardDrive, Smartphone,
-    CheckCircle, AlertTriangle, Users, DollarSign, FileText, Zap
+    CheckCircle, AlertTriangle, Users, DollarSign, FileText, Zap, FileStack
 } from 'lucide-react';
 import { SettingsStore, SystemSettings, IntegrationSettings } from '../../../services/SettingsStore';
 import IntegrationsTab from './IntegrationsTab';
@@ -14,10 +14,11 @@ import TwilioTemplatesTab from './TwilioTemplatesTab';
 import ServicePricingTab from './ServicePricingTab';
 import LegalDocumentsTab from './LegalDocumentsTab';
 import PipelineAutomationsTab from './PipelineAutomationsTab';
+import DocumentCatalogTab from './DocumentCatalogTab';
 
-type TabType = 'COMPANY' | 'PAYMENT' | 'NOTIFICATIONS' | 'WHATSAPP_TEMPLATES' | 'SERVICE_PRICING' | 'LEGAL_DOCS' | 'AUTOMATIONS' | 'INTEGRATIONS' | 'SYSTEM_USERS';
+type TabType = 'COMPANY' | 'PAYMENT' | 'NOTIFICATIONS' | 'WHATSAPP_TEMPLATES' | 'SERVICE_PRICING' | 'DOCUMENTS' | 'LEGAL_DOCS' | 'AUTOMATIONS' | 'INTEGRATIONS' | 'SYSTEM_USERS';
 
-const VALID_TABS: TabType[] = ['COMPANY', 'PAYMENT', 'NOTIFICATIONS', 'WHATSAPP_TEMPLATES', 'SERVICE_PRICING', 'LEGAL_DOCS', 'AUTOMATIONS', 'INTEGRATIONS', 'SYSTEM_USERS'];
+const VALID_TABS: TabType[] = ['COMPANY', 'PAYMENT', 'NOTIFICATIONS', 'WHATSAPP_TEMPLATES', 'SERVICE_PRICING', 'DOCUMENTS', 'LEGAL_DOCS', 'AUTOMATIONS', 'INTEGRATIONS', 'SYSTEM_USERS'];
 
 export default function GlobalSettingsPanel({ initialTab }: { initialTab?: string }) {
     const resolvedInitialTab = (initialTab && VALID_TABS.includes(initialTab as TabType)) ? initialTab as TabType : 'COMPANY';
@@ -78,6 +79,7 @@ export default function GlobalSettingsPanel({ initialTab }: { initialTab?: strin
                     { id: 'COMPANY', label: 'Société', icon: Building2 },
                     { id: 'PAYMENT', label: 'Paiement', icon: CreditCard },
                     { id: 'SERVICE_PRICING', label: 'Tarifs', icon: DollarSign },
+                    { id: 'DOCUMENTS', label: 'Pièces', icon: FileStack },
                     { id: 'LEGAL_DOCS', label: 'Juridique', icon: FileText },
                     { id: 'AUTOMATIONS', label: 'Automatisations', icon: Zap },
                     { id: 'NOTIFICATIONS', label: 'Notifications', icon: Bell },
@@ -314,6 +316,10 @@ export default function GlobalSettingsPanel({ initialTab }: { initialTab?: strin
 
                     {activeTab === 'LEGAL_DOCS' && (
                         <LegalDocumentsTab />
+                    )}
+
+                    {activeTab === 'DOCUMENTS' && (
+                        <DocumentCatalogTab />
                     )}
 
                     {activeTab === 'INTEGRATIONS' && (

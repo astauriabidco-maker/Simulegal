@@ -198,9 +198,12 @@ function NoteComposer({ note, onSave, onClose }: {
     );
 }
 
+const VALID_TABS: TabType[] = ['veille', 'services', 'eligibility', 'matrix'];
+
 // ─── Main Panel ───────────────────────────────────────────────────
-export default function AuditVeillePanel() {
-    const [activeTab, setActiveTab] = useState<TabType>('veille');
+export default function AuditVeillePanel({ initialTab }: { initialTab?: string }) {
+    const resolvedTab = (initialTab && VALID_TABS.includes(initialTab as TabType)) ? initialTab as TabType : 'veille';
+    const [activeTab, setActiveTab] = useState<TabType>(resolvedTab);
     const [notes, setNotes] = useState<VeilleNote[]>([]);
     const [composerOpen, setComposerOpen] = useState(false);
     const [editingNote, setEditingNote] = useState<VeilleNote | undefined>(undefined);
