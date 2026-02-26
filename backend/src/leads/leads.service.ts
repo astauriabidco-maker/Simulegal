@@ -340,6 +340,23 @@ export class LeadsService {
             }
         });
 
+        // ── Créer la Transaction correspondante pour le module Finance ──
+        try {
+            await this.prisma.transaction.create({
+                data: {
+                    type: 'PAYMENT',
+                    amount: data.amount,
+                    method: data.method,
+                    reference: data.reference || null,
+                    leadId: id,
+                    invoiceNumber,
+                }
+            });
+            console.log(`[FINANCE] 💳 Transaction créée: ${invoiceNumber} — ${data.amount / 100}€ (${data.method})`);
+        } catch (err) {
+            console.warn(`[FINANCE] ⚠️ Impossible de créer la transaction:`, err);
+        }
+
         return this.mapLead(updatedLead);
     }
 
