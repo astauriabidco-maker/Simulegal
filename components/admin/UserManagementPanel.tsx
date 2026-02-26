@@ -480,51 +480,97 @@ export default function UserManagementPanel() {
 
                             {/* Staff type toggle */}
                             <div className="bg-slate-100 p-1 rounded-lg flex">
-                                <button onClick={() => { setStaffType('AGENCY'); setFormData({ ...formData, homeAgencyId: agencies[0]?.id || '' }); }}
+                                <button onClick={() => { setStaffType('AGENCY'); setFormData({ ...formData, homeAgencyId: formData.homeAgencyId || '' }); }}
                                     className={`flex-1 py-2 text-xs font-bold rounded-md transition ${staffType === 'AGENCY' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400'}`}>
                                     Staff Agence
                                 </button>
-                                <button onClick={() => { setStaffType('HQ'); setFormData({ ...formData, homeAgencyId: 'HQ', scopeAgencyIds: [] }); }}
+                                <button onClick={() => { setStaffType('HQ'); setFormData({ ...formData, homeAgencyId: 'HQ' }); }}
                                     className={`flex-1 py-2 text-xs font-bold rounded-md transition ${staffType === 'HQ' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400'}`}>
                                     Staff Siège
                                 </button>
                             </div>
 
-                            {staffType === 'AGENCY' ? (
+                            {/* Agence principale — visible pour staff agence */}
+                            {staffType === 'AGENCY' && (
                                 <div>
                                     <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">
-                                        Agence de rattachement <span className="text-red-500">*</span>
+                                        Agence principale <span className="text-red-500">*</span>
                                     </label>
                                     <select className={`w-full h-12 border rounded-xl px-4 font-bold outline-none appearance-none transition ${formErrors.homeAgencyId ? 'bg-red-50 border-red-400 text-red-900' : 'bg-indigo-50 border-indigo-200 text-indigo-900 focus:border-indigo-500'}`}
-                                        value={formData.homeAgencyId} onChange={(e) => { setFormData({ ...formData, homeAgencyId: e.target.value }); setFormErrors(prev => { const n = { ...prev }; delete n.homeAgencyId; return n; }); }}>
+                                        value={formData.homeAgencyId} onChange={(e) => {
+                                            const newHome = e.target.value;
+                                            // Auto-ajouter l'agence principale dans le scope
+                                            const currentScope = formData.scopeAgencyIds || [];
+                                            const newScope = newHome && !currentScope.includes(newHome)
+                                                ? [...currentScope, newHome]
+                                                : currentScope;
+                                            setFormData({ ...formData, homeAgencyId: newHome, scopeAgencyIds: newScope });
+                                            setFormErrors(prev => { const n = { ...prev }; delete n.homeAgencyId; return n; });
+                                        }}>
                                         <option value="">⚠️ Sélectionner une agence...</option>
                                         {agencies.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
                                     </select>
                                     {formErrors.homeAgencyId && <p className="text-red-500 text-[11px] font-bold mt-1 ml-1">{formErrors.homeAgencyId}</p>}
                                 </div>
-                            ) : (
-                                <div className="p-4 bg-slate-50 border border-slate-100 rounded-xl">
-                                    <div className="flex items-center justify-between mb-3">
-                                        <span className="text-[10px] font-black text-slate-900 uppercase">Périmètre</span>
+                            )}
+
+                            {/* Agences secondaires — multi-sélection */}
+                            <div className="p-4 bg-slate-50 border border-slate-100 rounded-xl">
+                                <div className="flex items-center justify-between mb-3">
+                                    <div>
+                                        <span className="text-[10px] font-black text-slate-900 uppercase">
+                                            {staffType === 'AGENCY' ? 'Agences supplémentaires' : 'Périmètre agences'}
+                                        </span>
+                                        <p className="text-[10px] text-slate-400 mt-0.5">
+                                            {staffType === 'AGENCY'
+                                                ? 'Sélectionnez les agences additionnelles pour cet utilisateur'
+                                                : 'Définissez le périmètre de visibilité'}
+                                        </p>
+                                    </div>
+                                    {staffType === 'HQ' && (
                                         <label className="flex items-center gap-2 cursor-pointer">
                                             <input type="checkbox" checked={isGlobalScope}
                                                 onChange={(e) => setFormData({ ...formData, scopeAgencyIds: e.target.checked ? [] : [agencies[0]?.id] })}
                                                 className="w-4 h-4 rounded border-slate-300 text-indigo-600" />
                                             <span className="text-xs font-bold text-slate-600">🌍 Global</span>
                                         </label>
-                                    </div>
-                                    {!isGlobalScope && (
-                                        <div className="grid grid-cols-2 gap-2 max-h-36 overflow-y-auto">
-                                            {agencies.map(a => (
-                                                <label key={a.id} className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer text-xs font-bold transition ${formData.scopeAgencyIds?.includes(a.id) ? 'bg-indigo-50 border-indigo-200 text-indigo-700' : 'bg-white border-slate-100 text-slate-600'}`}>
-                                                    <input type="checkbox" checked={formData.scopeAgencyIds?.includes(a.id)} onChange={() => toggleScopeAgency(a.id)} className="rounded border-slate-300 text-indigo-600" />
-                                                    {a.name}
-                                                </label>
-                                            ))}
-                                        </div>
                                     )}
                                 </div>
-                            )}
+                                {(staffType === 'AGENCY' || !isGlobalScope) && (
+                                    <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto">
+                                        {agencies.map(a => {
+                                            const isHome = staffType === 'AGENCY' && formData.homeAgencyId === a.id;
+                                            const isChecked = formData.scopeAgencyIds?.includes(a.id) || isHome;
+                                            return (
+                                                <label key={a.id} className={`flex items-center gap-2 p-2.5 rounded-lg border cursor-pointer text-xs font-bold transition ${isHome
+                                                    ? 'bg-indigo-100 border-indigo-300 text-indigo-800'
+                                                    : isChecked
+                                                        ? 'bg-indigo-50 border-indigo-200 text-indigo-700'
+                                                        : 'bg-white border-slate-100 text-slate-600 hover:border-slate-200'
+                                                    }`}>
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={isChecked}
+                                                        disabled={isHome}
+                                                        onChange={() => {
+                                                            if (isHome) return; // Can't uncheck primary agency
+                                                            toggleScopeAgency(a.id);
+                                                        }}
+                                                        className="rounded border-slate-300 text-indigo-600 disabled:opacity-50" />
+                                                    <span className="flex-1">{a.name}</span>
+                                                    {isHome && <span className="text-[9px] bg-indigo-200 text-indigo-700 px-1.5 py-0.5 rounded-full">PRINCIPALE</span>}
+                                                </label>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                                {staffType === 'AGENCY' && (formData.scopeAgencyIds?.length || 0) > 1 && (
+                                    <div className="mt-2 flex items-center gap-1.5 text-[10px] text-indigo-600 font-bold">
+                                        <Building2 size={12} />
+                                        <span>{formData.scopeAgencyIds?.length} agences sélectionnées — cet utilisateur sera multi-agence</span>
+                                    </div>
+                                )}
+                            </div>
                         </div>
 
                         <div className="p-6 bg-slate-50 border-t border-slate-100 flex gap-3">
