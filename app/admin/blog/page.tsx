@@ -5,10 +5,11 @@ import {
     Plus, Edit3, Trash2, Eye, EyeOff, Star, Search,
     FileText, Calendar, BarChart3, ArrowLeft, Save,
     Globe, Tag, Clock, ChevronDown, Loader2, X, StarOff,
-    MessageCircle, CheckCircle, XCircle,
+    MessageCircle, CheckCircle, XCircle, Zap, Settings, Play, RefreshCw,
+    Bot, Sparkles, TrendingUp, AlertTriangle, ExternalLink, RotateCcw,
     Bold, Heading2, Heading3, List, ListOrdered, Quote, Code, Link, Image, Upload
 } from 'lucide-react';
-import { BlogStore, Article, ArticleCategory, ArticleStatus, ArticleComment } from '../../../services/BlogStore';
+import { BlogStore, Article, ArticleCategory, ArticleStatus, ArticleComment, BlogAutoTopic, BlogAutoConfig, BlogAutoStats } from '../../../services/BlogStore';
 
 const CATEGORIES: { id: ArticleCategory | 'ALL'; label: string; icon: string }[] = [
     { id: 'ALL', label: 'Tous', icon: '📋' },
@@ -24,6 +25,7 @@ const STATUS_BADGES: Record<ArticleStatus, { label: string; cls: string }> = {
     DRAFT: { label: 'Brouillon', cls: 'bg-amber-100 text-amber-700' },
     PUBLISHED: { label: 'Publié', cls: 'bg-emerald-100 text-emerald-700' },
     ARCHIVED: { label: 'Archivé', cls: 'bg-slate-100 text-slate-500' },
+    SCHEDULED: { label: 'Planifié', cls: 'bg-purple-100 text-purple-700' },
 };
 
 const STAT_COLORS: Record<string, { bg: string; text: string }> = {
@@ -135,13 +137,23 @@ function MarkdownToolbar({
 }
 
 export default function BlogAdminPage() {
-    const [activeTab, setActiveTab] = useState<'ARTICLES' | 'COMMENTS'>('ARTICLES');
+    const [activeTab, setActiveTab] = useState<'ARTICLES' | 'COMMENTS' | 'VEILLE'>('ARTICLES');
     const [articles, setArticles] = useState<Article[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [filterStatus, setFilterStatus] = useState<string>('ALL');
     const [searchQuery, setSearchQuery] = useState('');
     const [pendingComments, setPendingComments] = useState<ArticleComment[]>([]);
     const [isLoadingComments, setIsLoadingComments] = useState(false);
+
+    // ── Veille Auto state ──
+    const [autoTopics, setAutoTopics] = useState<BlogAutoTopic[]>([]);
+    const [autoStats, setAutoStats] = useState<BlogAutoStats | null>(null);
+    const [autoConfig, setAutoConfig] = useState<BlogAutoConfig | null>(null);
+    const [isLoadingVeille, setIsLoadingVeille] = useState(false);
+    const [isPipelineRunning, setIsPipelineRunning] = useState(false);
+    const [pipelineResult, setPipelineResult] = useState<string | null>(null);
+    const [showConfigPanel, setShowConfigPanel] = useState(false);
+    const [topicFilter, setTopicFilter] = useState<string>('ALL');
 
     // Editor state
     const [showEditor, setShowEditor] = useState(false);
@@ -177,6 +189,19 @@ export default function BlogAdminPage() {
         const comms = await BlogStore.getPendingComments();
         setPendingComments(comms);
         setIsLoadingComments(false);
+    };
+
+    const loadVeilleData = async () => {
+        setIsLoadingVeille(true);
+        const [topics, stats, config] = await Promise.all([
+            BlogStore.getAutoTopics(),
+            BlogStore.getAutoStats(),
+            BlogStore.getAutoConfig(),
+        ]);
+        setAutoTopics(topics);
+        setAutoStats(stats);
+        setAutoConfig(config);
+        setIsLoadingVeille(false);
     };
 
     useEffect(() => { loadData(); }, [filterStatus]);
@@ -228,7 +253,7 @@ export default function BlogAdminPage() {
 
     const handleDelete = async (id: string) => {
         if (!confirm('Supprimer cet article ?')) return;
-        await BlogStore.remove(id);
+        await BlogStore.delete(id);
         loadData();
     };
 
@@ -500,6 +525,13 @@ export default function BlogAdminPage() {
                         )}
                         {activeTab === 'COMMENTS' && <span className="absolute bottom-0 left-0 w-full h-0.5 bg-indigo-600 rounded-t-xl" />}
                     </button>
+                    <button onClick={() => { setActiveTab('VEILLE'); loadVeilleData(); }} className={`pb-3 font-bold text-sm transition-colors relative flex items-center gap-2 ${activeTab === 'VEILLE' ? 'text-indigo-600' : 'text-slate-500 hover:text-slate-800'}`}>
+                        🤖 Veille Auto
+                        {autoStats && autoStats.discovered > 0 && (
+                            <span className="bg-purple-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-black">{autoStats.discovered}</span>
+                        )}
+                        {activeTab === 'VEILLE' && <span className="absolute bottom-0 left-0 w-full h-0.5 bg-indigo-600 rounded-t-xl" />}
+                    </button>
                 </div>
 
                 {activeTab === 'ARTICLES' && (
@@ -650,6 +682,268 @@ export default function BlogAdminPage() {
                                     </div>
                                 </div>
                             ))
+                        )}
+                    </div>
+                )}
+
+                {/* ═══════════════════════════════════════════ */}
+                {/* TAB: VEILLE AUTO                          */}
+                {/* ═══════════════════════════════════════════ */}
+                {activeTab === 'VEILLE' && (
+                    <div className="space-y-6">
+                        {/* ── Pipeline Stats ── */}
+                        {autoStats && (
+                            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                                {[
+                                    { label: 'Total sujets', value: autoStats.total, color: 'bg-slate-50 text-slate-600', icon: '📊' },
+                                    { label: 'Découverts', value: autoStats.discovered, color: 'bg-blue-50 text-blue-600', icon: '🔍' },
+                                    { label: 'En cours', value: autoStats.generating, color: 'bg-amber-50 text-amber-600', icon: '⏳' },
+                                    { label: 'Générés', value: autoStats.generated, color: 'bg-emerald-50 text-emerald-600', icon: '✅' },
+                                    { label: 'Rejetés', value: autoStats.rejected, color: 'bg-rose-50 text-rose-600', icon: '❌' },
+                                    { label: 'Publiés', value: autoStats.published, color: 'bg-purple-50 text-purple-600', icon: '🚀' },
+                                ].map(s => (
+                                    <div key={s.label} className={`${s.color} rounded-2xl p-4 text-center`}>
+                                        <div className="text-xl mb-1">{s.icon}</div>
+                                        <div className="text-2xl font-black">{s.value}</div>
+                                        <div className="text-xs font-bold opacity-70">{s.label}</div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {/* ── Action Bar ── */}
+                        <div className="flex flex-wrap items-center gap-3 bg-gradient-to-r from-purple-50 to-indigo-50 p-4 rounded-2xl border border-purple-100">
+                            <div className="flex-1 min-w-0">
+                                <h3 className="font-bold text-slate-800 text-sm">Pipeline de veille légale</h3>
+                                <p className="text-xs text-slate-500 mt-0.5">
+                                    {autoConfig?.enabled ? '✅ Actif' : '⏸ Désactivé'}
+                                    {autoConfig?.lastRunAt && ` — Dernière exécution : ${new Date(autoConfig.lastRunAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}`}
+                                    {autoConfig && ` — ${autoConfig.totalGenerated} articles générés au total`}
+                                </p>
+                            </div>
+                            <button
+                                onClick={async () => { setIsPipelineRunning(true); setPipelineResult(null); const r = await BlogStore.triggerPipeline(); setIsPipelineRunning(false); if (r) setPipelineResult(`✅ ${r.discovered} sujets découverts, ${r.generated} articles générés${r.errors > 0 ? `, ${r.errors} erreurs` : ''}`); await loadVeilleData(); }}
+                                disabled={isPipelineRunning}
+                                className="px-5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl flex items-center gap-2 transition-all shadow-lg shadow-purple-200 disabled:opacity-50 text-sm"
+                            >
+                                {isPipelineRunning ? <Loader2 size={16} className="animate-spin" /> : <Zap size={16} />}
+                                {isPipelineRunning ? 'Pipeline en cours...' : 'Lancer le pipeline'}
+                            </button>
+                            <button
+                                onClick={async () => { setIsPipelineRunning(true); await BlogStore.discoverTopics(); setIsPipelineRunning(false); await loadVeilleData(); setPipelineResult('🔍 Découverte terminée'); }}
+                                disabled={isPipelineRunning}
+                                className="px-4 py-2.5 bg-white text-blue-600 border border-blue-200 font-bold rounded-xl flex items-center gap-2 hover:bg-blue-50 transition-all text-sm disabled:opacity-50"
+                            >
+                                <Search size={14} /> Découvrir
+                            </button>
+                            <button
+                                onClick={async () => { setIsPipelineRunning(true); const r = await BlogStore.generateDrafts(); setIsPipelineRunning(false); if (r) setPipelineResult(`🤖 ${r.generated} articles générés`); await loadVeilleData(); }}
+                                disabled={isPipelineRunning}
+                                className="px-4 py-2.5 bg-white text-emerald-600 border border-emerald-200 font-bold rounded-xl flex items-center gap-2 hover:bg-emerald-50 transition-all text-sm disabled:opacity-50"
+                            >
+                                <Sparkles size={14} /> Générer
+                            </button>
+                            <button
+                                onClick={() => setShowConfigPanel(!showConfigPanel)}
+                                className="p-2.5 bg-white text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50 transition-all"
+                                title="Configuration"
+                            >
+                                <Settings size={16} />
+                            </button>
+                        </div>
+
+                        {/* Toast */}
+                        {pipelineResult && (
+                            <div className="bg-emerald-50 text-emerald-700 px-4 py-3 rounded-xl text-sm font-bold flex items-center justify-between border border-emerald-100">
+                                <span>{pipelineResult}</span>
+                                <button onClick={() => setPipelineResult(null)} className="text-emerald-400 hover:text-emerald-600"><X size={14} /></button>
+                            </div>
+                        )}
+
+                        {/* ── Config Panel ── */}
+                        {showConfigPanel && autoConfig && (
+                            <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+                                <h3 className="font-black text-slate-800 mb-4 flex items-center gap-2"><Settings size={18} className="text-indigo-500" /> Configuration du pipeline</h3>
+                                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-500 mb-1">Statut</label>
+                                        <button
+                                            onClick={async () => { await BlogStore.updateAutoConfig({ enabled: !autoConfig.enabled }); const c = await BlogStore.getAutoConfig(); if (c) setAutoConfig(c); }}
+                                            className={`w-full px-4 py-2.5 rounded-xl font-bold text-sm transition-all ${autoConfig.enabled ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
+                                        >
+                                            {autoConfig.enabled ? '✅ Pipeline actif' : '⏸ Pipeline désactivé'}
+                                        </button>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-500 mb-1">Fréquence</label>
+                                        <select
+                                            value={autoConfig.frequency}
+                                            onChange={async (e) => { await BlogStore.updateAutoConfig({ frequency: e.target.value }); const c = await BlogStore.getAutoConfig(); if (c) setAutoConfig(c); }}
+                                            className="w-full px-4 py-2.5 rounded-xl border border-slate-200 font-bold text-sm focus:ring-2 focus:ring-indigo-300 outline-none"
+                                        >
+                                            <option value="DAILY">Quotidien</option>
+                                            <option value="WEEKLY">Hebdomadaire</option>
+                                            <option value="BIWEEKLY">Bimensuel</option>
+                                            <option value="MONTHLY">Mensuel</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-500 mb-1">Articles max par exécution</label>
+                                        <input
+                                            type="number" min={1} max={10} value={autoConfig.maxArticlesPerRun}
+                                            onChange={async (e) => { await BlogStore.updateAutoConfig({ maxArticlesPerRun: Number(e.target.value) }); const c = await BlogStore.getAutoConfig(); if (c) setAutoConfig(c); }}
+                                            className="w-full px-4 py-2.5 rounded-xl border border-slate-200 font-bold text-sm focus:ring-2 focus:ring-indigo-300 outline-none"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-500 mb-1">Score min de pertinence (0-100)</label>
+                                        <input
+                                            type="number" min={0} max={100} value={autoConfig.minRelevanceScore}
+                                            onChange={async (e) => { await BlogStore.updateAutoConfig({ minRelevanceScore: Number(e.target.value) }); const c = await BlogStore.getAutoConfig(); if (c) setAutoConfig(c); }}
+                                            className="w-full px-4 py-2.5 rounded-xl border border-slate-200 font-bold text-sm focus:ring-2 focus:ring-indigo-300 outline-none"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-500 mb-1">Modèle IA</label>
+                                        <select
+                                            value={autoConfig.aiModel}
+                                            onChange={async (e) => { await BlogStore.updateAutoConfig({ aiModel: e.target.value }); const c = await BlogStore.getAutoConfig(); if (c) setAutoConfig(c); }}
+                                            className="w-full px-4 py-2.5 rounded-xl border border-slate-200 font-bold text-sm focus:ring-2 focus:ring-indigo-300 outline-none"
+                                        >
+                                            <option value="gpt-4o-mini">GPT-4o Mini (rapide)</option>
+                                            <option value="gpt-4o">GPT-4o (qualité)</option>
+                                            <option value="gpt-4-turbo">GPT-4 Turbo</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-500 mb-1">Catégories ciblées</label>
+                                        <input
+                                            type="text" value={autoConfig.targetCategories}
+                                            onChange={async (e) => { await BlogStore.updateAutoConfig({ targetCategories: e.target.value }); const c = await BlogStore.getAutoConfig(); if (c) setAutoConfig(c); }}
+                                            className="w-full px-4 py-2.5 rounded-xl border border-slate-200 font-bold text-sm focus:ring-2 focus:ring-indigo-300 outline-none"
+                                            placeholder="IMMIGRATION,NATURALISATION,..."
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* ── Topic Filter ── */}
+                        <div className="flex gap-2 flex-wrap">
+                            {[
+                                { id: 'ALL', label: 'Tous', count: autoTopics.length },
+                                { id: 'DISCOVERED', label: '🔍 Découverts', count: autoTopics.filter(t => t.status === 'DISCOVERED').length },
+                                { id: 'GENERATED', label: '✅ Générés', count: autoTopics.filter(t => t.status === 'GENERATED').length },
+                                { id: 'REJECTED', label: '❌ Rejetés', count: autoTopics.filter(t => t.status === 'REJECTED').length },
+                            ].map(f => (
+                                <button key={f.id} onClick={() => setTopicFilter(f.id)}
+                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${topicFilter === f.id ? 'bg-indigo-600 text-white' : 'bg-white text-slate-500 border border-slate-200 hover:border-indigo-300'}`}>
+                                    {f.label} ({f.count})
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* ── Topics List ── */}
+                        {isLoadingVeille ? (
+                            <div className="flex items-center justify-center py-20"><Loader2 size={32} className="animate-spin text-slate-300" /></div>
+                        ) : autoTopics.filter(t => topicFilter === 'ALL' || t.status === topicFilter).length === 0 ? (
+                            <div className="text-center py-20 bg-white rounded-2xl border border-dashed border-slate-200">
+                                <Bot size={48} className="mx-auto text-purple-200 mb-4" />
+                                <p className="text-slate-500 font-bold">Aucun sujet découvert</p>
+                                <p className="text-slate-400 text-sm mt-1">Lancez le pipeline pour découvrir des sujets juridiques.</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-3">
+                                {autoTopics.filter(t => topicFilter === 'ALL' || t.status === topicFilter).map(topic => {
+                                    const statusMap: Record<string, { bg: string; text: string; label: string }> = {
+                                        DISCOVERED: { bg: 'bg-blue-100', text: 'text-blue-700', label: 'Découvert' },
+                                        GENERATING: { bg: 'bg-amber-100', text: 'text-amber-700', label: 'Génération...' },
+                                        GENERATED: { bg: 'bg-emerald-100', text: 'text-emerald-700', label: 'Article créé' },
+                                        REJECTED: { bg: 'bg-rose-100', text: 'text-rose-600', label: 'Rejeté' },
+                                        PUBLISHED: { bg: 'bg-purple-100', text: 'text-purple-700', label: 'Publié' },
+                                    };
+                                    const st = statusMap[topic.status] || statusMap.DISCOVERED;
+                                    const catInfo = CATEGORIES.find(c => c.id === topic.category);
+
+                                    return (
+                                        <div key={topic.id} className="bg-white rounded-2xl border border-slate-200 p-5 hover:shadow-md transition-all">
+                                            <div className="flex items-start gap-4">
+                                                {/* Relevance Score */}
+                                                <div className="shrink-0 w-14 text-center">
+                                                    <div className={`text-lg font-black ${topic.relevanceScore >= 70 ? 'text-emerald-600' : topic.relevanceScore >= 50 ? 'text-amber-600' : 'text-slate-400'}`}>
+                                                        {topic.relevanceScore}
+                                                    </div>
+                                                    <div className="w-full bg-slate-100 rounded-full h-1.5 mt-1">
+                                                        <div className={`h-1.5 rounded-full transition-all ${topic.relevanceScore >= 70 ? 'bg-emerald-500' : topic.relevanceScore >= 50 ? 'bg-amber-500' : 'bg-slate-300'}`}
+                                                            style={{ width: `${topic.relevanceScore}%` }} />
+                                                    </div>
+                                                    <div className="text-[9px] font-bold text-slate-400 mt-0.5">pertinence</div>
+                                                </div>
+
+                                                {/* Content */}
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${st.bg} ${st.text}`}>{st.label}</span>
+                                                        {catInfo && <span className="text-xs text-slate-400">{catInfo.icon} {catInfo.label}</span>}
+                                                        {topic.sourceName && <span className="text-[10px] text-slate-300 font-bold">via {topic.sourceName}</span>}
+                                                    </div>
+                                                    <h4 className="font-bold text-slate-800 text-sm leading-tight mb-1">{topic.title}</h4>
+                                                    <p className="text-xs text-slate-500 line-clamp-2">{topic.summary}</p>
+                                                    {topic.keywords && (
+                                                        <div className="flex gap-1 mt-2 flex-wrap">
+                                                            {topic.keywords.split(',').filter(Boolean).map(kw => (
+                                                                <span key={kw} className="text-[9px] bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded font-bold">{kw}</span>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                    {topic.error && (
+                                                        <div className="mt-2 flex items-center gap-1 text-[10px] text-rose-500 font-bold">
+                                                            <AlertTriangle size={10} /> {topic.error}
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                {/* Actions */}
+                                                <div className="flex items-center gap-2 shrink-0">
+                                                    {topic.sourceUrl && (
+                                                        <a href={topic.sourceUrl} target="_blank" rel="noopener noreferrer" title="Voir la source"
+                                                            className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-colors">
+                                                            <ExternalLink size={14} />
+                                                        </a>
+                                                    )}
+                                                    {topic.status === 'DISCOVERED' && (
+                                                        <button
+                                                            onClick={async () => { await BlogStore.rejectTopic(topic.id); await loadVeilleData(); }}
+                                                            title="Rejeter"
+                                                            className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors"
+                                                        >
+                                                            <XCircle size={14} />
+                                                        </button>
+                                                    )}
+                                                    {topic.status === 'REJECTED' && (
+                                                        <button
+                                                            onClick={async () => { await BlogStore.retryTopic(topic.id); await loadVeilleData(); }}
+                                                            title="Réessayer"
+                                                            className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-colors"
+                                                        >
+                                                            <RotateCcw size={14} />
+                                                        </button>
+                                                    )}
+                                                    {topic.generatedArticleId && (
+                                                        <button
+                                                            onClick={() => { const art = articles.find(a => a.id === topic.generatedArticleId); if (art) { setActiveTab('ARTICLES'); setSearchQuery(art.title.substring(0, 20)); } }}
+                                                            title="Voir l'article généré"
+                                                            className="p-2 text-emerald-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-colors"
+                                                        >
+                                                            <Eye size={14} />
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
                         )}
                     </div>
                 )}

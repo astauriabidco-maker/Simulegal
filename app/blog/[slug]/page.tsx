@@ -198,7 +198,7 @@ export default function BlogArticlePage() {
             }));
             setReactedTypes(prev => {
                 const next = new Set(prev);
-                result.toggled === 'added' ? next.add(type) : next.delete(type);
+                if (result.toggled === 'added') { next.add(type); } else { next.delete(type); }
                 return next;
             });
         }

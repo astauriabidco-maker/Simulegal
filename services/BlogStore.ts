@@ -309,6 +309,93 @@ export const BlogStore = {
         if (!res.ok) return [];
         return res.json();
     },
+
+    // ═══════════════════════════════════════════
+    // ADMIN – Auto Veille Pipeline
+    // ═══════════════════════════════════════════
+
+    getAutoTopics: async (status?: string): Promise<BlogAutoTopic[]> => {
+        const params = status ? `?status=${status}` : '';
+        const res = await fetch(`${API}/blog/auto/topics${params}`, { headers: getAuthHeaders() });
+        if (!res.ok) return [];
+        return res.json();
+    },
+
+    getAutoStats: async (): Promise<BlogAutoStats | null> => {
+        const res = await fetch(`${API}/blog/auto/stats`, { headers: getAuthHeaders() });
+        if (!res.ok) return null;
+        return res.json();
+    },
+
+    getAutoConfig: async (): Promise<BlogAutoConfig | null> => {
+        const res = await fetch(`${API}/blog/auto/config`, { headers: getAuthHeaders() });
+        if (!res.ok) return null;
+        return res.json();
+    },
+
+    updateAutoConfig: async (data: Partial<BlogAutoConfig>): Promise<boolean> => {
+        const res = await fetch(`${API}/blog/auto/config`, {
+            method: 'PUT', headers: getAuthHeaders(), body: JSON.stringify(data),
+        });
+        return res.ok;
+    },
+
+    triggerPipeline: async (): Promise<{ discovered: number; generated: number; errors: number } | null> => {
+        const res = await fetch(`${API}/blog/auto/trigger`, {
+            method: 'POST', headers: getAuthHeaders(),
+        });
+        if (!res.ok) return null;
+        return res.json();
+    },
+
+    discoverTopics: async (): Promise<{ discovered: number; sources: string[] } | null> => {
+        const res = await fetch(`${API}/blog/auto/discover`, {
+            method: 'POST', headers: getAuthHeaders(),
+        });
+        if (!res.ok) return null;
+        return res.json();
+    },
+
+    generateDrafts: async (): Promise<{ generated: number; errors: number } | null> => {
+        const res = await fetch(`${API}/blog/auto/generate`, {
+            method: 'POST', headers: getAuthHeaders(),
+        });
+        if (!res.ok) return null;
+        return res.json();
+    },
+
+    rejectTopic: async (id: string): Promise<boolean> => {
+        const res = await fetch(`${API}/blog/auto/topics/${id}/reject`, {
+            method: 'POST', headers: getAuthHeaders(),
+        });
+        return res.ok;
+    },
+
+    retryTopic: async (id: string): Promise<boolean> => {
+        const res = await fetch(`${API}/blog/auto/topics/${id}/retry`, {
+            method: 'POST', headers: getAuthHeaders(),
+        });
+        return res.ok;
+    },
 };
+
+export interface BlogAutoTopic {
+    id: string; title: string; summary: string; sourceUrl?: string; sourceName?: string;
+    category: string; relevanceScore: number; keywords?: string; status: string;
+    generatedArticleId?: string; legalUpdateId?: string; error?: string;
+    createdAt: string; updatedAt: string;
+}
+
+export interface BlogAutoConfig {
+    id: string; enabled: boolean; frequency: string; maxArticlesPerRun: number;
+    minRelevanceScore: number; targetCategories: string; aiModel: string;
+    aiPromptTemplate?: string; lastRunAt?: string; totalGenerated: number;
+}
+
+export interface BlogAutoStats {
+    total: number; discovered: number; generating: number; generated: number;
+    rejected: number; published: number;
+    config: { enabled: boolean; frequency: string; lastRunAt?: string; totalGenerated: number };
+}
 
 export default BlogStore;
