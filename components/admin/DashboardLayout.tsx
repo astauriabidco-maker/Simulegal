@@ -28,7 +28,8 @@ import {
     Handshake,
     UserCog,
     Gauge,
-    Newspaper
+    Newspaper,
+    LayoutGrid
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePermission } from '../../hooks/usePermission';
@@ -59,6 +60,7 @@ interface DashboardLayoutProps {
 const DEFAULT_MENU: MenuItem[] = [
     // ─── BLOC 1: TABLEAU DE BORD ─── Vue d'ensemble & monitoring
     { id: 'overview', label: 'Vue d\'ensemble', icon: <Gauge size={20} />, href: '/admin', category: 'DASHBOARD' },
+    { id: 'custom-dashboard', label: 'Mon Dashboard', icon: <LayoutGrid size={20} />, href: '/admin/custom-dashboard', category: 'DASHBOARD' },
     { id: 'agenda-dashboard', label: 'Cockpit Temporel', icon: <BarChart3 size={20} />, href: '/admin/dashboard-agenda', permission: 'crm.view_agency', category: 'DASHBOARD' },
 
     // ─── BLOC 2: ACTIVITÉ ─── Opérations quotidiennes (agences + siège)
