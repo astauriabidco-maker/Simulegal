@@ -464,9 +464,12 @@ export class FranchiseLeadsService {
         const contract = lead.contractDetails ? (typeof lead.contractDetails === 'string' ? JSON.parse(lead.contractDetails) : lead.contractDetails) : {};
         const agencyType = contract.type || 'FRANCHISE';
 
-        // 2. Créer l'agence
+        // 2. Créer l'agence — avec codes postaux pré-remplis
         const agencyName = lead.companyName || lead.name;
         const agencyId = `${agencyName.substring(0, 3).toUpperCase()}-${Date.now().toString().slice(-4)}`;
+
+        // Auto-génère les codes postaux à partir de la ville cible
+        const autoZipCodes = this.generateZipCodesForCity(lead.targetCity, lead.region, lead.exclusiveRadius || 15);
 
         const agency = await this.agenciesService.create({
             id: agencyId,
@@ -474,7 +477,8 @@ export class FranchiseLeadsService {
             type: agencyType,
             contactEmail: lead.email,
             region: lead.region,
-            zipCodes: '[]',
+            city: lead.targetCity,
+            zipCodes: JSON.stringify(autoZipCodes),
             commissionRate: lead.royaltyRate ?? contract.commissionRate ?? (agencyType === 'CORNER' ? 5 : 15),
             kioskUrl: `https://simulegal.fr/kiosk/${agencyId}`
         });
@@ -508,15 +512,288 @@ export class FranchiseLeadsService {
         // 6. Envoyer le Kit d'Ouverture (email HTML + WhatsApp)
         await this.notificationsService.onFranchiseOnboarding(lead, password, agency);
 
-        // 7. Log
-        await this.addNote(id, `✅ Contrat signé (${daysSinceDIP} jours après envoi du DIP). Agence ${agencyId} créée, compte gérant provisionné, et Kit d'Ouverture envoyé par email + WhatsApp.`, 'Système', 'SYSTEM' as any);
+        // ═══════════════════════════════════════════════
+        // 7. POST-SIGNATURE : Kit de démarrage enrichi
+        // ═══════════════════════════════════════════════
+
+        // 7a. Planifier le RDV de formation (J+7, 10h)
+        try {
+            const trainingDate = new Date();
+            trainingDate.setDate(trainingDate.getDate() + 7);
+            trainingDate.setHours(10, 0, 0, 0);
+            // Sauter le week-end
+            while (trainingDate.getDay() === 0 || trainingDate.getDay() === 6) {
+                trainingDate.setDate(trainingDate.getDate() + 1);
+            }
+
+            await this.prisma.appointment.create({
+                data: {
+                    id: `TRAIN-${agencyId}-${Date.now()}`,
+                    leadName: `${lead.name} — Formation Initiale`,
+                    leadEmail: lead.email,
+                    serviceId: 'FORMATION-ONBOARDING',
+                    start: trainingDate,
+                    end: new Date(trainingDate.getTime() + 2 * 60 * 60 * 1000), // 2h
+                    status: 'SCHEDULED',
+                    type: 'VISIO_JURISTE',
+                    agencyId: agency.id,
+                    meetingLink: `https://meet.simulegal.fr/formation-${agencyId}`,
+                }
+            });
+            console.log(`[FRANCHISE] 🎓 RDV formation planifié pour ${lead.name} le ${trainingDate.toLocaleDateString('fr-FR')}`);
+        } catch (err) {
+            console.warn(`[FRANCHISE] ⚠️ Impossible de créer le RDV formation:`, err);
+        }
+
+        // 7b. Pré-configurer les services par défaut selon le type
+        try {
+            const defaultServices = this.getDefaultServicesForType(agencyType);
+            // Stocker dans le contrat pour référence
+            const enrichedContract = {
+                ...contract,
+                provisionedServices: defaultServices,
+                onboardingSchedule: this.buildOnboardingSchedule(new Date()),
+                zipCodesAssigned: autoZipCodes,
+                trainingScheduled: true,
+            };
+            await this.prisma.franchiseLead.update({
+                where: { id },
+                data: { contractDetails: JSON.stringify(enrichedContract) }
+            });
+        } catch (err) {
+            console.warn(`[FRANCHISE] ⚠️ Erreur enrichissement contrat:`, err);
+        }
+
+        // 7c. Log complet
+        const logDetails = [
+            `✅ Contrat signé (${daysSinceDIP} jours après DIP).`,
+            `🏢 Agence ${agencyId} créée (type: ${agencyType}).`,
+            `👤 Compte gérant provisionné (${lead.email}).`,
+            `📍 ${autoZipCodes.length} codes postaux assignés.`,
+            `🎓 Formation programmée à J+7.`,
+            `📦 Kit d'Ouverture envoyé (email + WhatsApp).`,
+            `🔧 ${this.getDefaultServicesForType(agencyType).length} services pré-configurés.`,
+        ].join('\n');
+        await this.addNote(id, logDetails, 'Système', 'SYSTEM' as any);
 
         return {
             lead: updatedLead,
             agency,
-            user: { ...user, tempPassword: password }
+            user: { ...user, tempPassword: password },
+            starterKit: {
+                zipCodesAssigned: autoZipCodes,
+                trainingDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+                servicesProvisioned: this.getDefaultServicesForType(agencyType).length,
+                onboardingEmails: 4,
+            }
         };
     }
+
+    // ════════════════════════════════════════════════
+    // HELPERS POST-SIGNATURE
+    // ════════════════════════════════════════════════
+
+    /**
+     * Génère des codes postaux approximatifs à partir de la ville cible.
+     * Mapping des principales villes FR → codes postaux.
+     */
+    private generateZipCodesForCity(city: string, region: string, radiusKm: number): string[] {
+        const cityZips: Record<string, string[]> = {
+            'paris': ['75001', '75002', '75003', '75004', '75005', '75006', '75007', '75008', '75009', '75010', '75011', '75012', '75013', '75014', '75015', '75016', '75017', '75018', '75019', '75020'],
+            'lyon': ['69001', '69002', '69003', '69004', '69005', '69006', '69007', '69008', '69009'],
+            'marseille': ['13001', '13002', '13003', '13004', '13005', '13006', '13007', '13008', '13009', '13010', '13011', '13012', '13013', '13014', '13015', '13016'],
+            'toulouse': ['31000', '31100', '31200', '31300', '31400', '31500'],
+            'nice': ['06000', '06100', '06200', '06300'],
+            'nantes': ['44000', '44100', '44200', '44300'],
+            'strasbourg': ['67000', '67100', '67200'],
+            'montpellier': ['34000', '34070', '34080', '34090'],
+            'bordeaux': ['33000', '33100', '33200', '33300', '33800'],
+            'lille': ['59000', '59100', '59160', '59200', '59260', '59800'],
+            'rennes': ['35000', '35200', '35700'],
+            'grenoble': ['38000', '38100'],
+            'toulon': ['83000', '83100', '83200'],
+            'dijon': ['21000', '21100'],
+            'angers': ['49000', '49100'],
+            'metz': ['57000', '57050', '57070'],
+        };
+
+        const key = city.toLowerCase().trim();
+        const match = Object.keys(cityZips).find(c => key.includes(c) || c.includes(key));
+        if (match) {
+            // Limite selon le rayon : small radius = fewer zips
+            const maxZips = radiusKm <= 5 ? 3 : radiusKm <= 15 ? 6 : radiusKm <= 30 ? 10 : 20;
+            return cityZips[match].slice(0, maxZips);
+        }
+
+        // Fallback: generate from region prefix
+        const regionPrefixes: Record<string, string> = {
+            'IDF': '75', 'AURA': '69', 'PACA': '13', 'OCC': '31', 'NAQ': '33',
+            'HDF': '59', 'GES': '67', 'BRE': '35', 'NOR': '76', 'PDL': '44',
+            'BFC': '21', 'CVL': '37',
+        };
+        const prefix = regionPrefixes[region] || '75';
+        return [`${prefix}000`, `${prefix}100`];
+    }
+
+    /**
+     * Services par défaut selon le type d'agence
+     */
+    private getDefaultServicesForType(type: string): { id: string; name: string; category: string }[] {
+        const base = [
+            { id: 'SVC-SIMULATION', name: 'Simulation Juridique', category: 'Juridique' },
+            { id: 'SVC-CONSEIL', name: 'Conseil Juridique Initial', category: 'Juridique' },
+            { id: 'SVC-MEDIATION', name: 'Médiation', category: 'Résolution' },
+            { id: 'SVC-CREATION', name: 'Création d\'Entreprise', category: 'Business' },
+        ];
+
+        if (type === 'FRANCHISE') {
+            return [
+                ...base,
+                { id: 'SVC-REDACTION', name: 'Rédaction de Contrats', category: 'Juridique' },
+                { id: 'SVC-FORMATION', name: 'Formation Client', category: 'Formation' },
+                { id: 'SVC-DOMICILIATION', name: 'Domiciliation', category: 'Business' },
+            ];
+        }
+        if (type === 'CORNER') {
+            return [
+                ...base.slice(0, 2), // Seulement simulation + conseil pour les corners
+                { id: 'SVC-ORIENTATION', name: 'Orientation Juridique', category: 'Juridique' },
+            ];
+        }
+        return base;
+    }
+
+    /**
+     * Calendrier d'onboarding : emails automatiques J+1, J+7, J+14, J+30
+     */
+    private buildOnboardingSchedule(signedDate: Date): { day: number; subject: string; type: string }[] {
+        return [
+            { day: 1, subject: 'Bienvenue ! Premiers pas sur votre plateforme', type: 'WELCOME' },
+            { day: 7, subject: 'Rappel : Formation initiale demain', type: 'TRAINING_REMINDER' },
+            { day: 14, subject: 'Comment se passe votre première quinzaine ?', type: 'CHECKIN_2W' },
+            { day: 30, subject: 'Bilan du premier mois — Actions recommandées', type: 'CHECKIN_1M' },
+        ];
+    }
+
+    // ════════════════════════════════════════════════
+    // CRON — Emails de suivi onboarding (check daily 8h)
+    // ════════════════════════════════════════════════
+
+    @Cron('0 8 * * 1-5')
+    async onboardingFollowUpCron() {
+        console.log('[CRON] 📧 Vérification suivi onboarding...');
+
+        // Leads signés récemment
+        const signedLeads = await this.prisma.franchiseLead.findMany({
+            where: {
+                status: 'SIGNED',
+                updatedAt: { gte: new Date(Date.now() - 35 * 24 * 60 * 60 * 1000) } // Last 35 days
+            }
+        });
+
+        const now = new Date();
+        for (const lead of signedLeads) {
+            const daysSinceSigning = Math.floor((now.getTime() - new Date(lead.updatedAt).getTime()) / (1000 * 60 * 60 * 24));
+
+            // Parse contract to check what's already been sent
+            let contract: any = {};
+            try { contract = JSON.parse(lead.contractDetails || '{}'); } catch { }
+            const sentEmails = contract.onboardingEmailsSent || [];
+
+            const schedule = [
+                { day: 1, type: 'WELCOME', subject: '🚀 Premiers pas sur votre plateforme SimuLegal' },
+                { day: 7, type: 'TRAINING_REMINDER', subject: '🎓 Formation initiale — Rappel important' },
+                { day: 14, type: 'CHECKIN_2W', subject: '📊 Bilan de votre première quinzaine' },
+                { day: 30, type: 'CHECKIN_1M', subject: '📈 Premier mois — Bilan et recommandations' },
+            ];
+
+            for (const step of schedule) {
+                if (daysSinceSigning >= step.day && !sentEmails.includes(step.type)) {
+                    // Send onboarding follow-up email
+                    try {
+                        await this.notificationsService.sendEmail(
+                            lead.email,
+                            step.subject,
+                            this.buildOnboardingEmailHtml(lead, step, daysSinceSigning)
+                        );
+                        sentEmails.push(step.type);
+                        console.log(`[CRON] ✅ Email "${step.type}" envoyé à ${lead.email} (J+${daysSinceSigning})`);
+                    } catch (err) {
+                        console.warn(`[CRON] ⚠️ Échec envoi email "${step.type}" à ${lead.email}:`, err);
+                    }
+                }
+            }
+
+            // Update sent list
+            if (sentEmails.length > (contract.onboardingEmailsSent || []).length) {
+                contract.onboardingEmailsSent = sentEmails;
+                await this.prisma.franchiseLead.update({
+                    where: { id: lead.id },
+                    data: { contractDetails: JSON.stringify(contract) }
+                });
+            }
+        }
+    }
+
+    private buildOnboardingEmailHtml(lead: any, step: { type: string; subject: string; day: number }, daysSinceSigning: number): string {
+        const contents: Record<string, string> = {
+            'WELCOME': `
+                <p>Bonjour <strong>${lead.name}</strong>,</p>
+                <p>Bienvenue chez SimuLegal ! Votre agence <strong>${lead.companyName || lead.name}</strong> est active.</p>
+                <h3>🎯 Vos 3 premières actions :</h3>
+                <ol>
+                    <li>Connectez-vous à <a href="https://admin.simulegal.fr">admin.simulegal.fr</a> et changez votre mot de passe</li>
+                    <li>Complétez le profil de votre agence (horaires, adresse, photo)</li>
+                    <li>Explorez la plateforme : onglet Leads, Services, Calendrier</li>
+                </ol>`,
+            'TRAINING_REMINDER': `
+                <p>Bonjour <strong>${lead.name}</strong>,</p>
+                <p>Rappel : votre session de <strong>Formation Initiale Franchisé</strong> est prévue demain à 10h.</p>
+                <h3>📋 Au programme (2h) :</h3>
+                <ul>
+                    <li>Présentation de la plateforme SimuLegal</li>
+                    <li>Gestion des leads et du pipeline client</li>
+                    <li>Utilisation des outils de simulation juridique</li>
+                    <li>Reporting et suivi de performance</li>
+                </ul>
+                <p>Le lien visio sera envoyé 30 minutes avant le début.</p>`,
+            'CHECKIN_2W': `
+                <p>Bonjour <strong>${lead.name}</strong>,</p>
+                <p>Cela fait 2 semaines que votre agence est opérationnelle. Comment se passe le démarrage ?</p>
+                <h3>📊 Points à vérifier :</h3>
+                <ul>
+                    <li>Avez-vous complété votre profil agence ? → <a href="https://admin.simulegal.fr/admin/agency">Mon Agence</a></li>
+                    <li>Avez-vous eu vos premiers leads ? → <a href="https://admin.simulegal.fr/admin/leads">Mes Leads</a></li>
+                    <li>Avez-vous configuré vos services ? → <a href="https://admin.simulegal.fr/admin/services">Services</a></li>
+                </ul>
+                <p>N'hésitez pas à contacter votre référent franchise si vous avez des questions.</p>`,
+            'CHECKIN_1M': `
+                <p>Bonjour <strong>${lead.name}</strong>,</p>
+                <p>Félicitations, votre premier mois est terminé ! 🎉</p>
+                <h3>📈 Actions recommandées :</h3>
+                <ul>
+                    <li>Envoyez votre premier reporting mensuel au siège</li>
+                    <li>Planifiez votre événement d'inauguration si pas encore fait</li>
+                    <li>Analysez vos statistiques : quels services sont les plus demandés ?</li>
+                    <li>Explorez le module Analytics pour suivre votre performance</li>
+                </ul>
+                <p>Votre référent franchise prendra contact cette semaine pour un bilan. 📞</p>`,
+        };
+
+        return `
+        <div style="font-family: 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto;">
+            <div style="background: linear-gradient(135deg, #4f46e5, #7c3aed); padding: 24px; border-radius: 12px 12px 0 0;">
+                <h1 style="color: white; margin: 0; font-size: 20px;">${step.subject}</h1>
+                <p style="color: #c7d2fe; margin: 4px 0 0; font-size: 12px;">SimuLegal — Suivi Onboarding (J+${daysSinceSigning})</p>
+            </div>
+            <div style="background: white; padding: 24px; border: 1px solid #e2e8f0; border-radius: 0 0 12px 12px;">
+                ${contents[step.type] || '<p>Suivi onboarding</p>'}
+                <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
+                <p style="font-size: 11px; color: #94a3b8;">Cet email est envoyé automatiquement dans le cadre de votre programme d'onboarding SimuLegal.<br/>Support : support@simulegal.fr</p>
+            </div>
+        </div>`;
+    }
+
 
     // ========================================================
     // KIT D'OUVERTURE PDF — Téléchargeable
