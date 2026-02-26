@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AgenciesService } from '../agencies/agencies.service';
 import { UsersService } from '../users/users.service';
@@ -41,7 +41,7 @@ export class FranchiseLeadsService {
                 notes: { orderBy: { createdAt: 'desc' } }
             }
         });
-        if (!lead) return null;
+        if (!lead) throw new NotFoundException(`Lead ${id} introuvable`);
         return this.mapLead(lead);
     }
 
@@ -60,16 +60,23 @@ export class FranchiseLeadsService {
 
     async create(data: any) {
         const { contractDetails, contractHistory, documents, ...rest } = data;
-        const lead = await this.prisma.franchiseLead.create({
-            data: {
-                ...rest,
-                contractDetails: contractDetails ? JSON.stringify(contractDetails) : "{}",
-                contractHistory: contractHistory ? JSON.stringify(contractHistory) : "[]",
-                documents: documents ? JSON.stringify(documents) : "[]",
-                status: 'NEW'
+        try {
+            const lead = await this.prisma.franchiseLead.create({
+                data: {
+                    ...rest,
+                    contractDetails: contractDetails ? JSON.stringify(contractDetails) : "{}",
+                    contractHistory: contractHistory ? JSON.stringify(contractHistory) : "[]",
+                    documents: documents ? JSON.stringify(documents) : "[]",
+                    status: 'NEW'
+                }
+            });
+            return this.mapLead(lead);
+        } catch (e: any) {
+            if (e?.code === 'P2002') {
+                throw new ConflictException('Un candidat franchisé avec cet email existe déjà.');
             }
-        });
-        return this.mapLead(lead);
+            throw e;
+        }
     }
 
     async update(id: string, data: any) {
