@@ -1,4 +1,4 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Injectable, OnModuleInit, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -105,7 +105,7 @@ export class RolesService implements OnModuleInit {
 
     async update(id: string, data: { label?: string; description?: string; permissions?: string }) {
         if (id === 'SUPER_ADMIN') {
-            // Protection: on ne peut pas réduire les permissions du super admin
+            throw new ForbiddenException('Le rôle Super Admin ne peut pas être modifié');
         }
 
         return this.prisma.role.update({
@@ -116,9 +116,19 @@ export class RolesService implements OnModuleInit {
 
     async remove(id: string) {
         const role = await this.prisma.role.findUnique({ where: { id } });
-        if (role?.isSystem) {
-            throw new Error('Impossible de supprimer un rôle système');
+        if (!role) {
+            throw new BadRequestException('Rôle introuvable');
         }
+        if (role.isSystem) {
+            throw new ForbiddenException('Impossible de supprimer un rôle système');
+        }
+
+        // Vérifier qu'aucun utilisateur n'utilise ce rôle
+        const usersWithRole = await this.prisma.user.count({ where: { roleId: id } });
+        if (usersWithRole > 0) {
+            throw new BadRequestException(`Impossible de supprimer : ${usersWithRole} utilisateur(s) utilisent ce rôle`);
+        }
+
         return this.prisma.role.delete({ where: { id } });
     }
 }
