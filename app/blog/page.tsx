@@ -31,32 +31,46 @@ export default function BlogPage() {
     const [articles, setArticles] = useState<Article[]>([]);
     const [featured, setFeatured] = useState<Article[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [isLoadingMore, setIsLoadingMore] = useState(false);
     const [filterCategory, setFilterCategory] = useState<string>('ALL');
     const [searchQuery, setSearchQuery] = useState('');
+    const [activeTag, setActiveTag] = useState<string>('');
     const [total, setTotal] = useState(0);
+    const [hasMore, setHasMore] = useState(false);
+    const PAGE_SIZE = 12;
 
-    useEffect(() => {
-        const load = async () => {
-            setIsLoading(true);
-            const [result, feat] = await Promise.all([
-                BlogStore.getPublished(filterCategory, 50),
-                BlogStore.getFeatured(),
-            ]);
+    const loadArticles = async (offset = 0, append = false) => {
+        if (!append) setIsLoading(true);
+        else setIsLoadingMore(true);
+
+        const [result, feat] = await Promise.all([
+            BlogStore.getPublished(filterCategory, PAGE_SIZE, offset, searchQuery || undefined, activeTag || undefined),
+            offset === 0 ? BlogStore.getFeatured() : Promise.resolve(featured),
+        ]);
+
+        if (append) {
+            setArticles(prev => [...prev, ...result.articles]);
+        } else {
             setArticles(result.articles);
-            setTotal(result.total);
-            setFeatured(feat);
-            setIsLoading(false);
-        };
-        load();
-    }, [filterCategory]);
+        }
+        setTotal(result.total);
+        setHasMore(result.hasMore);
+        if (!append) setFeatured(feat);
+        setIsLoading(false);
+        setIsLoadingMore(false);
+    };
 
-    const filteredArticles = articles.filter(a =>
-        a.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (a.excerpt || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (a.tags || '').toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    useEffect(() => { loadArticles(0); }, [filterCategory, activeTag]);
 
-    // Separate featured from regular in the list view
+    // Debounced search
+    useEffect(() => {
+        const timeout = setTimeout(() => loadArticles(0), 400);
+        return () => clearTimeout(timeout);
+    }, [searchQuery]);
+
+    const loadMore = () => loadArticles(articles.length, true);
+
+    const filteredArticles = articles;
     const regularArticles = filteredArticles.filter(a => !a.featured);
     const featuredInList = filteredArticles.filter(a => a.featured);
 
@@ -257,6 +271,20 @@ export default function BlogPage() {
                                 })}
                             </div>
                         </section>
+
+                        {/* ── Load More Button ── */}
+                        {hasMore && (
+                            <div className="flex justify-center mt-12">
+                                <button onClick={loadMore} disabled={isLoadingMore}
+                                    className="px-8 py-3 bg-white border-2 border-indigo-200 text-indigo-600 font-bold rounded-2xl hover:bg-indigo-50 hover:border-indigo-300 transition-all disabled:opacity-50 flex items-center gap-2">
+                                    {isLoadingMore ? (
+                                        <><div className="w-4 h-4 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" /> Chargement...</>
+                                    ) : (
+                                        <>Voir plus d&apos;articles <ArrowRight size={16} /></>
+                                    )}
+                                </button>
+                            </div>
+                        )}
 
                         {/* ── CTA Bottom ── */}
                         <section className="mt-20 text-center bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 rounded-3xl p-12 border border-indigo-100">

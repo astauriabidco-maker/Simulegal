@@ -500,38 +500,101 @@ model RuleAuditLog {
 // ─── Blog / Insights ──────────────────────────────────────────────
 
 model Article {
-  id             String   @id @default(cuid())
-  title          String
-  slug           String   @unique
-  excerpt        String?  // Short summary for cards/SEO
-  content        String   // Markdown or HTML content
-  category       String   @default("GENERAL") // IMMIGRATION, NATURALISATION, SEJOUR, PERMIS, FAMILY, GENERAL
-  status         String   @default("DRAFT")   // DRAFT, PUBLISHED, ARCHIVED
-  coverImage     String?  // URL to cover image
-  authorName     String   @default("Rédaction SimuLegal")
-  authorRole     String?  // e.g. "Juriste en droit des étrangers"
-  tags           String?  // comma-separated tags
-  metaTitle      String?  // SEO title override
-  metaDescription String? // SEO description override
-  readTimeMin    Int      @default(5)
-  viewCount      Int      @default(0)
-  featured       Boolean  @default(false) // Show in hero section
-  publishedAt    DateTime?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  comments       ArticleComment[]
+  id              String   @id @default(cuid())
+  title           String
+  slug            String   @unique
+  excerpt         String?
+  content         String
+  category        String   @default("GENERAL")
+  status          String   @default("DRAFT") // DRAFT, PUBLISHED, ARCHIVED, SCHEDULED
+  coverImage      String?
+  authorName      String   @default("Rédaction SimuLegal")
+  authorRole      String?
+  tags            String?
+  metaTitle       String?
+  metaDescription String?
+  readTimeMin     Int      @default(5)
+  viewCount       Int      @default(0)
+  featured        Boolean  @default(false)
+  scheduledAt     DateTime? // Auto-publish at this date
+  publishedAt     DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  comments        ArticleComment[]
+  revisions       ArticleRevision[]
+  reactions       ArticleReaction[]
+  analytics       ArticleAnalytics[]
 }
 
 model ArticleComment {
-  id          String   @id @default(cuid())
+  id          String           @id @default(cuid())
   articleId   String
-  article     Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  article     Article          @relation(fields: [articleId], references: [id], onDelete: Cascade)
   authorName  String
   authorEmail String?
   content     String
-  status      String   @default("PENDING") // PENDING, APPROVED, REJECTED
-  parentId    String?  // For reply threading
-  createdAt   DateTime @default(now())
+  status      String           @default("PENDING")
+  parentId    String?
+  parent      ArticleComment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies     ArticleComment[] @relation("CommentReplies")
+  createdAt   DateTime         @default(now())
+}
+
+model ArticleRevision {
+  id        String   @id @default(cuid())
+  articleId String
+  article   Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  title     String
+  content   String
+  excerpt   String?
+  editedBy  String?  // Who made the edit
+  version   Int      @default(1)
+  createdAt DateTime @default(now())
+}
+
+model ArticleReaction {
+  id        String   @id @default(cuid())
+  articleId String
+  article   Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  type      String   // LIKE, LOVE, FIRE, USEFUL
+  ipHash    String   // Hashed IP to prevent duplicates
+  createdAt DateTime @default(now())
+
+  @@unique([articleId, ipHash, type])
+}
+
+model ArticleAnalytics {
+  id        String   @id @default(cuid())
+  articleId String
+  article   Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  date      DateTime
+  views     Int      @default(0)
+  uniqueIps Int      @default(0)
+  avgTimeMs Int?     // Avg reading time in ms
+  referrer  String?  // Top referrer for this day
+
+  @@unique([articleId, date])
+}
+
+model NewsletterSubscriber {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  status        String    @default("ACTIVE") // ACTIVE, UNSUBSCRIBED
+  subscribedAt  DateTime  @default(now())
+  unsubscribedAt DateTime?
+  confirmToken  String?   @unique
+  confirmed     Boolean   @default(false)
+}
+
+model BlogCategory {
+  id       String   @id @default(cuid())
+  name     String   @unique
+  slug     String   @unique
+  icon     String?  // Emoji or icon name
+  color    String?  // CSS color
+  sortOrder Int     @default(0)
+  createdAt DateTime @default(now())
 }
 
 // ══════════════════════════════════════════════════
