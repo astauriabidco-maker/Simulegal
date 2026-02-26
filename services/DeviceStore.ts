@@ -176,6 +176,15 @@ export const DeviceStore = {
         } catch {
             return null;
         }
+    },
+
+    // ── NEW: Fleet statistics ──
+    getFleetStats: async (): Promise<any | null> => {
+        try {
+            const response = await fetch(`${API_URL}/stats/fleet`);
+            if (!response.ok) throw new Error('Failed');
+            return response.json();
+        } catch { return null; }
     }
 };
 

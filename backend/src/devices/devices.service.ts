@@ -187,4 +187,38 @@ export class DevicesService {
             include: { assignedAgency: true }
         });
     }
+
+    // ── FLEET STATS ──
+    async getFleetStats() {
+        const devices = await this.prisma.device.findMany({ include: { assignedAgency: true } });
+        const now = Date.now();
+        const twoMin = 2 * 60 * 1000;
+
+        const total = devices.length;
+        const active = devices.filter(d => d.status === 'ACTIVE').length;
+        const online = devices.filter(d => d.status === 'ACTIVE' && (now - new Date(d.lastHeartbeat).getTime()) < twoMin).length;
+        const offline = devices.filter(d => d.status === 'ACTIVE' && (now - new Date(d.lastHeartbeat).getTime()) >= twoMin).length;
+        const unpaired = devices.filter(d => d.status === 'UNPAIRED').length;
+
+        // Version distribution
+        const versions: Record<string, number> = {};
+        devices.forEach(d => { versions[d.appVersion] = (versions[d.appVersion] || 0) + 1; });
+
+        // Agency coverage
+        const agencyIds = new Set(devices.filter(d => d.assignedAgencyId).map(d => d.assignedAgencyId));
+        const totalAgencies = await this.prisma.agency.count({ where: { status: 'ACTIVE' } });
+
+        // Offline alerts (devices offline > 1 hour)
+        const offlineAlerts = devices
+            .filter(d => d.status === 'ACTIVE' && (now - new Date(d.lastHeartbeat).getTime()) >= 60 * 60 * 1000)
+            .map(d => ({ id: d.id, name: d.name, agency: d.assignedAgency?.name || 'N/A', lastSeen: d.lastHeartbeat, downtime: Math.round((now - new Date(d.lastHeartbeat).getTime()) / (60 * 60 * 1000)) }));
+
+        return {
+            total, active, online, offline, unpaired,
+            uptimeRate: active > 0 ? Math.round((online / active) * 100) : 0,
+            versions,
+            agencyCoverage: { covered: agencyIds.size, total: totalAgencies },
+            offlineAlerts,
+        };
+    }
 }
