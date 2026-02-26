@@ -497,6 +497,40 @@ model RuleAuditLog {
   createdAt      DateTime @default(now())
 }
 
+// ─── Veille Légale → Blog Auto-Génération ─────────────────────────
+
+model BlogAutoTopic {
+  id             String   @id @default(cuid())
+  title          String
+  summary        String   // Topic description / why it's relevant
+  sourceUrl      String?  // Where it was found
+  sourceName     String?  // e.g. "Legifrance", "service-public.fr"
+  category       String   @default("GENERAL")
+  relevanceScore Int      @default(50) // 0-100: how relevant to SimuLegal's audience
+  keywords       String?  // comma-separated keywords
+  status         String   @default("DISCOVERED") // DISCOVERED, GENERATING, GENERATED, REJECTED, PUBLISHED
+  generatedArticleId String? // ID of generated Article (if any)
+  legalUpdateId  String?  // Link to LegalUpdate (if originated from veille)
+  error          String?  // Error message if generation fails
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model BlogAutoConfig {
+  id               String   @id @default(cuid())
+  enabled          Boolean  @default(true)
+  frequency        String   @default("WEEKLY") // DAILY, WEEKLY, BIWEEKLY, MONTHLY
+  maxArticlesPerRun Int     @default(2)
+  minRelevanceScore Int     @default(60) // Min score to auto-generate
+  targetCategories String   @default("IMMIGRATION,NATURALISATION,SEJOUR,PERMIS,FAMILY")
+  aiModel          String   @default("gpt-4o-mini")
+  aiPromptTemplate String?  // Custom prompt template
+  lastRunAt        DateTime?
+  totalGenerated   Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
 // ─── Blog / Insights ──────────────────────────────────────────────
 
 model Article {
