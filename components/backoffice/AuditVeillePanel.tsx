@@ -297,6 +297,41 @@ export default function AuditVeillePanel() {
         setComposerOpen(true);
     };
 
+    const handlePublishToBlog = async (note: VeilleNote) => {
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+        const token = typeof window !== 'undefined' ? localStorage.getItem('admin_token') : null;
+        try {
+            const res = await fetch(`${API_URL}/blog`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+                },
+                body: JSON.stringify({
+                    title: note.title,
+                    content: `## ${note.title}\n\n${note.summary}\n\n### Ce que vous devez savoir\n\nCette actualite juridique concerne directement les personnes engagees dans des demarches de ${note.category.toLowerCase()} en France.\n\n${note.sourceUrl ? `> **Source** : [Consulter la source](${note.sourceUrl})` : ''}\n\n### Nos recommandations\n\n1. **Verifiez votre situation** : Utilisez notre simulateur pour evaluer l'impact\n2. **Constituez votre dossier** : Rassemblez les pieces justificatives\n3. **Anticipez les delais** : Les modifications peuvent impacter les temps de traitement\n\n---\n\n*Article genere depuis la veille juridique SimuLegal.*`,
+                    excerpt: note.summary.substring(0, 160),
+                    category: note.category.toUpperCase().replace(/ /g, '_').substring(0, 20),
+                    status: 'DRAFT',
+                    tags: note.category,
+                    authorName: note.authorName || 'Veille Juridique',
+                    authorRole: 'Equipe juridique',
+                    metaTitle: note.title,
+                    metaDescription: note.summary.substring(0, 155),
+                    readTimeMin: 3,
+                }),
+            });
+            if (res.ok) {
+                showNotif(`📝 Article de blog cree en brouillon : "${note.title}"`);
+            } else {
+                const err = await res.json().catch(() => ({}));
+                showNotif(`⚠️ Erreur : ${err.message || 'Impossible de creer l\'article'}`);
+            }
+        } catch {
+            showNotif('❌ Erreur de connexion au serveur');
+        }
+    };
+
     const handleConsult = (note: VeilleNote) => {
         if (note.sourceUrl) {
             window.open(note.sourceUrl, '_blank', 'noopener,noreferrer');
@@ -424,6 +459,10 @@ export default function AuditVeillePanel() {
                                         <button onClick={() => handleEdit(note)}
                                             className="flex items-center gap-1 px-3 py-1.5 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold text-slate-600 hover:bg-violet-600 hover:text-white hover:border-violet-600 transition-all">
                                             <Edit3 size={14} /> Modifier
+                                        </button>
+                                        <button onClick={() => handlePublishToBlog(note)}
+                                            className="flex items-center gap-1 px-3 py-1.5 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold text-slate-600 hover:bg-orange-600 hover:text-white hover:border-orange-600 transition-all">
+                                            <FileText size={14} /> Publier en article
                                         </button>
                                         <button onClick={() => handleDelete(note.id)}
                                             className="flex items-center gap-1 px-3 py-1.5 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold text-slate-600 hover:bg-red-600 hover:text-white hover:border-red-600 transition-all ml-auto">

@@ -54,7 +54,7 @@ export class BlogAutoService {
     // CRON: Scheduled topic discovery
     // ═══════════════════════════════════════════════
 
-    @Cron(CronExpression.EVERY_DAY_AT_6AM)
+    @Cron('0 8 * * *') // 8h — après le scan veille (7h) pour capturer les nouvelles LegalUpdate
     async scheduledDiscovery() {
         const config = await this.getOrCreateConfig();
         if (!config.enabled) return;
