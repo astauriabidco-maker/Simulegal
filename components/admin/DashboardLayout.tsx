@@ -73,20 +73,20 @@ const DEFAULT_MENU: MenuItem[] = [
     { id: 'franchise-leads', label: 'CRM Franchise', icon: <Handshake size={20} />, href: '/admin/franchise-leads', permission: 'network.manage', category: 'RESEAU' },
     { id: 'network', label: 'Agences & Points', icon: <Network size={20} />, href: '/admin/network', permission: 'network.manage', category: 'RESEAU' },
     { id: 'devices', label: 'Flotte Terminaux', icon: <Tablet size={20} />, href: '/admin/devices', permission: 'fleet.manage', category: 'RESEAU' },
+    { id: 'commissions', label: 'Commissions Réseau', icon: <ArrowRightLeft size={20} />, href: '/admin/finances/payouts', permission: 'network.manage', category: 'RESEAU' },
 
-    // ─── BLOC 4: FINANCES ─── Facturation, paiements et commissions
+    // ─── BLOC 4: FINANCES ─── Facturation clients, encaissements et avoirs
     {
         id: 'finances',
-        label: 'Finances',
+        label: 'Facturation',
         icon: <Wallet size={20} />,
         permission: 'finance.view_agency',
         category: 'FINANCES',
         subItems: [
-            { id: 'finances-overview', label: 'Synthèse', icon: <BarChart3 size={16} />, href: '/admin/finances', permission: 'finance.view_agency' },
-            { id: 'finances-invoices', label: 'Factures', icon: <FileText size={16} />, href: '/admin/finances/invoices', permission: 'finance.view_agency' },
-            { id: 'finances-transactions', label: 'Règlements', icon: <ArrowRightLeft size={16} />, href: '/admin/finances/transactions', permission: 'finance.view_agency' },
+            { id: 'finances-overview', label: 'Tableau de bord', icon: <BarChart3 size={16} />, href: '/admin/finances', permission: 'finance.view_agency' },
+            { id: 'finances-invoices', label: 'Factures Clients', icon: <FileText size={16} />, href: '/admin/finances/invoices', permission: 'finance.view_agency' },
+            { id: 'finances-transactions', label: 'Transactions', icon: <ArrowRightLeft size={16} />, href: '/admin/finances/transactions', permission: 'finance.view_agency' },
             { id: 'finances-credit-notes', label: 'Avoirs', icon: <ArrowRightLeft size={16} className="rotate-180" />, href: '/admin/finances/credit-notes', permission: 'finance.view_agency' },
-            { id: 'finances-payouts', label: 'Reversements', icon: <Building2 size={16} />, href: '/admin/finances/payouts', permission: 'finance.view_agency' },
         ]
     },
 

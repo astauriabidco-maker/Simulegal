@@ -11,7 +11,7 @@ import { AgencyStore } from '../../../services/AgencyStore';
 import { BillingStore } from '../../../services/BillingStore';
 import { AuthStore } from '../../../services/authStore';
 
-type Tab = 'dashboard' | 'invoices' | 'transactions' | 'credit-notes' | 'payouts' | 'breakdown' | 'projection';
+type Tab = 'dashboard' | 'invoices' | 'transactions' | 'credit-notes' | 'breakdown' | 'projection';
 
 export default function FinancePage() {
     const [tab, setTab] = useState<Tab>('dashboard');
@@ -25,7 +25,6 @@ export default function FinancePage() {
     const [debts, setDebts] = useState<{ id: string; name: string; balance: number; rate: number }[]>([]);
     const [loading, setLoading] = useState(true);
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'warning' } | null>(null);
-    const [payoutModal, setPayoutModal] = useState<{ id: string; name: string; balance: number } | null>(null);
     const [manualPayment, setManualPayment] = useState<{ leadId: string; name: string; invoiceNumber: string; serviceName: string; currentPaid: number } | null>(null);
     const [mpAmount, setMpAmount] = useState('');
     const [mpMethod, setMpMethod] = useState('CASH');
@@ -74,13 +73,7 @@ export default function FinancePage() {
 
     useEffect(() => { loadData(); }, []);
 
-    const handlePayout = async () => {
-        if (!payoutModal) return;
-        await FinanceStore.createPayout(payoutModal.id, payoutModal.balance, new Date().toISOString().substring(0, 7));
-        showToast(`Virement de ${payoutModal.balance.toLocaleString()}€ vers ${payoutModal.name}`);
-        setPayoutModal(null);
-        loadData();
-    };
+
 
     const handleManualPayment = async () => {
         if (!manualPayment || !mpAmount) return;
@@ -132,8 +125,7 @@ export default function FinancePage() {
         { id: 'projection', label: 'Projections', icon: Target },
         { id: 'invoices', label: 'Factures', icon: FileText },
         { id: 'transactions', label: 'Transactions', icon: ArrowRightLeft },
-        { id: 'credit-notes', label: 'Avoirs', icon: ArrowRightLeft },
-        { id: 'payouts', label: 'Reversements', icon: Building2 },
+        { id: 'credit-notes', label: 'Avoirs', icon: XCircle },
     ];
 
     if (loading || !summary) return (
@@ -250,14 +242,14 @@ export default function FinancePage() {
                                                 <div className="w-9 h-9 bg-slate-900 text-white rounded-lg flex items-center justify-center text-xs font-black">{d.name.charAt(0)}</div>
                                                 <div><p className="font-bold text-slate-800 text-sm">{d.name}</p><p className="text-[10px] text-slate-400">Com. {d.rate}%</p></div>
                                             </div>
-                                            <div className="flex items-center gap-4">
-                                                <p className="font-black text-slate-900">{d.balance.toLocaleString()} €</p>
-                                                <button onClick={() => setPayoutModal(d)} className="px-3 py-1.5 bg-indigo-600 text-white text-xs font-bold rounded-lg hover:bg-indigo-700 transition-colors">Régler</button>
-                                            </div>
+                                            <p className="font-black text-amber-600">{d.balance.toLocaleString()} €</p>
                                         </div>
                                     ))}
                                 </div>
                             )}
+                            <a href="/admin/finances/payouts" className="block text-center w-full mt-2 py-3 bg-slate-50 text-[10px] font-black uppercase tracking-widest hover:bg-indigo-50 hover:text-indigo-600 transition-colors rounded-b-2xl text-slate-400">
+                                Gérer les commissions →
+                            </a>
                         </div>
 
                         {/* Quick stats sidebar */}
@@ -496,52 +488,6 @@ export default function FinancePage() {
                 </div>
             )}
 
-            {/* ═══ PAYOUTS ═══ */}
-            {tab === 'payouts' && (
-                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                    <table className="w-full text-left">
-                        <thead className="bg-slate-50 text-[10px] uppercase font-black tracking-wider text-slate-400">
-                            <tr><th className="p-4">Date</th><th className="p-4">Agence</th><th className="p-4">Période</th><th className="p-4">Référence</th><th className="p-4 text-right">Montant</th><th className="p-4">Statut</th><th className="p-4"></th></tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                            {payouts.map(p => (
-                                <tr key={p.id} className="hover:bg-slate-50 transition-colors">
-                                    <td className="p-4 text-sm text-slate-500">{new Date(p.createdAt).toLocaleDateString('fr-FR')}</td>
-                                    <td className="p-4 font-bold text-slate-800">{(p as any).agency?.name || p.agencyId}</td>
-                                    <td className="p-4 text-sm text-slate-500">{p.period}</td>
-                                    <td className="p-4 font-mono text-xs text-slate-400">{p.reference}</td>
-                                    <td className="p-4 text-right font-black text-indigo-600">{p.amount.toLocaleString()} €</td>
-                                    <td className="p-4"><span className="bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full text-[10px] font-black uppercase">{p.status}</span></td>
-                                    <td className="p-4">
-                                        <button onClick={() => handleDownloadSepa(p.id, p.reference || p.id)} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg" title="SEPA XML"><Download size={14} /></button>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            )}
-
-            {/* ═══ PAYOUT MODAL ═══ */}
-            {payoutModal && (
-                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-                        <div className="bg-slate-900 p-6 text-white text-center">
-                            <div className="w-16 h-16 bg-emerald-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg"><DollarSign size={32} /></div>
-                            <h2 className="text-xl font-black">Règlement Solde</h2>
-                            <p className="text-slate-400 text-xs font-bold uppercase mt-1">Confirmation de reversement</p>
-                        </div>
-                        <div className="p-8 text-center space-y-4">
-                            <div><p className="text-[10px] text-slate-400 font-bold uppercase">Montant à transférer</p><p className="text-4xl font-black text-slate-900">{payoutModal.balance.toLocaleString()} €</p></div>
-                            <div className="bg-slate-50 p-4 rounded-xl"><p className="text-sm text-slate-500">Destinataire</p><p className="font-black text-slate-900">{payoutModal.name}</p></div>
-                        </div>
-                        <div className="p-6 bg-slate-50 flex gap-3">
-                            <button onClick={() => setPayoutModal(null)} className="flex-1 py-3 bg-white border border-slate-200 text-slate-500 font-bold rounded-xl hover:bg-slate-100">Annuler</button>
-                            <button onClick={handlePayout} className="flex-1 py-3 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 flex items-center justify-center gap-2"><CheckCircle2 size={18} /> Confirmer</button>
-                        </div>
-                    </div>
-                </div>
-            )}
 
             {/* ═══ MANUAL PAYMENT MODAL ═══ */}
             {manualPayment && (
