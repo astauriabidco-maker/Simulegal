@@ -8,11 +8,11 @@ import {
     DollarSign, ArrowRightLeft, Calendar, Briefcase,
     PieChart, AlertTriangle, RefreshCw, LayoutGrid, XCircle
 } from 'lucide-react';
-import { usePermission } from '../../../hooks/usePermission';
-import { PermissionKey } from '../../../config/PermissionRegistry';
-import { FinanceStore } from '../../../services/FinanceStore';
-import { CRM } from '../../../services/crmStore';
-import { AgencyStore } from '../../../services/AgencyStore';
+import { usePermission } from '../../hooks/usePermission';
+import { PermissionKey } from '../../config/PermissionRegistry';
+import { FinanceStore } from '../../services/FinanceStore';
+import { CRM } from '../../services/crmStore';
+import { AgencyStore } from '../../services/AgencyStore';
 
 // ═══════════════════════════════════════════════
 // WIDGET CATALOG — Each widget has an id, permission, and data fetcher
