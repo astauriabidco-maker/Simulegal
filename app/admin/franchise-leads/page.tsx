@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { FranchiseLead, FranchiseLeadStore, FranchiseLeadStatus } from '../../../services/FranchiseLeadStore';
 import {
     Plus, Search, MoreHorizontal, MapPin, Mail, Phone, CheckCircle, FileText,
-    Download, BarChart3, Kanban, X, Filter, TrendingUp, Users, Percent, Calendar
+    Download, BarChart3, Kanban, X, Filter, TrendingUp, Users, Percent, Calendar,
+    ScrollText, FileSignature, Clock, AlertCircle, XCircle, Eye, Loader2, Ban
 } from 'lucide-react';
 import { AuthStore } from '../../../services/authStore';
 
@@ -18,6 +19,18 @@ const STATUS_COLUMNS: { id: FranchiseLeadStatus; label: string; color: string; b
     { id: 'SIGNED', label: 'Signés', color: 'text-emerald-700', bgColor: 'bg-emerald-100' },
     { id: 'REJECTED', label: 'Rejetés', color: 'text-red-700', bgColor: 'bg-red-100' }
 ];
+
+/** Allowed drag-and-drop transitions (respects pipeline order + Loi Doubin) */
+const ALLOWED_TRANSITIONS: Record<string, string[]> = {
+    NEW: ['CONTACTED', 'REJECTED'],
+    CONTACTED: ['MEETING', 'REJECTED'],
+    MEETING: ['VALIDATED', 'REJECTED'],
+    VALIDATED: ['REJECTED'], // DIP_SENT only via "Envoyer DIP" button (triggers backend logic)
+    DIP_SENT: ['REJECTED'],  // CONTRACT_SENT only via "Générer Contrat" (respects 20-day cooling)
+    CONTRACT_SENT: ['REJECTED'], // SIGNED only via "Signer" button (creates agency)
+    SIGNED: [],               // Terminal state
+    REJECTED: ['NEW'],        // Can be re-opened
+};
 
 const REGIONS = ['IDF', 'AURA', 'PACA', 'HDF', 'NAQ', 'OCC', 'BRE', 'NOR', 'GES', 'PDL', 'BFC', 'CVL'];
 
@@ -50,6 +63,16 @@ export default function FranchiseLeadsPage() {
 
     // Drag state
     const [draggedLead, setDraggedLead] = useState<FranchiseLead | null>(null);
+    const [dropTarget, setDropTarget] = useState<string | null>(null);
+
+    // Toast
+    const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'warning' } | null>(null);
+    const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+    const showToast = useCallback((message: string, type: 'success' | 'error' | 'warning' = 'success') => {
+        setToast({ message, type });
+        setTimeout(() => setToast(null), 4000);
+    }, []);
 
     useEffect(() => {
         loadLeads();
@@ -74,7 +97,6 @@ export default function FranchiseLeadsPage() {
     // Filtered leads
     const filteredLeads = useMemo(() => {
         return leads.filter(lead => {
-            // Search
             if (searchQuery) {
                 const q = searchQuery.toLowerCase();
                 const match = lead.name.toLowerCase().includes(q) ||
@@ -82,9 +104,7 @@ export default function FranchiseLeadsPage() {
                     lead.targetCity.toLowerCase().includes(q);
                 if (!match) return false;
             }
-            // Region
             if (regionFilter && lead.region !== regionFilter) return false;
-            // Date (last N days)
             if (dateFilter) {
                 const days = parseInt(dateFilter);
                 const leadDate = new Date(lead.createdAt);
@@ -98,7 +118,7 @@ export default function FranchiseLeadsPage() {
 
     const handleCreateLead = async () => {
         if (!newLeadData.name || !newLeadData.email) {
-            alert('Veuillez remplir au moins le nom et l\'email.');
+            showToast('Veuillez remplir au moins le nom et l\'email.', 'error');
             return;
         }
         const { type, ...leadData } = newLeadData;
@@ -110,42 +130,152 @@ export default function FranchiseLeadsPage() {
         setIsCreateModalOpen(false);
         setNewLeadData({ name: '', email: '', phone: '', targetCity: '', region: 'IDF', type: 'FRANCHISE' });
         loadLeads();
+        showToast('Candidat créé avec succès');
     };
 
-    const handleSignContract = async (id: string) => {
-        if (!confirm('Signer ce contrat ? Cela créera automatiquement l\'agence.')) return;
-        await FranchiseLeadStore.signContract(id);
-        loadLeads();
+    // ── Quick Actions ──
+
+    const handleQuickTransition = async (lead: FranchiseLead, newStatus: FranchiseLeadStatus, label: string) => {
+        setActionLoading(lead.id);
+        await FranchiseLeadStore.updateStatus(lead.id, newStatus);
+        await loadLeads();
+        setActionLoading(null);
+        showToast(`${lead.name} → ${label}`);
     };
 
-    // Drag & Drop handlers
+    const handleSendDIP = async (lead: FranchiseLead) => {
+        if (!confirm(`Envoyer le DIP à ${lead.name} ?\nCela démarrera le délai légal de réflexion de 20 jours.`)) return;
+        setActionLoading(lead.id);
+        const result = await FranchiseLeadStore.sendDIP(lead.id);
+        setActionLoading(null);
+        if (result) {
+            await loadLeads();
+            showToast(`DIP envoyé à ${lead.name}. Délai de 20 jours lancé.`);
+        } else {
+            showToast('Erreur lors de l\'envoi du DIP', 'error');
+        }
+    };
+
+    const handleGenerateContract = async (lead: FranchiseLead) => {
+        setActionLoading(lead.id);
+        window.open(`http://localhost:4000/franchise-leads/${lead.id}/contract`, '_blank');
+        await new Promise(r => setTimeout(r, 2000));
+        await loadLeads();
+        setActionLoading(null);
+        showToast(`Contrat généré pour ${lead.name}`);
+    };
+
+    const handleSignContract = async (lead: FranchiseLead) => {
+        if (!confirm(`Signer le contrat de ${lead.name} ?\nCela créera automatiquement l'agence et le compte gérant.`)) return;
+        setActionLoading(lead.id);
+        const result = await FranchiseLeadStore.signContract(lead.id);
+        setActionLoading(null);
+        if (result) {
+            await loadLeads();
+            showToast(`🎉 Contrat signé ! Agence créée pour ${lead.name}`);
+        } else {
+            showToast('Erreur lors de la signature', 'error');
+        }
+    };
+
+    const handleReject = async (lead: FranchiseLead) => {
+        const reason = prompt(`Motif du rejet pour ${lead.name} :`);
+        if (!reason) return;
+        setActionLoading(lead.id);
+        await FranchiseLeadStore.update(lead.id, { status: 'REJECTED' as any, rejectionReason: reason });
+        await loadLeads();
+        setActionLoading(null);
+        showToast(`${lead.name} rejeté`, 'warning');
+    };
+
+    // ── Drag & Drop (secured) ──
+
     const handleDragStart = (e: React.DragEvent, lead: FranchiseLead) => {
         setDraggedLead(lead);
         e.dataTransfer.effectAllowed = 'move';
     };
 
-    const handleDragOver = (e: React.DragEvent) => {
+    const handleDragOver = (e: React.DragEvent, columnId: string) => {
         e.preventDefault();
-        e.dataTransfer.dropEffect = 'move';
+        if (draggedLead) {
+            const allowed = ALLOWED_TRANSITIONS[draggedLead.status] || [];
+            if (allowed.includes(columnId)) {
+                e.dataTransfer.dropEffect = 'move';
+                setDropTarget(columnId);
+            } else {
+                e.dataTransfer.dropEffect = 'none';
+                setDropTarget(null);
+            }
+        }
+    };
+
+    const handleDragLeave = () => {
+        setDropTarget(null);
     };
 
     const handleDrop = async (e: React.DragEvent, newStatus: FranchiseLeadStatus) => {
         e.preventDefault();
+        setDropTarget(null);
         if (!draggedLead || draggedLead.status === newStatus) {
             setDraggedLead(null);
             return;
         }
 
-        // Optimistic update
-        setLeads(prev => prev.map(l => l.id === draggedLead.id ? { ...l, status: newStatus } : l));
-        setDraggedLead(null);
+        // Check if transition is allowed
+        const allowed = ALLOWED_TRANSITIONS[draggedLead.status] || [];
+        if (!allowed.includes(newStatus)) {
+            setDraggedLead(null);
+            const statusLabel = STATUS_COLUMNS.find(c => c.id === newStatus)?.label || newStatus;
+            showToast(`Transition interdite vers "${statusLabel}". Utilisez les boutons d'action.`, 'error');
+            return;
+        }
 
-        // API call
+        // If rejecting via drag, ask for reason
+        if (newStatus === 'REJECTED') {
+            const reason = prompt(`Motif du rejet pour ${draggedLead.name} :`);
+            if (!reason) {
+                setDraggedLead(null);
+                return;
+            }
+            setLeads(prev => prev.map(l => l.id === draggedLead.id ? { ...l, status: newStatus } : l));
+            setDraggedLead(null);
+            await FranchiseLeadStore.update(draggedLead.id, { status: 'REJECTED' as any, rejectionReason: reason });
+            showToast(`${draggedLead.name} rejeté`, 'warning');
+            return;
+        }
+
+        // Optimistic update + API call
+        setLeads(prev => prev.map(l => l.id === draggedLead.id ? { ...l, status: newStatus } : l));
+        const leadName = draggedLead.name;
+        setDraggedLead(null);
         await FranchiseLeadStore.updateStatus(draggedLead.id, newStatus);
+        const label = STATUS_COLUMNS.find(c => c.id === newStatus)?.label || newStatus;
+        showToast(`${leadName} → ${label}`);
+    };
+
+    /** Compute cooling period days remaining */
+    const getCoolingDays = (lead: FranchiseLead): number | null => {
+        if (lead.status !== 'DIP_SENT' || !lead.dipSentAt) return null;
+        const days = Math.floor((Date.now() - new Date(lead.dipSentAt).getTime()) / (1000 * 60 * 60 * 24));
+        return Math.max(0, 20 - days);
     };
 
     return (
         <div className="p-8 h-full flex flex-col">
+            {/* Toast */}
+            {toast && (
+                <div className={`fixed top-6 right-6 z-50 px-5 py-3 rounded-xl shadow-xl font-bold text-sm flex items-center gap-2 transition-all animate-in slide-in-from-right ${toast.type === 'success' ? 'bg-emerald-500 text-white' :
+                        toast.type === 'error' ? 'bg-rose-500 text-white' :
+                            'bg-amber-500 text-white'
+                    }`}>
+                    {toast.type === 'success' && <CheckCircle size={16} />}
+                    {toast.type === 'error' && <XCircle size={16} />}
+                    {toast.type === 'warning' && <AlertCircle size={16} />}
+                    {toast.message}
+                    <button onClick={() => setToast(null)} className="ml-2 opacity-70 hover:opacity-100"><X size={14} /></button>
+                </div>
+            )}
+
             {/* Header */}
             <div className="flex justify-between items-center mb-6">
                 <div>
@@ -257,69 +387,236 @@ export default function FranchiseLeadsPage() {
             {/* Kanban View */}
             {viewMode === 'KANBAN' && (
                 <div className="flex gap-4 overflow-x-auto pb-4 flex-1">
-                    {STATUS_COLUMNS.map(column => (
-                        <div
-                            key={column.id}
-                            className="min-w-[280px] w-[280px] bg-slate-50 rounded-2xl flex flex-col max-h-full"
-                            onDragOver={handleDragOver}
-                            onDrop={(e) => handleDrop(e, column.id)}
-                        >
-                            <div className="p-4 border-b border-slate-200 flex justify-between items-center sticky top-0 bg-slate-50 rounded-t-2xl z-10">
-                                <div className="flex items-center gap-2">
-                                    <span className={`px-2.5 py-1 rounded-lg text-xs font-black ${column.bgColor} ${column.color}`}>
-                                        {filteredLeads.filter(l => l.status === column.id).length}
-                                    </span>
-                                    <span className="font-bold text-slate-700 text-sm">{column.label}</span>
+                    {STATUS_COLUMNS.map(column => {
+                        const isValidDrop = draggedLead ? (ALLOWED_TRANSITIONS[draggedLead.status] || []).includes(column.id) : false;
+                        const isActiveTarget = dropTarget === column.id;
+
+                        return (
+                            <div
+                                key={column.id}
+                                className={`min-w-[280px] w-[280px] rounded-2xl flex flex-col max-h-full transition-all ${isActiveTarget ? 'bg-indigo-50 ring-2 ring-indigo-300' :
+                                        draggedLead && !isValidDrop && draggedLead.status !== column.id ? 'bg-slate-50 opacity-50' :
+                                            'bg-slate-50'
+                                    }`}
+                                onDragOver={(e) => handleDragOver(e, column.id)}
+                                onDragLeave={handleDragLeave}
+                                onDrop={(e) => handleDrop(e, column.id)}
+                            >
+                                <div className="p-4 border-b border-slate-200 flex justify-between items-center sticky top-0 bg-inherit rounded-t-2xl z-10">
+                                    <div className="flex items-center gap-2">
+                                        <span className={`px-2.5 py-1 rounded-lg text-xs font-black ${column.bgColor} ${column.color}`}>
+                                            {filteredLeads.filter(l => l.status === column.id).length}
+                                        </span>
+                                        <span className="font-bold text-slate-700 text-sm">{column.label}</span>
+                                    </div>
+                                    {draggedLead && isValidDrop && (
+                                        <span className="text-[10px] text-indigo-500 font-bold animate-pulse">Déposer ici</span>
+                                    )}
+                                    {draggedLead && !isValidDrop && draggedLead.status !== column.id && (
+                                        <Ban size={14} className="text-slate-300" />
+                                    )}
+                                </div>
+
+                                <div className="p-3 space-y-3 overflow-y-auto flex-1">
+                                    {filteredLeads.filter(l => l.status === column.id).map(lead => {
+                                        const coolingDays = getCoolingDays(lead);
+                                        const isLoading = actionLoading === lead.id;
+
+                                        return (
+                                            <div
+                                                key={lead.id}
+                                                draggable={!isLoading}
+                                                onDragStart={(e) => handleDragStart(e, lead)}
+                                                className={`bg-white p-4 rounded-xl shadow-sm border-2 border-transparent hover:border-indigo-200 hover:shadow-md transition-all cursor-grab active:cursor-grabbing relative ${draggedLead?.id === lead.id ? 'opacity-50 scale-95' : ''
+                                                    } ${isLoading ? 'opacity-60 pointer-events-none' : ''}`}
+                                            >
+                                                {isLoading && (
+                                                    <div className="absolute inset-0 bg-white/50 rounded-xl flex items-center justify-center z-10">
+                                                        <Loader2 size={20} className="animate-spin text-indigo-500" />
+                                                    </div>
+                                                )}
+
+                                                {/* Card Header */}
+                                                <div className="flex justify-between items-start mb-2">
+                                                    <h3 className="font-bold text-slate-800 text-sm">{lead.name}</h3>
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); window.location.href = `/admin/franchise-leads/${lead.id}`; }}
+                                                        className="text-slate-400 hover:text-indigo-600 p-1 rounded-lg hover:bg-indigo-50 transition-colors"
+                                                        title="Voir le détail"
+                                                    >
+                                                        <Eye size={14} />
+                                                    </button>
+                                                </div>
+
+                                                {/* Card Info */}
+                                                <div className="space-y-1 mb-3">
+                                                    <div className="flex items-center gap-2 text-xs text-slate-500">
+                                                        <MapPin size={12} />
+                                                        <span>{lead.targetCity} ({lead.region})</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-2 text-xs text-slate-500">
+                                                        <Mail size={12} />
+                                                        <span className="truncate">{lead.email}</span>
+                                                    </div>
+                                                    {lead.companyName && (
+                                                        <div className="text-[10px] text-slate-400 font-medium truncate">
+                                                            🏢 {lead.companyName}
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                {/* Cooling Period Badge */}
+                                                {coolingDays !== null && (
+                                                    <div className={`mb-3 px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-2 ${coolingDays > 0
+                                                            ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                                                            : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                                        }`}>
+                                                        <Clock size={12} />
+                                                        {coolingDays > 0
+                                                            ? `Délai : ${coolingDays}j restants`
+                                                            : '✅ Délai écoulé'
+                                                        }
+                                                    </div>
+                                                )}
+
+                                                {/* Rejection reason */}
+                                                {lead.status === 'REJECTED' && lead.rejectionReason && (
+                                                    <div className="mb-3 px-3 py-2 rounded-lg text-[10px] bg-rose-50 text-rose-600 border border-rose-200 line-clamp-2">
+                                                        ❌ {lead.rejectionReason}
+                                                    </div>
+                                                )}
+
+                                                {/* Action Buttons — Contextual per status */}
+                                                <div className="flex flex-wrap gap-1.5 pt-2 border-t border-slate-100">
+                                                    {/* NEW → Contacté */}
+                                                    {lead.status === 'NEW' && (
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); handleQuickTransition(lead, 'CONTACTED', 'Contacté'); }}
+                                                            className="text-[11px] bg-blue-50 text-blue-600 px-2 py-1 rounded-lg hover:bg-blue-100 flex items-center gap-1 font-bold transition-colors"
+                                                        >
+                                                            <Phone size={11} /> Contacté
+                                                        </button>
+                                                    )}
+
+                                                    {/* CONTACTED → Meeting / Validated */}
+                                                    {lead.status === 'CONTACTED' && (
+                                                        <>
+                                                            <button
+                                                                onClick={(e) => { e.stopPropagation(); handleQuickTransition(lead, 'MEETING', 'RDV planifié'); }}
+                                                                className="text-[11px] bg-purple-50 text-purple-600 px-2 py-1 rounded-lg hover:bg-purple-100 flex items-center gap-1 font-bold transition-colors"
+                                                            >
+                                                                <Calendar size={11} /> RDV
+                                                            </button>
+                                                            <button
+                                                                onClick={(e) => { e.stopPropagation(); handleQuickTransition(lead, 'VALIDATED', 'Projet validé'); }}
+                                                                className="text-[11px] bg-indigo-50 text-indigo-600 px-2 py-1 rounded-lg hover:bg-indigo-100 flex items-center gap-1 font-bold transition-colors"
+                                                            >
+                                                                <CheckCircle size={11} /> Valider
+                                                            </button>
+                                                        </>
+                                                    )}
+
+                                                    {/* MEETING → Validated */}
+                                                    {lead.status === 'MEETING' && (
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); handleQuickTransition(lead, 'VALIDATED', 'Projet validé'); }}
+                                                            className="text-[11px] bg-indigo-50 text-indigo-600 px-2 py-1 rounded-lg hover:bg-indigo-100 flex items-center gap-1 font-bold transition-colors"
+                                                        >
+                                                            <CheckCircle size={11} /> Valider le projet
+                                                        </button>
+                                                    )}
+
+                                                    {/* VALIDATED → Send DIP */}
+                                                    {lead.status === 'VALIDATED' && (
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); handleSendDIP(lead); }}
+                                                            className="text-[11px] bg-cyan-50 text-cyan-700 px-2 py-1 rounded-lg hover:bg-cyan-100 flex items-center gap-1 font-bold transition-colors"
+                                                        >
+                                                            <ScrollText size={11} /> Envoyer DIP
+                                                        </button>
+                                                    )}
+
+                                                    {/* DIP_SENT → View DIP + Generate Contract (if cooling ok) */}
+                                                    {lead.status === 'DIP_SENT' && (
+                                                        <>
+                                                            <button
+                                                                onClick={(e) => { e.stopPropagation(); window.open(`http://localhost:4000/franchise-leads/${lead.id}/dip`, '_blank'); }}
+                                                                className="text-[11px] bg-slate-100 text-slate-600 px-2 py-1 rounded-lg hover:bg-slate-200 flex items-center gap-1 font-bold transition-colors"
+                                                            >
+                                                                <Eye size={11} /> DIP
+                                                            </button>
+                                                            {coolingDays !== null && coolingDays <= 0 && (
+                                                                <button
+                                                                    onClick={(e) => { e.stopPropagation(); handleGenerateContract(lead); }}
+                                                                    className="text-[11px] bg-orange-50 text-orange-600 px-2 py-1 rounded-lg hover:bg-orange-100 flex items-center gap-1 font-bold transition-colors"
+                                                                >
+                                                                    <FileSignature size={11} /> Contrat
+                                                                </button>
+                                                            )}
+                                                        </>
+                                                    )}
+
+                                                    {/* CONTRACT_SENT → Sign + View docs */}
+                                                    {lead.status === 'CONTRACT_SENT' && (
+                                                        <>
+                                                            <button
+                                                                onClick={(e) => { e.stopPropagation(); handleSignContract(lead); }}
+                                                                className="text-[11px] bg-emerald-50 text-emerald-600 px-2 py-1 rounded-lg hover:bg-emerald-100 flex items-center gap-1 font-bold transition-colors"
+                                                            >
+                                                                <FileSignature size={11} /> Signer
+                                                            </button>
+                                                            <button
+                                                                onClick={(e) => { e.stopPropagation(); window.open(`http://localhost:4000/franchise-leads/${lead.id}/contract`, '_blank'); }}
+                                                                className="text-[11px] bg-slate-100 text-slate-600 px-2 py-1 rounded-lg hover:bg-slate-200 flex items-center gap-1 font-bold transition-colors"
+                                                            >
+                                                                <Eye size={11} /> Contrat
+                                                            </button>
+                                                        </>
+                                                    )}
+
+                                                    {/* SIGNED → View docs + Kit */}
+                                                    {lead.status === 'SIGNED' && (
+                                                        <>
+                                                            <span className="text-[11px] text-emerald-600 font-bold flex items-center gap-1">
+                                                                <CheckCircle size={11} /> Agence créée
+                                                            </span>
+                                                            <button
+                                                                onClick={(e) => { e.stopPropagation(); window.open(`http://localhost:4000/franchise-leads/${lead.id}/opening-kit`, '_blank'); }}
+                                                                className="text-[11px] bg-slate-100 text-slate-600 px-2 py-1 rounded-lg hover:bg-slate-200 flex items-center gap-1 font-bold transition-colors"
+                                                            >
+                                                                <Download size={11} /> Kit
+                                                            </button>
+                                                        </>
+                                                    )}
+
+                                                    {/* REJECTED → Re-open */}
+                                                    {lead.status === 'REJECTED' && (
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); handleQuickTransition(lead, 'NEW', 'Réouvert'); }}
+                                                            className="text-[11px] bg-blue-50 text-blue-600 px-2 py-1 rounded-lg hover:bg-blue-100 flex items-center gap-1 font-bold transition-colors"
+                                                        >
+                                                            <Plus size={11} /> Réouvrir
+                                                        </button>
+                                                    )}
+
+                                                    {/* Reject button (for non-terminal states) */}
+                                                    {!['SIGNED', 'REJECTED'].includes(lead.status) && (
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); handleReject(lead); }}
+                                                            className="text-[11px] text-slate-400 hover:text-rose-500 px-1.5 py-1 rounded-lg hover:bg-rose-50 transition-colors ml-auto"
+                                                            title="Rejeter"
+                                                        >
+                                                            <XCircle size={13} />
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             </div>
-
-                            <div className="p-3 space-y-3 overflow-y-auto flex-1">
-                                {filteredLeads.filter(l => l.status === column.id).map(lead => (
-                                    <div
-                                        key={lead.id}
-                                        draggable
-                                        onDragStart={(e) => handleDragStart(e, lead)}
-                                        className={`bg-white p-4 rounded-xl shadow-sm border-2 border-transparent hover:border-indigo-200 hover:shadow-md transition-all cursor-grab active:cursor-grabbing ${draggedLead?.id === lead.id ? 'opacity-50' : ''}`}
-                                        onClick={() => window.location.href = `/admin/franchise-leads/${lead.id}`}
-                                    >
-                                        <div className="flex justify-between items-start mb-2">
-                                            <h3 className="font-bold text-slate-800 text-sm">{lead.name}</h3>
-                                            <button className="text-slate-400 hover:text-slate-600 p-1">
-                                                <MoreHorizontal size={14} />
-                                            </button>
-                                        </div>
-
-                                        <div className="space-y-1 mb-3">
-                                            <div className="flex items-center gap-2 text-xs text-slate-500">
-                                                <MapPin size={12} />
-                                                <span>{lead.targetCity} ({lead.region})</span>
-                                            </div>
-                                            <div className="flex items-center gap-2 text-xs text-slate-500">
-                                                <Mail size={12} />
-                                                <span className="truncate">{lead.email}</span>
-                                            </div>
-                                        </div>
-
-                                        <div className="flex justify-end gap-2">
-                                            {lead.status === 'CONTRACT_SENT' && (
-                                                <button
-                                                    onClick={(e) => { e.stopPropagation(); handleSignContract(lead.id); }}
-                                                    className="text-xs bg-emerald-50 text-emerald-600 px-2 py-1 rounded-lg hover:bg-emerald-100 flex items-center gap-1 font-bold"
-                                                >
-                                                    <FileText size={12} /> Signer
-                                                </button>
-                                            )}
-                                            {lead.status === 'SIGNED' && (
-                                                <span className="text-xs text-emerald-600 font-bold flex items-center gap-1">
-                                                    <CheckCircle size={12} /> Agence créée
-                                                </span>
-                                            )}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             )}
 
