@@ -146,5 +146,41 @@ export const FinanceStore = {
             console.error('[Finance] ❌ Erreur API avoirs:', error);
             return [];
         }
-    }
+    },
+
+    // ── NEW: Financial Summary (enriched KPIs) ──
+    getFinancialSummary: async (): Promise<any> => {
+        try {
+            const response = await fetch(`${API_URL}/summary`, { headers: getHeaders() });
+            if (!response.ok) throw new Error('Erreur');
+            return response.json();
+        } catch { return null; }
+    },
+
+    // ── NEW: Revenue Breakdown ──
+    getRevenueBreakdown: async (): Promise<any> => {
+        try {
+            const response = await fetch(`${API_URL}/breakdown`, { headers: getHeaders() });
+            if (!response.ok) throw new Error('Erreur');
+            return response.json();
+        } catch { return null; }
+    },
+
+    // ── NEW: Cash Flow Projection ──
+    getCashFlowProjection: async (): Promise<any> => {
+        try {
+            const response = await fetch(`${API_URL}/projection`, { headers: getHeaders() });
+            if (!response.ok) throw new Error('Erreur');
+            return response.json();
+        } catch { return null; }
+    },
+
+    // ── NEW: Download SEPA XML ──
+    downloadSepaXml: async (payoutId: string): Promise<Blob | null> => {
+        try {
+            const response = await fetch(`${API_URL}/payouts/${payoutId}/sepa`, { headers: getHeaders() });
+            if (!response.ok) throw new Error('Erreur');
+            return response.blob();
+        } catch { return null; }
+    },
 };

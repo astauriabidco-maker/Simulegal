@@ -8,6 +8,30 @@ import { AuthGuard } from '@nestjs/passport';
 export class FinanceController {
     constructor(private readonly financeService: FinanceService) { }
 
+    @Get('summary')
+    getFinancialSummary(@Request() req: any) {
+        if (req.user.role !== 'SUPER_ADMIN' && req.user.role !== 'HQ_ADMIN') {
+            throw new ForbiddenException('Accès réservé au siège');
+        }
+        return this.financeService.getFinancialSummary();
+    }
+
+    @Get('breakdown')
+    getRevenueBreakdown(@Request() req: any) {
+        if (req.user.role !== 'SUPER_ADMIN' && req.user.role !== 'HQ_ADMIN') {
+            throw new ForbiddenException('Accès réservé au siège');
+        }
+        return this.financeService.getRevenueBreakdown();
+    }
+
+    @Get('projection')
+    getCashFlowProjection(@Request() req: any) {
+        if (req.user.role !== 'SUPER_ADMIN' && req.user.role !== 'HQ_ADMIN') {
+            throw new ForbiddenException('Accès réservé au siège');
+        }
+        return this.financeService.getCashFlowProjection();
+    }
+
     @Get('stats')
     getStats(@Request() req: any) {
         if (req.user.role !== 'SUPER_ADMIN' && req.user.role !== 'HQ_ADMIN') {
