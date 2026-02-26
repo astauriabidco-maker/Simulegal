@@ -21,6 +21,7 @@ export default function RoleManager() {
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [showSuccess, setShowSuccess] = useState(false);
+    const [showError, setShowError] = useState('');
 
     useEffect(() => {
         const fetchRoles = async () => {
@@ -47,7 +48,7 @@ export default function RoleManager() {
 
     const handleCreateRole = () => {
         const newRole: Role = {
-            id: '',
+            id: '__NEW__',
             label: 'Nouveau Rôle',
             description: 'Description du rôle...',
             permissions: [],
@@ -58,17 +59,65 @@ export default function RoleManager() {
 
     const handleSave = async () => {
         if (!selectedRole) return;
+        if (!selectedRole.label || selectedRole.label.trim().length < 2) {
+            setShowError('Le nom du rôle est requis (min 2 caractères)');
+            setTimeout(() => setShowError(''), 4000);
+            return;
+        }
+
         setIsSaving(true);
         try {
-            await RoleStore.saveRole(selectedRole);
+            // Pour un nouveau rôle, on POST sans id
+            if (selectedRole.id === '__NEW__') {
+                const data = {
+                    label: selectedRole.label,
+                    description: selectedRole.description,
+                    permissions: selectedRole.permissions.join(',')
+                };
+                const response = await fetch('http://localhost:4000/roles', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('admin_token')}`
+                    },
+                    body: JSON.stringify(data)
+                });
+                if (!response.ok) throw new Error('Erreur création');
+            } else {
+                await RoleStore.saveRole(selectedRole);
+            }
             const updatedRoles = await RoleStore.getAllRoles();
             setRoles(updatedRoles);
-            setIsSaving(false);
+            setSelectedRole(null);
             setShowSuccess(true);
             setTimeout(() => setShowSuccess(false), 3000);
         } catch (error) {
             console.error('Save error:', error);
-            setIsSaving(false);
+            setShowError('Erreur lors de la sauvegarde');
+            setTimeout(() => setShowError(''), 4000);
+        }
+        setIsSaving(false);
+    };
+
+    const handleDelete = async () => {
+        if (!selectedRole || selectedRole.isSystem) return;
+        if (!confirm(`Supprimer le rôle "${selectedRole.label}" ? Cette action est irréversible.`)) return;
+
+        try {
+            const ok = await RoleStore.deleteRole(selectedRole.id);
+            if (ok) {
+                const updatedRoles = await RoleStore.getAllRoles();
+                setRoles(updatedRoles);
+                setSelectedRole(null);
+                setShowSuccess(true);
+                setTimeout(() => setShowSuccess(false), 3000);
+            } else {
+                setShowError('Impossible de supprimer ce rôle');
+                setTimeout(() => setShowError(''), 4000);
+            }
+        } catch (error) {
+            setShowError('Erreur lors de la suppression');
+            setTimeout(() => setShowError(''), 4000);
         }
     };
 
@@ -144,18 +193,29 @@ export default function RoleManager() {
                                     />
                                 </div>
                             </div>
-                            <button
-                                onClick={handleSave}
-                                disabled={isSaving || selectedRole.id === 'SUPER_ADMIN'}
-                                className="bg-indigo-600 hover:bg-slate-900 text-white px-8 py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-xl shadow-indigo-100 flex items-center gap-2 disabled:bg-slate-100 disabled:text-slate-300 disabled:shadow-none"
-                            >
-                                {isSaving ? 'Enregistrement...' : (
-                                    <>
-                                        <Save size={18} />
-                                        Appliquer les changements
-                                    </>
+                            <div className="flex items-center gap-3">
+                                {!selectedRole.isSystem && selectedRole.id !== '__NEW__' && (
+                                    <button
+                                        onClick={handleDelete}
+                                        className="bg-red-50 hover:bg-red-100 text-red-600 px-6 py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest transition-all flex items-center gap-2 border border-red-100"
+                                    >
+                                        <Trash2 size={16} />
+                                        Supprimer
+                                    </button>
                                 )}
-                            </button>
+                                <button
+                                    onClick={handleSave}
+                                    disabled={isSaving || selectedRole.id === 'SUPER_ADMIN'}
+                                    className="bg-indigo-600 hover:bg-slate-900 text-white px-8 py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-xl shadow-indigo-100 flex items-center gap-2 disabled:bg-slate-100 disabled:text-slate-300 disabled:shadow-none"
+                                >
+                                    {isSaving ? 'Enregistrement...' : (
+                                        <>
+                                            <Save size={18} />
+                                            {selectedRole.id === '__NEW__' ? 'Créer le rôle' : 'Appliquer'}
+                                        </>
+                                    )}
+                                </button>
+                            </div>
                         </div>
 
                         <div className="flex-1 overflow-y-auto p-12 space-y-12 pb-32">
@@ -163,6 +223,13 @@ export default function RoleManager() {
                                 <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-2xl flex items-center gap-3 animate-in fade-in slide-in-from-top-4">
                                     <CheckCircle2 className="text-emerald-500" size={20} />
                                     <p className="text-emerald-700 text-sm font-black uppercase">Changements enregistrés avec succès !</p>
+                                </div>
+                            )}
+
+                            {showError && (
+                                <div className="bg-red-50 border border-red-100 p-4 rounded-2xl flex items-center gap-3 animate-in fade-in slide-in-from-top-4">
+                                    <AlertCircle className="text-red-500" size={20} />
+                                    <p className="text-red-700 text-sm font-black uppercase">{showError}</p>
                                 </div>
                             )}
 

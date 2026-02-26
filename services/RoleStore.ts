@@ -12,41 +12,75 @@ const STORAGE_KEY = 'admin_roles';
 
 const DEFAULT_ROLES: Role[] = [
     {
-        id: 'SUPERADMIN',
+        id: 'SUPER_ADMIN',
         label: 'Super Administrateur',
         description: 'Accès total et illimité à toutes les fonctions du système.',
         permissions: [
-            'crm.view_all', 'crm.view_agency', 'crm.create', 'crm.edit_technical', 'crm.validate_doc', 'crm.delete',
+            'crm.view_all', 'crm.view_agency', 'crm.view_own', 'crm.create', 'crm.edit_technical', 'crm.validate_doc', 'crm.delete', 'crm.assign',
             'finance.view_global', 'finance.view_agency', 'finance.payout',
-            'network.manage', 'fleet.manage', 'users.manage', 'roles.manage', 'settings.manage'
+            'network.manage', 'fleet.manage', 'users.manage', 'roles.manage', 'settings.manage', 'automations.manage',
+            'inbox.view', 'inbox.send',
+            'profile.view_own', 'profile.edit_own', 'profile.view_team',
         ],
         isSystem: true
     },
     {
-        id: 'HQ',
-        label: 'Staff Siège (HQ)',
-        description: 'Gestion opérationnelle des dossiers et du réseau.',
+        id: 'HQ_ADMIN',
+        label: 'Administrateur Siège',
+        description: 'Gestion opérationnelle des dossiers, du réseau et des utilisateurs.',
         permissions: [
-            'crm.view_all', 'crm.view_agency', 'crm.create', 'crm.edit_technical', 'crm.validate_doc',
+            'crm.view_all', 'crm.view_agency', 'crm.view_own', 'crm.create', 'crm.edit_technical', 'crm.validate_doc', 'crm.assign',
             'finance.view_global', 'finance.view_agency',
-            'network.manage', 'fleet.manage', 'users.manage'
+            'network.manage', 'fleet.manage', 'users.manage',
+            'inbox.view', 'inbox.send',
+            'profile.view_own', 'profile.edit_own', 'profile.view_team',
         ],
         isSystem: true
     },
     {
-        id: 'AGENCY',
-        label: 'Directeur d\'Agence',
-        description: 'Gestion des leads de l\'agence et suivi des commissions.',
-        permissions: ['crm.view_agency', 'crm.create', 'finance.view_agency'],
+        id: 'CASE_WORKER',
+        label: 'Juriste / Opérateur',
+        description: 'Traitement juridique des dossiers, validation de documents.',
+        permissions: [
+            'crm.view_all', 'crm.view_agency', 'crm.view_own', 'crm.create', 'crm.edit_technical', 'crm.validate_doc', 'crm.assign',
+            'inbox.view', 'inbox.send',
+            'profile.view_own', 'profile.edit_own', 'profile.view_team',
+        ],
         isSystem: true
     },
     {
-        id: 'AGENCY_SALES',
-        label: 'Commercial Agence',
-        description: 'Acquisition de nouveaux leads en agence.',
-        permissions: ['crm.create', 'crm.view_agency'],
-        isSystem: false
-    }
+        id: 'AGENCY_MANAGER',
+        label: 'Manager Agence',
+        description: 'Gestion des leads de l\'agence, suivi des commissions.',
+        permissions: [
+            'crm.view_agency', 'crm.view_own', 'crm.create', 'crm.assign',
+            'finance.view_agency',
+            'inbox.view', 'inbox.send',
+            'profile.view_own', 'profile.edit_own', 'profile.view_team',
+        ],
+        isSystem: true
+    },
+    {
+        id: 'SALES',
+        label: 'Commercial',
+        description: 'Prospection commerciale, création de leads et communication client.',
+        permissions: ['crm.view_own', 'crm.create', 'inbox.view', 'inbox.send', 'profile.view_own', 'profile.edit_own'],
+        isSystem: true
+    },
+    {
+        id: 'KIOSK_AGENT',
+        label: 'Agent de Kiosque',
+        description: 'Création de dossiers depuis une tablette en agence.',
+        permissions: ['crm.create', 'profile.view_own'],
+        isSystem: true
+    },
+    {
+        id: 'API_PARTNER',
+        label: 'Partenaire API',
+        description: 'Accès API pour intégrations externes.',
+        permissions: ['crm.create', 'crm.view_own'],
+        isSystem: true
+    },
 ];
 
 const API_URL = 'http://localhost:4000';
