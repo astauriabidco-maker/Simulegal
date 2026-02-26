@@ -50,6 +50,9 @@ export default function UserManagementPanel() {
     // Staff type toggle
     const [staffType, setStaffType] = useState<'AGENCY' | 'HQ'>('AGENCY');
 
+    // Form validation errors
+    const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+
     const [formData, setFormData] = useState<Partial<StaffUser>>({
         name: '',
         email: '',
@@ -58,6 +61,33 @@ export default function UserManagementPanel() {
         homeAgencyId: '',
         scopeAgencyIds: []
     });
+
+    // ═══ VALIDATION ═══
+    const validateForm = (): boolean => {
+        const errors: Record<string, string> = {};
+
+        if (!formData.name || formData.name.trim().length < 2) {
+            errors.name = 'Le nom est requis (min 2 caractères)';
+        }
+
+        if (!formData.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+            errors.email = 'Email professionnel valide requis';
+        }
+
+        if (!formData.role) {
+            errors.role = 'Sélectionnez un rôle';
+        }
+
+        // Si staff agence, l'agence est obligatoire
+        if (staffType === 'AGENCY' && (!formData.homeAgencyId || formData.homeAgencyId === '')) {
+            errors.homeAgencyId = 'Sélectionnez une agence de rattachement';
+        }
+
+        setFormErrors(errors);
+        return Object.keys(errors).length === 0;
+    };
+
+    const hasErrors = Object.keys(formErrors).length > 0;
 
     const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
         setToast({ message, type });
@@ -117,6 +147,11 @@ export default function UserManagementPanel() {
     };
 
     const handleSave = async () => {
+        if (!validateForm()) {
+            showToast('Veuillez corriger les erreurs du formulaire', 'error');
+            return;
+        }
+
         try {
             if (editingUser) {
                 await UserStore.updateUser(editingUser.id, formData as any);
@@ -133,6 +168,7 @@ export default function UserManagementPanel() {
                 }
                 showToast(`${formData.name} créé avec succès`);
             }
+            setFormErrors({});
             await loadData();
             setIsModalOpen(false);
         } catch (error) {
@@ -403,23 +439,34 @@ export default function UserManagementPanel() {
                         <div className="p-6 space-y-5">
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="col-span-2">
-                                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Nom complet</label>
-                                    <input type="text" className="w-full h-12 bg-slate-50 border border-slate-200 rounded-xl px-4 font-bold text-slate-900 focus:border-indigo-500 outline-none"
-                                        placeholder="Jean Dupont" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
+                                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">
+                                        Nom complet <span className="text-red-500">*</span>
+                                    </label>
+                                    <input type="text" className={`w-full h-12 bg-slate-50 border rounded-xl px-4 font-bold text-slate-900 outline-none transition ${formErrors.name ? 'border-red-400 bg-red-50' : 'border-slate-200 focus:border-indigo-500'}`}
+                                        placeholder="Jean Dupont" value={formData.name}
+                                        onChange={(e) => { setFormData({ ...formData, name: e.target.value }); setFormErrors(prev => { const n = { ...prev }; delete n.name; return n; }); }} />
+                                    {formErrors.name && <p className="text-red-500 text-[11px] font-bold mt-1 ml-1">{formErrors.name}</p>}
                                 </div>
                                 <div className="col-span-2">
-                                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Email</label>
-                                    <input type="email" className="w-full h-12 bg-slate-50 border border-slate-200 rounded-xl px-4 font-bold text-slate-900 focus:border-indigo-500 outline-none"
-                                        placeholder="jean@simulegal.fr" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
+                                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">
+                                        Email <span className="text-red-500">*</span>
+                                    </label>
+                                    <input type="email" className={`w-full h-12 bg-slate-50 border rounded-xl px-4 font-bold text-slate-900 outline-none transition ${formErrors.email ? 'border-red-400 bg-red-50' : 'border-slate-200 focus:border-indigo-500'}`}
+                                        placeholder="jean@simulegal.fr" value={formData.email}
+                                        onChange={(e) => { setFormData({ ...formData, email: e.target.value }); setFormErrors(prev => { const n = { ...prev }; delete n.email; return n; }); }} />
+                                    {formErrors.email && <p className="text-red-500 text-[11px] font-bold mt-1 ml-1">{formErrors.email}</p>}
                                 </div>
                                 <div>
-                                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Rôle</label>
-                                    <select className="w-full h-12 bg-slate-50 border border-slate-200 rounded-xl px-4 font-bold text-slate-900 outline-none appearance-none"
-                                        value={formData.role} onChange={(e) => setFormData({ ...formData, role: e.target.value as StaffUser['role'] })}>
+                                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">
+                                        Rôle <span className="text-red-500">*</span>
+                                    </label>
+                                    <select className={`w-full h-12 bg-slate-50 border rounded-xl px-4 font-bold text-slate-900 outline-none appearance-none transition ${formErrors.role ? 'border-red-400 bg-red-50' : 'border-slate-200 focus:border-indigo-500'}`}
+                                        value={formData.role} onChange={(e) => { setFormData({ ...formData, role: e.target.value as StaffUser['role'] }); setFormErrors(prev => { const n = { ...prev }; delete n.role; return n; }); }}>
                                         {Object.entries(ROLE_LABELS).map(([val, label]) => (
                                             <option key={val} value={val}>{label}</option>
                                         ))}
                                     </select>
+                                    {formErrors.role && <p className="text-red-500 text-[11px] font-bold mt-1 ml-1">{formErrors.role}</p>}
                                 </div>
                                 <div>
                                     <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Statut</label>
@@ -445,12 +492,15 @@ export default function UserManagementPanel() {
 
                             {staffType === 'AGENCY' ? (
                                 <div>
-                                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Agence</label>
-                                    <select className="w-full h-12 bg-indigo-50 border border-indigo-200 rounded-xl px-4 font-bold text-indigo-900 outline-none appearance-none"
-                                        value={formData.homeAgencyId} onChange={(e) => setFormData({ ...formData, homeAgencyId: e.target.value })}>
-                                        <option value="">Sélectionner...</option>
+                                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">
+                                        Agence de rattachement <span className="text-red-500">*</span>
+                                    </label>
+                                    <select className={`w-full h-12 border rounded-xl px-4 font-bold outline-none appearance-none transition ${formErrors.homeAgencyId ? 'bg-red-50 border-red-400 text-red-900' : 'bg-indigo-50 border-indigo-200 text-indigo-900 focus:border-indigo-500'}`}
+                                        value={formData.homeAgencyId} onChange={(e) => { setFormData({ ...formData, homeAgencyId: e.target.value }); setFormErrors(prev => { const n = { ...prev }; delete n.homeAgencyId; return n; }); }}>
+                                        <option value="">⚠️ Sélectionner une agence...</option>
                                         {agencies.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
                                     </select>
+                                    {formErrors.homeAgencyId && <p className="text-red-500 text-[11px] font-bold mt-1 ml-1">{formErrors.homeAgencyId}</p>}
                                 </div>
                             ) : (
                                 <div className="p-4 bg-slate-50 border border-slate-100 rounded-xl">

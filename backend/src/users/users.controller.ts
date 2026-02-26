@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, ForbiddenException, Request } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, ForbiddenException, BadRequestException, Request } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { AuthGuard } from '@nestjs/passport';
 
@@ -48,6 +48,17 @@ export class UsersController {
         if (req.user.role !== 'SUPER_ADMIN' && req.user.role !== 'HQ_ADMIN') {
             throw new ForbiddenException('Action réservée au siège');
         }
+
+        // Validation des champs obligatoires
+        const errors: string[] = [];
+        if (!data.name || data.name.trim().length < 2) errors.push('Nom requis (min 2 caractères)');
+        if (!data.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) errors.push('Email valide requis');
+        if (!data.role) errors.push('Rôle requis');
+
+        if (errors.length > 0) {
+            throw new BadRequestException(errors.join(', '));
+        }
+
         return this.usersService.create(data);
     }
 
