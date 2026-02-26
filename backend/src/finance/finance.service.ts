@@ -212,6 +212,56 @@ export class FinanceService {
         });
     }
 
+    /**
+     * Créer un avoir (credit note) lié à une facture/lead
+     * - Crée le CreditNote en base
+     * - Crée une Transaction de type REFUND
+     * - Réduit le amountPaid du Lead
+     */
+    async createCreditNote(data: { leadId: string; amount: number; reason: string }) {
+        const lead = await this.prisma.lead.findUnique({ where: { id: data.leadId } });
+        if (!lead) throw new Error('Lead/Facture non trouvé');
+
+        // Générer numéro d'avoir unique : AV-YYYY-XXXXX
+        const year = new Date().getFullYear();
+        const count = await this.prisma.creditNote.count();
+        const number = `AV-${year}-${String(count + 1).padStart(5, '0')}`;
+
+        // 1. Créer le CreditNote
+        const creditNote = await this.prisma.creditNote.create({
+            data: {
+                number,
+                amount: data.amount,
+                reason: data.reason,
+                leadId: data.leadId,
+            },
+            include: { lead: true }
+        });
+
+        // 2. Créer la Transaction REFUND associée
+        await this.prisma.transaction.create({
+            data: {
+                type: 'REFUND',
+                amount: data.amount,
+                method: lead.paymentMethod || 'REFUND',
+                reference: number,
+                leadId: data.leadId,
+                invoiceNumber: lead.invoiceNumber,
+            }
+        });
+
+        // 3. Ajuster le montant payé du Lead (déduire le remboursement)
+        const newAmountPaid = Math.max(0, (lead.amountPaid || 0) - data.amount);
+        await this.prisma.lead.update({
+            where: { id: data.leadId },
+            data: { amountPaid: newAmountPaid }
+        });
+
+        console.log(`[FINANCE] 📄 Avoir ${number} créé: -${data.amount / 100}€ sur ${lead.invoiceNumber || data.leadId} — ${data.reason}`);
+
+        return creditNote;
+    }
+
     // ════════════════════════════════════════
     // FINANCIAL SUMMARY — KPIs enrichis
     // ════════════════════════════════════════

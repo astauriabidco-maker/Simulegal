@@ -148,6 +148,22 @@ export const FinanceStore = {
         }
     },
 
+    // ── Créer un avoir ──
+    createCreditNote: async (leadId: string, amount: number, reason: string): Promise<any> => {
+        try {
+            const response = await fetch(`${API_URL}/credit-notes`, {
+                method: 'POST',
+                headers: getHeaders(),
+                body: JSON.stringify({ leadId, amount, reason })
+            });
+            if (!response.ok) throw new Error('Erreur création avoir');
+            return response.json();
+        } catch (error) {
+            console.error('[Finance] ❌ Erreur API création avoir:', error);
+            return null;
+        }
+    },
+
     // ── NEW: Financial Summary (enriched KPIs) ──
     getFinancialSummary: async (): Promise<any> => {
         try {

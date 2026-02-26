@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
     TrendingUp, TrendingDown, Wallet, Clock, CheckCircle2, FileText, ArrowRightLeft,
     Building2, Download, DollarSign, X, Search, BarChart3, PieChart, Target,
-    AlertTriangle, ChevronUp, ChevronDown, RefreshCw, XCircle, AlertCircle
+    AlertTriangle, ChevronUp, ChevronDown, RefreshCw, XCircle, AlertCircle, RotateCcw
 } from 'lucide-react';
 import { FinanceStore, Payout } from '../../../services/FinanceStore';
 import { AgencyStore } from '../../../services/AgencyStore';
@@ -30,6 +30,9 @@ export default function FinancePage() {
     const [mpAmount, setMpAmount] = useState('');
     const [mpMethod, setMpMethod] = useState('CASH');
     const [mpRef, setMpRef] = useState('');
+    const [creditNoteModal, setCreditNoteModal] = useState<{ leadId: string; name: string; invoiceNumber: string; maxAmount: number } | null>(null);
+    const [cnAmount, setCnAmount] = useState('');
+    const [cnReason, setCnReason] = useState('');
 
     const showToast = useCallback((msg: string, type: 'success' | 'error' | 'warning' = 'success') => {
         setToast({ message: msg, type }); setTimeout(() => setToast(null), 4000);
@@ -90,6 +93,21 @@ export default function FinancePage() {
             loadData();
         } else {
             showToast('Erreur lors de l\'enregistrement du paiement', 'error');
+        }
+    };
+
+    const handleCreateCreditNote = async () => {
+        if (!creditNoteModal || !cnAmount || !cnReason) return;
+        const amountCents = Math.round(parseFloat(cnAmount) * 100);
+        if (isNaN(amountCents) || amountCents <= 0) { showToast('Montant invalide', 'error'); return; }
+        if (amountCents > creditNoteModal.maxAmount) { showToast('Le montant de l\'avoir ne peut pas dépasser le montant payé', 'error'); return; }
+        const result = await FinanceStore.createCreditNote(creditNoteModal.leadId, amountCents, cnReason);
+        if (result) {
+            showToast(`📄 Avoir ${result.number} créé: -${cnAmount}€`);
+            setCreditNoteModal(null); setCnAmount(''); setCnReason('');
+            loadData();
+        } else {
+            showToast('Erreur lors de la création de l\'avoir', 'error');
         }
     };
 
@@ -411,6 +429,12 @@ export default function FinancePage() {
                                                     className="px-3 py-1.5 bg-emerald-600 text-white text-[10px] font-bold rounded-lg hover:bg-emerald-700 transition-colors flex items-center gap-1">
                                                     <DollarSign size={12} />Encaisser
                                                 </button>
+                                                {paid > 0 && (
+                                                    <button onClick={() => setCreditNoteModal({ leadId: inv.id, name: inv.name, invoiceNumber: inv.invoiceNumber, maxAmount: paid })}
+                                                        className="px-3 py-1.5 bg-rose-100 text-rose-700 text-[10px] font-bold rounded-lg hover:bg-rose-200 transition-colors flex items-center gap-1">
+                                                        <RotateCcw size={12} />Avoir
+                                                    </button>
+                                                )}
                                                 <button onClick={() => { try { BillingStore.downloadInvoicePdf(inv.id); showToast('Téléchargement facture PDF'); } catch { } }}
                                                     className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg" title="Télécharger PDF">
                                                     <Download size={14} />
@@ -453,17 +477,18 @@ export default function FinancePage() {
                 <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
                     <table className="w-full text-left">
                         <thead className="bg-slate-50 text-[10px] uppercase font-black tracking-wider text-slate-400">
-                            <tr><th className="p-4">N° Avoir</th><th className="p-4">Date</th><th className="p-4">Client</th><th className="p-4">Raison</th><th className="p-4 text-right">Montant</th></tr>
+                            <tr><th className="p-4">N° Avoir</th><th className="p-4">Date</th><th className="p-4">Client</th><th className="p-4">Facture liée</th><th className="p-4">Raison</th><th className="p-4 text-right">Montant</th></tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
-                            {creditNotes.length === 0 ? <tr><td colSpan={5} className="p-16 text-center text-slate-400 font-bold">Aucun avoir émis</td></tr> :
+                            {creditNotes.length === 0 ? <tr><td colSpan={6} className="p-16 text-center text-slate-400 font-bold">Aucun avoir émis</td></tr> :
                                 creditNotes.map(cn => (
                                     <tr key={cn.id} className="hover:bg-slate-50 transition-colors">
-                                        <td className="p-4 font-black text-slate-900 text-sm">{cn.number}</td>
+                                        <td className="p-4 font-black text-rose-600 text-sm">{cn.number}</td>
                                         <td className="p-4 text-sm text-slate-500">{new Date(cn.createdAt).toLocaleDateString('fr-FR')}</td>
                                         <td className="p-4 font-bold text-slate-700">{cn.lead?.name}</td>
+                                        <td className="p-4 text-xs font-bold text-indigo-600">{cn.lead?.invoiceNumber || '-'}</td>
                                         <td className="p-4 text-sm text-slate-500">{cn.reason}</td>
-                                        <td className="p-4 text-right font-black text-rose-600">{fmt(cn.amount)} €</td>
+                                        <td className="p-4 text-right font-black text-rose-600">-{fmt(cn.amount)} €</td>
                                     </tr>
                                 ))}
                         </tbody>
@@ -579,6 +604,69 @@ export default function FinancePage() {
                             <button onClick={handleManualPayment} disabled={!mpAmount || parseFloat(mpAmount) <= 0}
                                 className="flex-1 py-3 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
                                 <CheckCircle2 size={18} /> Encaisser {mpAmount ? `${mpAmount} €` : ''}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ═══ CREDIT NOTE MODAL ═══ */}
+            {creditNoteModal && (
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
+                        <div className="bg-gradient-to-r from-rose-600 to-pink-600 p-6 text-white">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <h2 className="text-xl font-black">Émettre un Avoir</h2>
+                                    <p className="text-rose-200 text-xs font-bold mt-1">{creditNoteModal.invoiceNumber} — {creditNoteModal.name}</p>
+                                </div>
+                                <button onClick={() => { setCreditNoteModal(null); setCnAmount(''); setCnReason(''); }} className="p-2 hover:bg-white/20 rounded-lg"><X size={20} /></button>
+                            </div>
+                        </div>
+
+                        <div className="p-6 space-y-5">
+                            {/* Info facture */}
+                            <div className="bg-slate-50 p-4 rounded-xl">
+                                <div className="flex justify-between text-sm"><span className="text-slate-500">Facture liée</span><span className="font-bold text-indigo-600">{creditNoteModal.invoiceNumber}</span></div>
+                                <div className="flex justify-between text-sm mt-1"><span className="text-slate-500">Montant encaissé</span><span className="font-bold text-slate-800">{fmt(creditNoteModal.maxAmount)} €</span></div>
+                            </div>
+
+                            {/* Montant */}
+                            <div>
+                                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Montant de l'avoir (€) — max {fmt(creditNoteModal.maxAmount)}€</label>
+                                <input type="number" step="0.01" min="0" max={creditNoteModal.maxAmount / 100} value={cnAmount} onChange={e => setCnAmount(e.target.value)}
+                                    className="w-full h-12 border border-slate-200 rounded-xl px-4 text-lg font-black text-slate-900 focus:ring-2 focus:ring-rose-500 focus:border-rose-500 outline-none" placeholder="0.00" />
+                            </div>
+
+                            {/* Raison */}
+                            <div>
+                                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">Motif de l'avoir</label>
+                                <div className="grid grid-cols-2 gap-2 mb-3">
+                                    {[
+                                        'Erreur de facturation',
+                                        'Annulation de service',
+                                        'Remboursement partiel',
+                                        'Geste commercial',
+                                        'Double paiement',
+                                        'Insatisfaction client',
+                                    ].map(r => (
+                                        <button key={r} onClick={() => setCnReason(r)}
+                                            className={`p-2 rounded-lg border text-xs font-bold text-left transition-all ${cnReason === r ? 'border-rose-500 bg-rose-50 text-rose-700' : 'border-slate-200 text-slate-600 hover:border-slate-300'}`}>
+                                            {r}
+                                        </button>
+                                    ))}
+                                </div>
+                                <input type="text" value={cnReason} onChange={e => setCnReason(e.target.value)}
+                                    className="w-full h-10 border border-slate-200 rounded-xl px-4 text-sm text-slate-700 focus:ring-2 focus:ring-rose-500 outline-none" placeholder="Autre motif..." />
+                            </div>
+                        </div>
+
+                        <div className="p-6 bg-slate-50 border-t border-slate-100 flex gap-3">
+                            <button onClick={() => { setCreditNoteModal(null); setCnAmount(''); setCnReason(''); }}
+                                className="flex-1 py-3 bg-white border border-slate-200 text-slate-500 font-bold rounded-xl hover:bg-slate-100">Annuler</button>
+                            <button onClick={handleCreateCreditNote} disabled={!cnAmount || parseFloat(cnAmount) <= 0 || !cnReason}
+                                className="flex-1 py-3 bg-rose-600 text-white font-bold rounded-xl hover:bg-rose-700 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                                <RotateCcw size={18} /> Émettre l'avoir {cnAmount ? `-${cnAmount} €` : ''}
                             </button>
                         </div>
                     </div>

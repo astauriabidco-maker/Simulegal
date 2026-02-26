@@ -117,6 +117,14 @@ export class FinanceController {
         return this.financeService.getCreditNotes();
     }
 
+    @Post('credit-notes')
+    createCreditNote(@Request() req: any, @Body() data: { leadId: string; amount: number; reason: string }) {
+        if (req.user.role !== 'SUPER_ADMIN' && req.user.role !== 'HQ_ADMIN') {
+            throw new ForbiddenException('Action réservée au siège');
+        }
+        return this.financeService.createCreditNote(data);
+    }
+
     @Get('payouts/:id/sepa')
     @Header('Content-Type', 'application/xml')
     async downloadSepa(
