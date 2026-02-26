@@ -17,6 +17,7 @@ export interface FranchiseLead {
     documents?: string; // JSON string
     rejectionReason?: string;
     convertedAgencyId?: string;
+    score?: number;
     // Loi Doubin fields
     dipSentAt?: string;
     coolingPeriodRemaining?: number | null;
@@ -84,7 +85,6 @@ export const FranchiseLeadStore = {
 
     create: async (data: Partial<FranchiseLead>): Promise<FranchiseLead | null> => {
         try {
-            // Note: Create endpoint is public for Landing Page, but we can send auth if available
             const response = await fetch(API_URL, {
                 method: 'POST',
                 headers: getHeaders(),
@@ -230,13 +230,7 @@ export const FranchiseLeadStore = {
         }
     },
 
-    getAnalytics: async (): Promise<{
-        total: number;
-        statusCounts: Record<string, number>;
-        regionCounts: Record<string, number>;
-        conversionRate: number;
-        monthlyTrend: { month: string; count: number; signed: number }[];
-    } | null> => {
+    getAnalytics: async (): Promise<any | null> => {
         try {
             const response = await fetch(`${API_URL}/analytics/dashboard`, {
                 headers: getHeaders()
@@ -249,8 +243,103 @@ export const FranchiseLeadStore = {
         }
     },
 
+    // ── NEW: Enhanced Analytics (scoring + velocity) ──
+    getEnhancedAnalytics: async (): Promise<any | null> => {
+        try {
+            const response = await fetch(`${API_URL}/analytics/enhanced`, { headers: getHeaders() });
+            if (!response.ok) throw new Error('Failed');
+            return await response.json();
+        } catch { return null; }
+    },
+
+    // ── NEW: Pipeline Velocity KPIs ──
+    getPipelineVelocity: async (): Promise<any | null> => {
+        try {
+            const response = await fetch(`${API_URL}/analytics/velocity`, { headers: getHeaders() });
+            if (!response.ok) throw new Error('Failed');
+            return await response.json();
+        } catch { return null; }
+    },
+
+    // ── NEW: Map Data ──
+    getMapData: async (): Promise<any[] | null> => {
+        try {
+            const response = await fetch(`${API_URL}/analytics/map`, { headers: getHeaders() });
+            if (!response.ok) throw new Error('Failed');
+            return await response.json();
+        } catch { return null; }
+    },
+
+    // ── NEW: Compare Leads ──
+    compareLeads: async (ids: string[]): Promise<any[] | null> => {
+        try {
+            const response = await fetch(`${API_URL}/analytics/compare`, {
+                method: 'POST', headers: getHeaders(), body: JSON.stringify({ ids })
+            });
+            if (!response.ok) throw new Error('Failed');
+            return await response.json();
+        } catch { return null; }
+    },
+
+    // ── NEW: PnL Simulation ──
+    simulatePnL: async (id: string, params?: any): Promise<any | null> => {
+        try {
+            const response = await fetch(`${API_URL}/${id}/pnl`, {
+                method: 'POST', headers: getHeaders(), body: JSON.stringify(params || {})
+            });
+            if (!response.ok) throw new Error('Failed');
+            return await response.json();
+        } catch { return null; }
+    },
+
+    // ── NEW: Onboarding ──
+    getOnboarding: async (id: string): Promise<any[] | null> => {
+        try {
+            const response = await fetch(`${API_URL}/${id}/onboarding`, { headers: getHeaders() });
+            if (!response.ok) throw new Error('Failed');
+            return await response.json();
+        } catch { return null; }
+    },
+
+    updateOnboardingStep: async (id: string, stepId: string, completed: boolean): Promise<any | null> => {
+        try {
+            const response = await fetch(`${API_URL}/${id}/onboarding/${stepId}`, {
+                method: 'PATCH', headers: getHeaders(), body: JSON.stringify({ completed })
+            });
+            if (!response.ok) throw new Error('Failed');
+            return await response.json();
+        } catch { return null; }
+    },
+
+    // ── Score computation (client-side mirror of backend) ──
+    computeScore: (lead: FranchiseLead): number => {
+        let score = 0;
+        if (lead.name) score += 5;
+        if (lead.email) score += 5;
+        if (lead.phone) score += 5;
+        if (lead.targetCity) score += 5;
+        if (lead.companyName) score += 5;
+        if (lead.legalForm) score += 5;
+        if (lead.siret && /^\d{14}$/.test(lead.siret.replace(/\s/g, ''))) score += 15;
+        const hotRegions = ['IDF', 'AURA', 'PACA', 'NAQ', 'OCC'];
+        if (hotRegions.includes(lead.region)) score += 10;
+        if (lead.entryFee && lead.entryFee > 0) score += 5;
+        if (lead.royaltyRate && lead.royaltyRate > 0) score += 5;
+        if (lead.contractDuration && lead.contractDuration > 0) score += 5;
+        const pipelineBonus: Record<string, number> = {
+            NEW: 0, CONTACTED: 4, MEETING: 8, VALIDATED: 12,
+            DIP_SENT: 15, CONTRACT_SENT: 18, SIGNED: 20
+        };
+        score += pipelineBonus[lead.status] || 0;
+        const days = Math.floor((Date.now() - new Date(lead.createdAt).getTime()) / (1000 * 60 * 60 * 24));
+        if (days <= 7) score += 10;
+        else if (days <= 30) score += 5;
+        return Math.min(100, score);
+    },
+
     downloadCSV: () => {
         const token = AuthStore.getToken();
         window.open(`${API_URL}/export/csv?token=${token}`, '_blank');
     }
 };
+

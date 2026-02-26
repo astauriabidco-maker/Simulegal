@@ -17,6 +17,61 @@ export class FranchiseLeadsController {
     }
 
     // --- PROTECTED ROUTES (HQ ONLY) ---
+    // Note: Routes without :id params MUST come before :id routes
+
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles('HQ_ADMIN', 'SUPER_ADMIN', 'SUPERADMIN')
+    @Get('analytics/dashboard')
+    getAnalytics() {
+        return this.franchiseLeadsService.getAnalytics();
+    }
+
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles('HQ_ADMIN', 'SUPER_ADMIN', 'SUPERADMIN')
+    @Get('analytics/enhanced')
+    getEnhancedAnalytics() {
+        return this.franchiseLeadsService.getEnhancedAnalytics();
+    }
+
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles('HQ_ADMIN', 'SUPER_ADMIN', 'SUPERADMIN')
+    @Get('analytics/velocity')
+    getPipelineVelocity() {
+        return this.franchiseLeadsService.getPipelineVelocity();
+    }
+
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles('HQ_ADMIN', 'SUPER_ADMIN', 'SUPERADMIN')
+    @Get('analytics/map')
+    getMapData() {
+        return this.franchiseLeadsService.getMapData();
+    }
+
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles('HQ_ADMIN', 'SUPER_ADMIN', 'SUPERADMIN')
+    @Post('analytics/compare')
+    compareLeads(@Body() body: { ids: string[] }) {
+        return this.franchiseLeadsService.compareLeads(body.ids);
+    }
+
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles('HQ_ADMIN', 'SUPER_ADMIN', 'SUPERADMIN')
+    @Get('export/csv')
+    async exportCSV(@Res() res: Response) {
+        const csv = await this.franchiseLeadsService.exportToCSV();
+        res.set({
+            'Content-Type': 'text/csv; charset=utf-8',
+            'Content-Disposition': 'attachment; filename=franchise-leads.csv'
+        });
+        res.send('\uFEFF' + csv); // BOM for Excel UTF-8
+    }
+
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles('HQ_ADMIN', 'SUPER_ADMIN', 'SUPERADMIN')
+    @Post('siret/validate')
+    validateSiret(@Body() body: { siret: string }) {
+        return this.franchiseLeadsService.validateSiret(body.siret);
+    }
 
     @UseGuards(JwtAuthGuard, RolesGuard)
     @Roles('HQ_ADMIN', 'SUPER_ADMIN', 'SUPERADMIN')
@@ -39,16 +94,7 @@ export class FranchiseLeadsController {
         return this.franchiseLeadsService.update(id, body);
     }
 
-    // --- VALIDATION SIRET ---
-
-    @UseGuards(JwtAuthGuard, RolesGuard)
-    @Roles('HQ_ADMIN', 'SUPER_ADMIN', 'SUPERADMIN')
-    @Post('siret/validate')
-    validateSiret(@Body() body: { siret: string }) {
-        return this.franchiseLeadsService.validateSiret(body.siret);
-    }
-
-    // --- LOI DOUBIN: DIP (Document d'Information Précontractuelle) ---
+    // --- LOI DOUBIN: DIP ---
 
     @UseGuards(JwtAuthGuard, RolesGuard)
     @Roles('HQ_ADMIN', 'SUPER_ADMIN', 'SUPERADMIN')
@@ -70,7 +116,7 @@ export class FranchiseLeadsController {
         res.end(buffer);
     }
 
-    // --- COOLING PERIOD STATUS ---
+    // --- COOLING PERIOD ---
 
     @UseGuards(JwtAuthGuard, RolesGuard)
     @Roles('HQ_ADMIN', 'SUPER_ADMIN', 'SUPERADMIN')
@@ -126,24 +172,31 @@ export class FranchiseLeadsController {
         return this.franchiseLeadsService.addNote(id, body.content, body.author, body.type);
     }
 
-    // --- ANALYTICS & EXPORT ---
+    // --- PnL SIMULATION ---
 
     @UseGuards(JwtAuthGuard, RolesGuard)
     @Roles('HQ_ADMIN', 'SUPER_ADMIN', 'SUPERADMIN')
-    @Get('analytics/dashboard')
-    getAnalytics() {
-        return this.franchiseLeadsService.getAnalytics();
+    @Post(':id/pnl')
+    async simulatePnL(@Param('id') id: string, @Body() params?: any) {
+        const lead = await this.franchiseLeadsService.findOne(id);
+        return this.franchiseLeadsService.simulatePnL(lead, params);
+    }
+
+    // --- ONBOARDING ---
+
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles('HQ_ADMIN', 'SUPER_ADMIN', 'SUPERADMIN')
+    @Get(':id/onboarding')
+    async getOnboarding(@Param('id') id: string) {
+        const lead = await this.franchiseLeadsService.findOne(id);
+        return this.franchiseLeadsService.getOnboardingChecklist(lead);
     }
 
     @UseGuards(JwtAuthGuard, RolesGuard)
     @Roles('HQ_ADMIN', 'SUPER_ADMIN', 'SUPERADMIN')
-    @Get('export/csv')
-    async exportCSV(@Res() res: Response) {
-        const csv = await this.franchiseLeadsService.exportToCSV();
-        res.set({
-            'Content-Type': 'text/csv; charset=utf-8',
-            'Content-Disposition': 'attachment; filename=franchise-leads.csv'
-        });
-        res.send('\uFEFF' + csv); // BOM for Excel UTF-8
+    @Patch(':id/onboarding/:stepId')
+    updateOnboarding(@Param('id') id: string, @Param('stepId') stepId: string, @Body() body: { completed: boolean }) {
+        return this.franchiseLeadsService.updateOnboardingStep(id, stepId, body.completed);
     }
 }
+

@@ -34,7 +34,7 @@ const ALLOWED_TRANSITIONS: Record<string, string[]> = {
 
 const REGIONS = ['IDF', 'AURA', 'PACA', 'HDF', 'NAQ', 'OCC', 'BRE', 'NOR', 'GES', 'PDL', 'BFC', 'CVL'];
 
-type ViewMode = 'KANBAN' | 'ANALYTICS';
+type ViewMode = 'KANBAN' | 'LIST' | 'ANALYTICS' | 'MAP' | 'COMPARE';
 
 interface Analytics {
     total: number;
@@ -49,6 +49,13 @@ export default function FranchiseLeadsPage() {
     const [loading, setLoading] = useState(true);
     const [viewMode, setViewMode] = useState<ViewMode>('KANBAN');
     const [analytics, setAnalytics] = useState<Analytics | null>(null);
+    const [enhancedAnalytics, setEnhancedAnalytics] = useState<any>(null);
+    const [mapData, setMapData] = useState<any[]>([]);
+    const [selectedForCompare, setSelectedForCompare] = useState<string[]>([]);
+    const [compareData, setCompareData] = useState<any[]>([]);
+    const [multiSelected, setMultiSelected] = useState<Set<string>>(new Set());
+    const [sortField, setSortField] = useState<string>('createdAt');
+    const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
     // Filters
     const [searchQuery, setSearchQuery] = useState('');
@@ -79,7 +86,8 @@ export default function FranchiseLeadsPage() {
     }, []);
 
     useEffect(() => {
-        if (viewMode === 'ANALYTICS') loadAnalytics();
+        if (viewMode === 'ANALYTICS') loadEnhancedAnalytics();
+        if (viewMode === 'MAP') loadMapData();
     }, [viewMode]);
 
     const loadLeads = async () => {
@@ -92,6 +100,52 @@ export default function FranchiseLeadsPage() {
     const loadAnalytics = async () => {
         const data = await FranchiseLeadStore.getAnalytics();
         if (data) setAnalytics(data);
+    };
+
+    const loadEnhancedAnalytics = async () => {
+        const data = await FranchiseLeadStore.getEnhancedAnalytics();
+        if (data) { setEnhancedAnalytics(data); setAnalytics(data); }
+    };
+
+    const loadMapData = async () => {
+        const data = await FranchiseLeadStore.getMapData();
+        if (data) setMapData(data);
+    };
+
+    const loadComparison = async () => {
+        if (selectedForCompare.length < 2) { showToast('Sélectionnez au moins 2 candidats', 'error'); return; }
+        const data = await FranchiseLeadStore.compareLeads(selectedForCompare);
+        if (data) { setCompareData(data); setViewMode('COMPARE'); }
+    };
+
+    const toggleMultiSelect = (id: string) => {
+        setMultiSelected(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id); else next.add(id);
+            return next;
+        });
+    };
+
+    const toggleCompareSelect = (id: string) => {
+        setSelectedForCompare(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id].slice(0, 3));
+    };
+
+    const getScoreColor = (score: number) => {
+        if (score >= 80) return 'bg-emerald-500';
+        if (score >= 60) return 'bg-blue-500';
+        if (score >= 40) return 'bg-amber-500';
+        return 'bg-rose-500';
+    };
+
+    const getLastActivityLabel = (lead: FranchiseLead): string => {
+        if (lead.notes && lead.notes.length > 0) {
+            const last = lead.notes[0];
+            const daysAgo = Math.floor((Date.now() - new Date(last.createdAt).getTime()) / (1000 * 60 * 60 * 24));
+            const prefix = last.type === 'EMAIL' ? '📧' : last.type === 'CALL' ? '📞' : '📝';
+            return `${prefix} ${daysAgo === 0 ? "Aujourd'hui" : `il y a ${daysAgo}j`}`;
+        }
+        const daysAgo = Math.floor((Date.now() - new Date(lead.updatedAt).getTime()) / (1000 * 60 * 60 * 24));
+        return `📅 ${daysAgo === 0 ? "Aujourd'hui" : `il y a ${daysAgo}j`}`;
     };
 
     // Filtered leads
@@ -115,6 +169,16 @@ export default function FranchiseLeadsPage() {
             return true;
         });
     }, [leads, searchQuery, regionFilter, dateFilter]);
+
+    // Sorted leads for list view
+    const sortedLeads = useMemo(() => {
+        return [...filteredLeads].sort((a: any, b: any) => {
+            const av = sortField === 'score' ? FranchiseLeadStore.computeScore(a) : a[sortField] || '';
+            const bv = sortField === 'score' ? FranchiseLeadStore.computeScore(b) : b[sortField] || '';
+            if (sortDir === 'asc') return av > bv ? 1 : -1;
+            return av < bv ? 1 : -1;
+        });
+    }, [filteredLeads, sortField, sortDir]);
 
     const handleCreateLead = async () => {
         if (!newLeadData.name || !newLeadData.email) {
@@ -265,8 +329,8 @@ export default function FranchiseLeadsPage() {
             {/* Toast */}
             {toast && (
                 <div className={`fixed top-6 right-6 z-50 px-5 py-3 rounded-xl shadow-xl font-bold text-sm flex items-center gap-2 transition-all animate-in slide-in-from-right ${toast.type === 'success' ? 'bg-emerald-500 text-white' :
-                        toast.type === 'error' ? 'bg-rose-500 text-white' :
-                            'bg-amber-500 text-white'
+                    toast.type === 'error' ? 'bg-rose-500 text-white' :
+                        'bg-amber-500 text-white'
                     }`}>
                     {toast.type === 'success' && <CheckCircle size={16} />}
                     {toast.type === 'error' && <XCircle size={16} />}
@@ -284,19 +348,39 @@ export default function FranchiseLeadsPage() {
                 </div>
                 <div className="flex items-center gap-3">
                     {/* View Toggle */}
-                    <div className="flex bg-slate-100 rounded-xl p-1">
+                    <div className="flex bg-slate-100 rounded-xl p-1 flex-wrap">
                         <button
                             onClick={() => setViewMode('KANBAN')}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${viewMode === 'KANBAN' ? 'bg-white shadow text-indigo-600' : 'text-slate-500'}`}
+                            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-bold transition-all ${viewMode === 'KANBAN' ? 'bg-white shadow text-indigo-600' : 'text-slate-500'}`}
                         >
-                            <Kanban size={16} /> Pipeline
+                            <Kanban size={14} /> Pipeline
+                        </button>
+                        <button
+                            onClick={() => setViewMode('LIST')}
+                            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-bold transition-all ${viewMode === 'LIST' ? 'bg-white shadow text-indigo-600' : 'text-slate-500'}`}
+                        >
+                            <FileText size={14} /> Liste
                         </button>
                         <button
                             onClick={() => setViewMode('ANALYTICS')}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${viewMode === 'ANALYTICS' ? 'bg-white shadow text-indigo-600' : 'text-slate-500'}`}
+                            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-bold transition-all ${viewMode === 'ANALYTICS' ? 'bg-white shadow text-indigo-600' : 'text-slate-500'}`}
                         >
-                            <BarChart3 size={16} /> Analytics
+                            <BarChart3 size={14} /> Analytics
                         </button>
+                        <button
+                            onClick={() => setViewMode('MAP')}
+                            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-bold transition-all ${viewMode === 'MAP' ? 'bg-white shadow text-indigo-600' : 'text-slate-500'}`}
+                        >
+                            <MapPin size={14} /> Carte
+                        </button>
+                        {selectedForCompare.length >= 2 && (
+                            <button
+                                onClick={loadComparison}
+                                className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-bold bg-amber-100 text-amber-700 animate-pulse"
+                            >
+                                <Users size={14} /> Comparer ({selectedForCompare.length})
+                            </button>
+                        )}
                     </div>
 
                     {/* Export */}
@@ -318,7 +402,7 @@ export default function FranchiseLeadsPage() {
             </div>
 
             {/* Filters Bar */}
-            {viewMode === 'KANBAN' && (
+            {(viewMode === 'KANBAN' || viewMode === 'LIST') && (
                 <div className="flex items-center gap-4 mb-6 p-4 bg-white rounded-2xl border border-slate-200 shadow-sm">
                     <div className="flex items-center gap-2 flex-1">
                         <Search size={18} className="text-slate-400" />
@@ -395,8 +479,8 @@ export default function FranchiseLeadsPage() {
                             <div
                                 key={column.id}
                                 className={`min-w-[280px] w-[280px] rounded-2xl flex flex-col max-h-full transition-all ${isActiveTarget ? 'bg-indigo-50 ring-2 ring-indigo-300' :
-                                        draggedLead && !isValidDrop && draggedLead.status !== column.id ? 'bg-slate-50 opacity-50' :
-                                            'bg-slate-50'
+                                    draggedLead && !isValidDrop && draggedLead.status !== column.id ? 'bg-slate-50 opacity-50' :
+                                        'bg-slate-50'
                                     }`}
                                 onDragOver={(e) => handleDragOver(e, column.id)}
                                 onDragLeave={handleDragLeave}
@@ -438,15 +522,24 @@ export default function FranchiseLeadsPage() {
 
                                                 {/* Card Header */}
                                                 <div className="flex justify-between items-start mb-2">
-                                                    <h3 className="font-bold text-slate-800 text-sm">{lead.name}</h3>
-                                                    <button
-                                                        onClick={(e) => { e.stopPropagation(); window.location.href = `/admin/franchise-leads/${lead.id}`; }}
-                                                        className="text-slate-400 hover:text-indigo-600 p-1 rounded-lg hover:bg-indigo-50 transition-colors"
-                                                        title="Voir le détail"
-                                                    >
-                                                        <Eye size={14} />
-                                                    </button>
+                                                    <div className="flex items-center gap-2">
+                                                        <h3 className="font-bold text-slate-800 text-sm">{lead.name}</h3>
+                                                        {(() => { const s = FranchiseLeadStore.computeScore(lead); return <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-md text-white ${getScoreColor(s)}`}>{s}</span>; })()}
+                                                    </div>
+                                                    <div className="flex items-center gap-1">
+                                                        <input type="checkbox" checked={selectedForCompare.includes(lead.id)} onChange={(e) => { e.stopPropagation(); toggleCompareSelect(lead.id); }} className="accent-amber-500 w-3 h-3" title="Comparer" />
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); window.location.href = `/admin/franchise-leads/${lead.id}`; }}
+                                                            className="text-slate-400 hover:text-indigo-600 p-1 rounded-lg hover:bg-indigo-50 transition-colors"
+                                                            title="Voir le détail"
+                                                        >
+                                                            <Eye size={14} />
+                                                        </button>
+                                                    </div>
                                                 </div>
+
+                                                {/* Last Activity */}
+                                                <div className="text-[10px] text-slate-400 mb-2">{getLastActivityLabel(lead)}</div>
 
                                                 {/* Card Info */}
                                                 <div className="space-y-1 mb-3">
@@ -468,8 +561,8 @@ export default function FranchiseLeadsPage() {
                                                 {/* Cooling Period Badge */}
                                                 {coolingDays !== null && (
                                                     <div className={`mb-3 px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-2 ${coolingDays > 0
-                                                            ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                                                            : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                                        ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                                                        : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                                                         }`}>
                                                         <Clock size={12} />
                                                         {coolingDays > 0
@@ -620,6 +713,183 @@ export default function FranchiseLeadsPage() {
                 </div>
             )}
 
+            {/* ═══════════════ LIST VIEW ═══════════════ */}
+            {viewMode === 'LIST' && (
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex-1">
+                    {/* Multi-action bar */}
+                    {multiSelected.size > 0 && (
+                        <div className="bg-indigo-50 border-b border-indigo-200 px-6 py-3 flex items-center gap-4">
+                            <span className="text-sm font-bold text-indigo-700">{multiSelected.size} sélectionné(s)</span>
+                            <button
+                                onClick={() => { multiSelected.forEach(id => FranchiseLeadStore.updateStatus(id, 'CONTACTED')); loadLeads(); setMultiSelected(new Set()); showToast(`${multiSelected.size} leads → Contacté`); }}
+                                className="text-xs bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg font-bold hover:bg-blue-200"
+                            >Marquer Contactés</button>
+                            <button
+                                onClick={() => { toggleCompareSelect; setSelectedForCompare(Array.from(multiSelected).slice(0, 3)); }}
+                                className="text-xs bg-amber-100 text-amber-700 px-3 py-1.5 rounded-lg font-bold hover:bg-amber-200"
+                            >Comparer</button>
+                            <button
+                                onClick={() => setMultiSelected(new Set())}
+                                className="text-xs text-slate-500 hover:text-slate-700 ml-auto"
+                            >Désélectionner</button>
+                        </div>
+                    )}
+
+                    <table className="w-full">
+                        <thead>
+                            <tr className="bg-slate-50 border-b border-slate-200">
+                                <th className="p-3 w-10"><input type="checkbox" onChange={(e) => { if (e.target.checked) setMultiSelected(new Set(filteredLeads.map(l => l.id))); else setMultiSelected(new Set()); }} /></th>
+                                {[
+                                    { key: 'name', label: 'Candidat' },
+                                    { key: 'targetCity', label: 'Ville' },
+                                    { key: 'region', label: 'Région' },
+                                    { key: 'status', label: 'Statut' },
+                                    { key: 'score', label: 'Score' },
+                                    { key: 'createdAt', label: 'Date' },
+                                ].map(col => (
+                                    <th
+                                        key={col.key}
+                                        onClick={() => { setSortField(col.key); setSortDir(prev => prev === 'asc' ? 'desc' : 'asc'); }}
+                                        className="p-3 text-left text-xs font-bold text-slate-500 uppercase cursor-pointer hover:text-slate-800 select-none"
+                                    >
+                                        {col.label} {sortField === col.key && (sortDir === 'asc' ? '↑' : '↓')}
+                                    </th>
+                                ))}
+                                <th className="p-3 text-left text-xs font-bold text-slate-500 uppercase">Activité</th>
+                                <th className="p-3 w-10">☆</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {sortedLeads.map(lead => {
+                                const score = FranchiseLeadStore.computeScore(lead);
+                                const col = STATUS_COLUMNS.find(c => c.id === lead.status);
+                                return (
+                                    <tr key={lead.id} className={`border-b border-slate-100 hover:bg-slate-50 transition-colors ${multiSelected.has(lead.id) ? 'bg-indigo-50' : ''}`}>
+                                        <td className="p-3"><input type="checkbox" checked={multiSelected.has(lead.id)} onChange={() => toggleMultiSelect(lead.id)} /></td>
+                                        <td className="p-3">
+                                            <button onClick={() => window.location.href = `/admin/franchise-leads/${lead.id}`} className="text-left">
+                                                <div className="font-bold text-sm text-slate-800">{lead.name}</div>
+                                                <div className="text-xs text-slate-400">{lead.email}</div>
+                                            </button>
+                                        </td>
+                                        <td className="p-3 text-sm text-slate-600">{lead.targetCity}</td>
+                                        <td className="p-3 text-sm text-slate-600">{lead.region}</td>
+                                        <td className="p-3"><span className={`px-2 py-1 rounded-lg text-[10px] font-black ${col?.bgColor} ${col?.color}`}>{col?.label}</span></td>
+                                        <td className="p-3">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-12 bg-slate-200 rounded-full h-1.5"><div className={`h-1.5 rounded-full ${getScoreColor(score)}`} style={{ width: `${score}%` }} /></div>
+                                                <span className="text-xs font-bold text-slate-600">{score}</span>
+                                            </div>
+                                        </td>
+                                        <td className="p-3 text-xs text-slate-500">{new Date(lead.createdAt).toLocaleDateString('fr-FR')}</td>
+                                        <td className="p-3 text-xs text-slate-400">{getLastActivityLabel(lead)}</td>
+                                        <td className="p-3"><input type="checkbox" checked={selectedForCompare.includes(lead.id)} onChange={() => toggleCompareSelect(lead.id)} title="Comparer" className="accent-amber-500" /></td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+
+            {/* ═══════════════ MAP VIEW ═══════════════ */}
+            {viewMode === 'MAP' && (
+                <div className="flex-1 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div className="p-4 border-b border-slate-200 flex items-center justify-between">
+                        <h2 className="text-lg font-black text-slate-900">Carte du Réseau</h2>
+                        <div className="flex items-center gap-4 text-xs">
+                            <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-emerald-500" /> Signés ({mapData.filter(m => m.isSigned).length})</span>
+                            <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-indigo-500" /> En cours ({mapData.filter(m => !m.isSigned && m.status !== 'REJECTED').length})</span>
+                            <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-rose-400" /> Rejetés ({mapData.filter(m => m.status === 'REJECTED').length})</span>
+                        </div>
+                    </div>
+                    <div className="relative" style={{ height: '500px', background: 'linear-gradient(135deg, #e0e7ff 0%, #f0f4ff 50%, #e8f5e9 100%)' }}>
+                        {/* France outline area - render each lead as a positioned pin */}
+                        {mapData.map(point => {
+                            // Normalize coordinates to viewport (France: lat 41-51, lng -5 to 10)
+                            const x = ((point.lng + 5) / 15) * 100;
+                            const y = ((51 - point.lat) / 10) * 100;
+                            return (
+                                <div
+                                    key={point.id}
+                                    className="absolute transform -translate-x-1/2 -translate-y-1/2 group cursor-pointer"
+                                    style={{ left: `${Math.max(5, Math.min(95, x))}%`, top: `${Math.max(5, Math.min(95, y))}%` }}
+                                    onClick={() => window.location.href = `/admin/franchise-leads/${point.id}`}
+                                >
+                                    {point.exclusiveTerritory && point.exclusiveRadius && (
+                                        <div className={`absolute rounded-full border-2 border-dashed opacity-20 ${point.isSigned ? 'bg-emerald-300 border-emerald-500' : 'bg-indigo-200 border-indigo-400'}`}
+                                            style={{ width: `${point.exclusiveRadius * 4}px`, height: `${point.exclusiveRadius * 4}px`, top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}
+                                        />
+                                    )}
+                                    <div className={`w-4 h-4 rounded-full shadow-lg border-2 border-white transition-transform group-hover:scale-150 ${point.isSigned ? 'bg-emerald-500' : point.status === 'REJECTED' ? 'bg-rose-400' : 'bg-indigo-500'
+                                        }`} />
+                                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-slate-900 text-white text-[10px] px-2 py-1 rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none">
+                                        <div className="font-bold">{point.name}</div>
+                                        <div>{point.targetCity} • {point.region}</div>
+                                        <div>{STATUS_COLUMNS.find(c => c.id === point.status)?.label}</div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+
+                        {/* Region labels */}
+                        {Object.entries({ IDF: [52, 50], AURA: [53, 47], PACA: [68, 42], OCC: [52, 33], NAQ: [30, 40], HDF: [53, 58], GES: [72, 55], BRE: [10, 50], NOR: [38, 58], PDL: [18, 43], BFC: [64, 48], CVL: [38, 45] }).map(([region, [x, y]]) => (
+                            <div key={region} className="absolute text-[9px] font-black text-slate-300 uppercase" style={{ left: `${x}%`, top: `${y}%` }}>{region}</div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* ═══════════════ COMPARE VIEW ═══════════════ */}
+            {viewMode === 'COMPARE' && compareData.length > 0 && (
+                <div className="flex-1 overflow-auto">
+                    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+                        <div className="flex items-center justify-between mb-6">
+                            <h2 className="text-lg font-black text-slate-900">Comparaison des candidats</h2>
+                            <button onClick={() => { setViewMode('LIST'); setSelectedForCompare([]); setCompareData([]); }} className="text-xs text-slate-500 hover:text-slate-700 font-bold">← Retour</button>
+                        </div>
+
+                        <div className="grid gap-4" style={{ gridTemplateColumns: `200px repeat(${compareData.length}, 1fr)` }}>
+                            {/* Header Row */}
+                            <div className="font-bold text-xs text-slate-400 uppercase py-2">Critère</div>
+                            {compareData.map(c => (
+                                <div key={c.id} className="py-2">
+                                    <div className="font-black text-sm text-slate-800">{c.name}</div>
+                                    <div className="text-[10px] text-slate-400">{c.targetCity} ({c.region})</div>
+                                </div>
+                            ))}
+
+                            {/* Comparison rows */}
+                            {[
+                                ['Score', ...compareData.map(c => {
+                                    const sc = c.score;
+                                    return <div key={c.id} className="flex items-center gap-2"><div className="w-16 bg-slate-200 rounded-full h-2"><div className={`h-2 rounded-full ${sc >= 80 ? 'bg-emerald-500' : sc >= 60 ? 'bg-blue-500' : sc >= 40 ? 'bg-amber-500' : 'bg-rose-500'}`} style={{ width: `${sc}%` }} /></div><span className="font-black text-sm">{sc}</span></div>;
+                                })],
+                                ['Statut', ...compareData.map(c => { const col = STATUS_COLUMNS.find(s => s.id === c.status); return <span key={c.id} className={`px-2 py-1 rounded-lg text-[10px] font-black ${col?.bgColor} ${col?.color}`}>{col?.label}</span>; })],
+                                ['Société', ...compareData.map(c => <span key={c.id} className="text-sm">{c.companyName || '-'}</span>)],
+                                ['SIRET', ...compareData.map(c => <span key={c.id} className={`text-sm font-mono ${c.siret ? 'text-emerald-600' : 'text-slate-300'}`}>{c.siret || 'Non renseigné'}</span>)],
+                                ['Droit d\'entrée', ...compareData.map(c => <span key={c.id} className="font-bold text-sm">{c.entryFee ? `${c.entryFee.toLocaleString()} €` : '-'}</span>)],
+                                ['Redevance', ...compareData.map(c => <span key={c.id} className="font-bold text-sm">{c.royaltyRate ? `${c.royaltyRate}%` : '-'}</span>)],
+                                ['Territoire exclusif', ...compareData.map(c => <span key={c.id} className="text-sm">{c.exclusiveTerritory ? `✅ ${c.exclusiveRadius}km` : '❌'}</span>)],
+                                ['Ancienneté', ...compareData.map(c => <span key={c.id} className="text-sm">{c.daysSinceCreation}j</span>)],
+                                ['Notes', ...compareData.map(c => <span key={c.id} className="text-sm">{c.notesCount} note(s)</span>)],
+                                ['CA Année 1', ...compareData.map(c => <span key={c.id} className="font-bold text-sm text-emerald-600">{c.pnl?.summary?.year1Revenue?.toLocaleString()} €</span>)],
+                                ['Résultat Année 1', ...compareData.map(c => <span key={c.id} className={`font-bold text-sm ${(c.pnl?.summary?.year1Profit || 0) >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>{c.pnl?.summary?.year1Profit?.toLocaleString()} €</span>)],
+                                ['Break-even', ...compareData.map(c => <span key={c.id} className="font-bold text-sm">{c.pnl?.summary?.breakEvenMonth ? `Mois ${c.pnl.summary.breakEvenMonth}` : 'N/A'}</span>)],
+                                ['Marge moyenne', ...compareData.map(c => <span key={c.id} className="font-bold text-sm">{c.pnl?.summary?.avgMargin}%</span>)],
+                            ].map((row, i) => (
+                                <>
+                                    <div key={`label-${i}`} className={`font-bold text-xs text-slate-600 py-3 px-2 ${i % 2 === 0 ? 'bg-slate-50' : ''} rounded-l-lg`}>{row[0]}</div>
+                                    {row.slice(1).map((cell, j) => (
+                                        <div key={`cell-${i}-${j}`} className={`py-3 px-2 ${i % 2 === 0 ? 'bg-slate-50' : ''} ${j === row.length - 2 ? 'rounded-r-lg' : ''}`}>{cell}</div>
+                                    ))}
+                                </>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Analytics View */}
             {viewMode === 'ANALYTICS' && analytics && (
                 <div className="grid grid-cols-4 gap-6">
@@ -723,6 +993,73 @@ export default function FranchiseLeadsPage() {
                             ))}
                         </div>
                     </div>
+
+                    {/* Enhanced Analytics: Velocity + Score Distribution */}
+                    {enhancedAnalytics && (
+                        <>
+                            {/* Pipeline Velocity */}
+                            <div className="col-span-2 bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
+                                <h3 className="font-black text-slate-900 mb-1">⏱️ Vélocité Pipeline</h3>
+                                <p className="text-xs text-slate-400 mb-4">Temps moyen (jours) par étape</p>
+                                <div className="space-y-2">
+                                    {Object.entries(enhancedAnalytics.velocity?.avgByStage || {}).filter(([k]) => k !== 'SIGNED').map(([stage, days]: [string, any]) => {
+                                        const col = STATUS_COLUMNS.find(c => c.id === stage);
+                                        return (
+                                            <div key={stage} className="flex items-center gap-3">
+                                                <span className="text-xs font-bold text-slate-500 w-28">{col?.label || stage}</span>
+                                                <div className="flex-1 h-6 bg-slate-100 rounded-lg overflow-hidden">
+                                                    <div className="h-full bg-indigo-400 rounded-lg flex items-center justify-end px-2 transition-all" style={{ width: `${Math.min(100, (days / 30) * 100)}%` }}>
+                                                        <span className="text-[10px] font-black text-white">{days}j</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                                <div className="mt-4 p-3 bg-indigo-50 rounded-xl flex items-center justify-between">
+                                    <span className="text-xs font-bold text-indigo-700">Durée totale moyenne NEW→SIGNED</span>
+                                    <span className="font-black text-xl text-indigo-600">{enhancedAnalytics.velocity?.avgTotalDays || 0}j</span>
+                                </div>
+                            </div>
+
+                            {/* Score Distribution */}
+                            <div className="col-span-2 bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
+                                <h3 className="font-black text-slate-900 mb-1">🎯 Distribution des scores</h3>
+                                <p className="text-xs text-slate-400 mb-4">Score moyen : <span className="font-black text-indigo-600">{enhancedAnalytics.avgScore}</span>/100</p>
+                                <div className="grid grid-cols-4 gap-4">
+                                    {[
+                                        { label: 'Excellent', key: 'excellent', color: 'bg-emerald-500', count: enhancedAnalytics.scoreDistribution?.excellent },
+                                        { label: 'Bon', key: 'bon', color: 'bg-blue-500', count: enhancedAnalytics.scoreDistribution?.bon },
+                                        { label: 'Moyen', key: 'moyen', color: 'bg-amber-500', count: enhancedAnalytics.scoreDistribution?.moyen },
+                                        { label: 'Faible', key: 'faible', color: 'bg-rose-500', count: enhancedAnalytics.scoreDistribution?.faible },
+                                    ].map(d => (
+                                        <div key={d.key} className="text-center">
+                                            <div className="w-full h-24 bg-slate-100 rounded-lg flex items-end justify-center p-1">
+                                                <div className={`w-full ${d.color} rounded transition-all`} style={{ height: `${Math.max(8, ((d.count || 0) / Math.max(analytics.total, 1)) * 100)}%` }} />
+                                            </div>
+                                            <p className="text-xs font-bold text-slate-600 mt-2">{d.label}</p>
+                                            <p className="text-lg font-black text-slate-800">{d.count || 0}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Stale Leads Alert */}
+                            {enhancedAnalytics.velocity?.staleLeads > 0 && (
+                                <div className="col-span-4 bg-gradient-to-r from-amber-50 to-orange-50 rounded-2xl p-6 border border-amber-200">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center">
+                                            <AlertCircle size={24} className="text-amber-600" />
+                                        </div>
+                                        <div>
+                                            <h3 className="font-black text-amber-900">⚠️ {enhancedAnalytics.velocity.staleLeads} lead(s) inactif(s)</h3>
+                                            <p className="text-xs text-amber-700">Aucune activité depuis plus de 7 jours. Le système de relance automatique enverra des emails de suivi.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </>
+                    )}
                 </div>
             )}
 

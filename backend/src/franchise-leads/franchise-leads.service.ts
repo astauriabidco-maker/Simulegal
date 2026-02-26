@@ -1,4 +1,5 @@
 import { Injectable, BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
+import { Cron } from '@nestjs/schedule';
 import { PrismaService } from '../prisma/prisma.service';
 import { AgenciesService } from '../agencies/agencies.service';
 import { UsersService } from '../users/users.service';
@@ -763,16 +764,388 @@ export class FranchiseLeadsService {
 
         const leads = await this.prisma.franchiseLead.findMany({ where, orderBy: { createdAt: 'desc' } });
 
-        const headers = ['ID', 'Nom', 'Email', 'Téléphone', 'Ville', 'Région', 'Statut', 'Société', 'SIRET', 'DIP Envoyé', 'Droit Entrée €', 'Redevance %', 'Date Création'];
+        const headers = ['ID', 'Nom', 'Email', 'Téléphone', 'Ville', 'Région', 'Statut', 'Société', 'SIRET', 'DIP Envoyé', 'Droit Entrée €', 'Redevance %', 'Score', 'Date Création'];
         const rows = leads.map(l => [
             l.id, l.name, l.email, l.phone, l.targetCity, l.region, l.status,
             l.companyName || '', l.siret || '',
             l.dipSentAt ? new Date(l.dipSentAt).toLocaleDateString('fr-FR') : '',
             l.entryFee ? (l.entryFee / 100).toFixed(2) : '',
             l.royaltyRate?.toString() || '',
+            this.computeScore(l).toString(),
             new Date(l.createdAt).toLocaleDateString('fr-FR')
         ].map(v => `"${(v || '').toString().replace(/"/g, '""')}"`).join(';'));
 
         return [headers.join(';'), ...rows].join('\n');
+    }
+
+    // ========================================================
+    // 1. SCORING AUTOMATIQUE (0-100)
+    // ========================================================
+
+    computeScore(lead: any): number {
+        let score = 0;
+
+        // Profil completude (max 30pts)
+        if (lead.name) score += 5;
+        if (lead.email) score += 5;
+        if (lead.phone) score += 5;
+        if (lead.targetCity) score += 5;
+        if (lead.companyName) score += 5;
+        if (lead.legalForm) score += 5;
+
+        // SIRET vérifié (15pts)
+        if (lead.siret && /^\d{14}$/.test(lead.siret.replace(/\s/g, ''))) score += 15;
+
+        // Région à fort potentiel (10pts)
+        const hotRegions = ['IDF', 'AURA', 'PACA', 'NAQ', 'OCC'];
+        if (hotRegions.includes(lead.region)) score += 10;
+
+        // Conditions financières renseignées (15pts)
+        if (lead.entryFee && lead.entryFee > 0) score += 5;
+        if (lead.royaltyRate && lead.royaltyRate > 0) score += 5;
+        if (lead.contractDuration && lead.contractDuration > 0) score += 5;
+
+        // Avancement pipeline (20pts)
+        const pipelineBonus: Record<string, number> = {
+            NEW: 0, CONTACTED: 4, MEETING: 8, VALIDATED: 12,
+            DIP_SENT: 15, CONTRACT_SENT: 18, SIGNED: 20
+        };
+        score += pipelineBonus[lead.status] || 0;
+
+        // Réactivité — créé récemment (10pts)
+        const daysSinceCreation = Math.floor((Date.now() - new Date(lead.createdAt).getTime()) / (1000 * 60 * 60 * 24));
+        if (daysSinceCreation <= 7) score += 10;
+        else if (daysSinceCreation <= 30) score += 5;
+
+        return Math.min(100, score);
+    }
+
+    // ========================================================
+    // 12. PIPELINE VELOCITY — KPIs temps moyen par étape
+    // ========================================================
+
+    async getPipelineVelocity() {
+        const leads = await this.prisma.franchiseLead.findMany({
+            include: { notes: { orderBy: { createdAt: 'asc' } } }
+        });
+
+        const STAGES = ['NEW', 'CONTACTED', 'MEETING', 'VALIDATED', 'DIP_SENT', 'CONTRACT_SENT', 'SIGNED'];
+        const stageDurations: Record<string, number[]> = {};
+        STAGES.forEach(s => { stageDurations[s] = []; });
+
+        for (const lead of leads) {
+            const transitions: { status: string; date: Date }[] = [
+                { status: 'NEW', date: new Date(lead.createdAt) }
+            ];
+            for (const note of (lead.notes || [])) {
+                const match = note.content.match(/→ (\w+)|Statut mis à jour : (\w+)|DIP.*envoyé|Contrat signé/);
+                if (match) {
+                    const status = match[1] || match[2];
+                    if (status && STAGES.includes(status)) {
+                        transitions.push({ status, date: new Date(note.createdAt) });
+                    }
+                }
+            }
+            if (lead.dipSentAt) {
+                transitions.push({ status: 'DIP_SENT', date: new Date(lead.dipSentAt) });
+            }
+
+            for (let i = 1; i < transitions.length; i++) {
+                const days = Math.floor((transitions[i].date.getTime() - transitions[i - 1].date.getTime()) / (1000 * 60 * 60 * 24));
+                const prevStatus = transitions[i - 1].status;
+                if (stageDurations[prevStatus]) {
+                    stageDurations[prevStatus].push(days);
+                }
+            }
+        }
+
+        const avgByStage: Record<string, number> = {};
+        for (const [stage, durations] of Object.entries(stageDurations)) {
+            avgByStage[stage] = durations.length > 0
+                ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length)
+                : 0;
+        }
+
+        // Total pipeline
+        const signedLeads = leads.filter(l => l.status === 'SIGNED');
+        const avgTotalDays = signedLeads.length > 0
+            ? Math.round(signedLeads.reduce((acc, l) => acc + Math.floor((new Date(l.updatedAt).getTime() - new Date(l.createdAt).getTime()) / (1000 * 60 * 60 * 24)), 0) / signedLeads.length)
+            : 0;
+
+        // Stale leads (no activity for 7+ days)
+        const staleLeads = leads.filter(l => {
+            if (['SIGNED', 'REJECTED'].includes(l.status)) return false;
+            const lastActivity = (l.notes && l.notes.length > 0) ? new Date(l.notes[l.notes.length - 1].createdAt) : new Date(l.updatedAt);
+            return (Date.now() - lastActivity.getTime()) > 7 * 24 * 60 * 60 * 1000;
+        }).length;
+
+        return { avgByStage, avgTotalDays, staleLeads, totalLeads: leads.length };
+    }
+
+    // ========================================================
+    // 2. AUTO-RELANCE CRON — Relance leads stagnants
+    // ========================================================
+
+    @Cron('0 9 * * 1-5') // Lundi-Vendredi à 9h
+    async autoRelanceCron() {
+        console.log('[FranchiseLeads] ⏰ Auto-relance check...');
+        const leads = await this.prisma.franchiseLead.findMany({
+            where: {
+                status: { in: ['NEW', 'CONTACTED', 'MEETING', 'VALIDATED'] }
+            },
+            include: { notes: { orderBy: { createdAt: 'desc' }, take: 1 } }
+        });
+
+        const relanceConfig: Record<string, number> = {
+            NEW: 3,       // 3 jours sans action
+            CONTACTED: 7, // 7 jours
+            MEETING: 5,   // 5 jours
+            VALIDATED: 3  // 3 jours -> presser l'envoi du DIP
+        };
+
+        let relanced = 0;
+        for (const lead of leads) {
+            const lastDate = lead.notes?.[0]?.createdAt || lead.updatedAt;
+            const daysSince = Math.floor((Date.now() - new Date(lastDate).getTime()) / (1000 * 60 * 60 * 24));
+            const threshold = relanceConfig[lead.status] || 7;
+
+            if (daysSince >= threshold) {
+                const messages: Record<string, string> = {
+                    NEW: `📧 Relance automatique J+${daysSince} : \"Bonjour ${lead.name}, votre demande de franchise SimuLegal est toujours en cours d'étude. Un conseiller vous contactera sous 48h.\"`,
+                    CONTACTED: `📧 Relance automatique J+${daysSince} : \"${lead.name}, nous souhaitons faire le point sur votre projet de franchise à ${lead.targetCity}. Avez-vous des disponibilités cette semaine ?\"`,
+                    MEETING: `📧 Relance automatique J+${daysSince} : \"${lead.name}, suite à notre échange, nous restons disponibles pour finaliser l'étude de votre projet.\"`,
+                    VALIDATED: `📧 Relance automatique J+${daysSince} : \"${lead.name}, votre projet est validé ! Pour avancer, nous devons vous transmettre le DIP (Document d'Information Précontractuelle). Confirmez-vous votre intérêt ?\"`,
+                };
+
+                await this.addNote(lead.id, messages[lead.status] || `📧 Relance automatique J+${daysSince}`, 'Système Auto-Relance', 'EMAIL');
+                relanced++;
+            }
+        }
+        console.log(`[FranchiseLeads] ✅ ${relanced} lead(s) relancé(s) automatiquement`);
+    }
+
+    // ========================================================
+    // 9. ONBOARDING CHECKLIST (Post-signature)
+    // ========================================================
+
+    getOnboardingChecklist(lead: any) {
+        const defaultSteps = [
+            { id: 'password', label: 'Changer le mot de passe', deadline: 'Immédiat', category: 'setup' },
+            { id: 'profile', label: 'Compléter le profil agence', deadline: 'Jour 1', category: 'setup' },
+            { id: 'training', label: 'Suivre la formation en ligne', deadline: 'Semaine 1', category: 'formation' },
+            { id: 'marketing', label: 'Commander les supports marketing', deadline: 'Semaine 1', category: 'marketing' },
+            { id: 'services', label: 'Configurer les services proposés', deadline: 'Semaine 2', category: 'setup' },
+            { id: 'test', label: 'Effectuer une simulation test', deadline: 'Semaine 2', category: 'formation' },
+            { id: 'inauguration', label: 'Organiser l\'inauguration', deadline: 'Mois 1', category: 'marketing' },
+            { id: 'reporting', label: 'Envoyer le premier reporting', deadline: 'Mois 1', category: 'admin' },
+        ];
+
+        // Parse existing onboarding state from contractDetails
+        let onboarding: Record<string, boolean> = {};
+        try {
+            const details = typeof lead.contractDetails === 'string' ? JSON.parse(lead.contractDetails) : lead.contractDetails;
+            onboarding = details?.onboarding || {};
+        } catch { /* ignore */ }
+
+        return defaultSteps.map(step => ({
+            ...step,
+            completed: !!onboarding[step.id],
+            completedAt: onboarding[`${step.id}_at`] || null
+        }));
+    }
+
+    async updateOnboardingStep(id: string, stepId: string, completed: boolean) {
+        const lead = await this.prisma.franchiseLead.findUnique({ where: { id } });
+        if (!lead) throw new NotFoundException('Lead not found');
+
+        let details: any = {};
+        try { details = JSON.parse(lead.contractDetails || '{}'); } catch { /* */ }
+
+        if (!details.onboarding) details.onboarding = {};
+        details.onboarding[stepId] = completed;
+        if (completed) details.onboarding[`${stepId}_at`] = new Date().toISOString();
+
+        return this.prisma.franchiseLead.update({
+            where: { id },
+            data: { contractDetails: JSON.stringify(details) }
+        });
+    }
+
+    // ========================================================
+    // 10. SIMULATEUR PnL (Prévisionnel)
+    // ========================================================
+
+    simulatePnL(lead: any, params?: { monthlyRevenue?: number; fixedCosts?: number; variableCostRate?: number }) {
+        const contract = typeof lead.contractDetails === 'string' ? JSON.parse(lead.contractDetails || '{}') : (lead.contractDetails || {});
+        const type = contract.type || 'FRANCHISE';
+
+        // Benchmarks par type
+        const benchmarks: Record<string, any> = {
+            FRANCHISE: { avgMonthlyRevenue: 45000, fixedCosts: 8000, variableCostRate: 0.35 },
+            CORNER: { avgMonthlyRevenue: 15000, fixedCosts: 2000, variableCostRate: 0.20 },
+        };
+
+        const bench = benchmarks[type] || benchmarks['FRANCHISE'];
+        const monthlyRevenue = params?.monthlyRevenue || bench.avgMonthlyRevenue;
+        const fixedCosts = params?.fixedCosts || bench.fixedCosts;
+        const variableCostRate = params?.variableCostRate || bench.variableCostRate;
+        const royaltyRate = (lead.royaltyRate ?? contract.commissionRate ?? 15) / 100;
+        const adFeeRate = (lead.advertisingFee ?? 0) / 100;
+        const entryFee = (lead.entryFee ?? 0) / 100;
+
+        const months: any[] = [];
+        let cumulativeProfit = -entryFee;
+
+        for (let m = 1; m <= 36; m++) {
+            // ramp-up: progressive growth over first 6 months
+            const ramp = m <= 6 ? 0.5 + (m / 12) : 1;
+            const revenue = Math.round(monthlyRevenue * ramp);
+            const variableCosts = Math.round(revenue * variableCostRate);
+            const royalty = Math.round(revenue * royaltyRate);
+            const adFee = Math.round(revenue * adFeeRate);
+            const totalCosts = fixedCosts + variableCosts + royalty + adFee;
+            const netProfit = revenue - totalCosts;
+            cumulativeProfit += netProfit;
+
+            months.push({
+                month: m,
+                revenue,
+                fixedCosts,
+                variableCosts,
+                royalty,
+                adFee,
+                totalCosts,
+                netProfit,
+                cumulativeProfit: Math.round(cumulativeProfit),
+                margin: revenue > 0 ? Math.round((netProfit / revenue) * 100) : 0
+            });
+        }
+
+        const breakEvenMonth = months.findIndex(m => m.cumulativeProfit >= 0) + 1;
+
+        return {
+            type,
+            entryFee,
+            royaltyRate: royaltyRate * 100,
+            adFeeRate: adFeeRate * 100,
+            months,
+            summary: {
+                year1Revenue: months.slice(0, 12).reduce((a, m) => a + m.revenue, 0),
+                year1Profit: months.slice(0, 12).reduce((a, m) => a + m.netProfit, 0),
+                year2Revenue: months.slice(12, 24).reduce((a, m) => a + m.revenue, 0),
+                year2Profit: months.slice(12, 24).reduce((a, m) => a + m.netProfit, 0),
+                year3Revenue: months.slice(24, 36).reduce((a, m) => a + m.revenue, 0),
+                year3Profit: months.slice(24, 36).reduce((a, m) => a + m.netProfit, 0),
+                breakEvenMonth: breakEvenMonth > 0 ? breakEvenMonth : null,
+                avgMargin: Math.round(months.slice(12).reduce((a, m) => a + m.margin, 0) / 24)
+            }
+        };
+    }
+
+    // ========================================================
+    // 4. COMPARAISON MULTI-CANDIDATS
+    // ========================================================
+
+    async compareLeads(ids: string[]) {
+        const leads = await Promise.all(ids.map(id => this.findOne(id)));
+        return leads.filter(Boolean).map((lead: any) => ({
+            id: lead.id,
+            name: lead.name,
+            email: lead.email,
+            targetCity: lead.targetCity,
+            region: lead.region,
+            status: lead.status,
+            companyName: lead.companyName,
+            siret: lead.siret,
+            legalForm: lead.legalForm,
+            score: this.computeScore(lead),
+            entryFee: lead.entryFee ? lead.entryFee / 100 : 0,
+            royaltyRate: lead.royaltyRate || 0,
+            exclusiveTerritory: lead.exclusiveTerritory || false,
+            exclusiveRadius: lead.exclusiveRadius || 0,
+            pnl: this.simulatePnL(lead),
+            daysSinceCreation: Math.floor((Date.now() - new Date(lead.createdAt).getTime()) / (1000 * 60 * 60 * 24)),
+            notesCount: lead.notes?.length || 0,
+            coolingStatus: this.getDIPCoolingStatus(lead),
+        }));
+    }
+
+    // ========================================================
+    // 3. MAP DATA — Données géographiques réseau
+    // ========================================================
+
+    async getMapData() {
+        const leads = await this.prisma.franchiseLead.findMany({
+            select: {
+                id: true, name: true, targetCity: true, region: true, status: true,
+                exclusiveTerritory: true, exclusiveRadius: true, convertedAgencyId: true,
+                entryFee: true, royaltyRate: true
+            }
+        });
+
+        // Coordonnées approximatives des grandes villes françaises
+        const cityCoords: Record<string, [number, number]> = {
+            'Paris': [48.8566, 2.3522], 'Lyon': [45.7640, 4.8357], 'Marseille': [43.2965, 5.3698],
+            'Toulouse': [43.6047, 1.4442], 'Nice': [43.7102, 7.2620], 'Nantes': [47.2184, -1.5536],
+            'Strasbourg': [48.5734, 7.7521], 'Montpellier': [43.6108, 3.8767], 'Bordeaux': [44.8378, -0.5792],
+            'Lille': [50.6292, 3.0573], 'Rennes': [48.1173, -1.6778], 'Reims': [49.2583, 3.6319],
+            'Grenoble': [45.1885, 5.7245], 'Rouen': [49.4432, 1.0999], 'Toulon': [43.1242, 5.9280],
+            'Clermont': [45.7772, 3.0870], 'Dijon': [47.3220, 5.0415], 'Angers': [47.4784, -0.5632],
+            'Metz': [49.1193, 6.1757], 'Perpignan': [42.6886, 2.8949],
+        };
+
+        // Region center coords
+        const regionCoords: Record<string, [number, number]> = {
+            'IDF': [48.85, 2.35], 'AURA': [45.75, 4.85], 'PACA': [43.50, 5.90],
+            'OCC': [43.60, 2.50], 'NAQ': [45.00, 0.00], 'HDF': [49.90, 2.80],
+            'GES': [48.60, 6.50], 'BRE': [48.20, -2.90], 'NOR': [49.10, 0.20],
+            'PDL': [47.40, -1.00], 'BFC': [47.00, 5.00], 'CVL': [47.50, 1.50],
+        };
+
+        return leads.map(l => {
+            const cityKey = Object.keys(cityCoords).find(c => l.targetCity.toLowerCase().includes(c.toLowerCase()));
+            const coords = cityKey ? cityCoords[cityKey] : regionCoords[l.region] || [46.5, 2.5];
+
+            return {
+                id: l.id,
+                name: l.name,
+                targetCity: l.targetCity,
+                region: l.region,
+                status: l.status,
+                lat: coords[0],
+                lng: coords[1],
+                exclusiveTerritory: l.exclusiveTerritory,
+                exclusiveRadius: l.exclusiveRadius,
+                isSigned: l.status === 'SIGNED',
+                hasAgency: !!l.convertedAgencyId,
+            };
+        });
+    }
+
+    // ========================================================
+    // ENHANCED ANALYTICS (includes scoring + velocity)
+    // ========================================================
+
+    async getEnhancedAnalytics() {
+        const basic = await this.getAnalytics();
+        const velocity = await this.getPipelineVelocity();
+        const leads = await this.prisma.franchiseLead.findMany();
+
+        // Score distribution
+        const scores = leads.map(l => this.computeScore(l));
+        const avgScore = scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
+        const scoreDistribution = {
+            excellent: scores.filter(s => s >= 80).length,
+            bon: scores.filter(s => s >= 60 && s < 80).length,
+            moyen: scores.filter(s => s >= 40 && s < 60).length,
+            faible: scores.filter(s => s < 40).length,
+        };
+
+        return {
+            ...basic,
+            velocity,
+            avgScore,
+            scoreDistribution,
+        };
     }
 }
