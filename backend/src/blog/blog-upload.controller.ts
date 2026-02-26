@@ -7,7 +7,6 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { diskStorage } from 'multer';
 import { extname, join } from 'path';
 import { existsSync, mkdirSync, readdirSync, statSync, unlinkSync } from 'fs';
-import { Response } from 'express';
 
 const UPLOAD_DIR = join(process.cwd(), 'uploads', 'blog');
 
@@ -61,7 +60,7 @@ export class BlogUploadController {
     }
 
     @Get(':filename')
-    async serveImage(@Param('filename') filename: string, @Res() res: Response) {
+    async serveImage(@Param('filename') filename: string, @Res() res: any) {
         // Sanitize filename to prevent directory traversal
         const safeName = filename.replace(/[^a-zA-Z0-9._-]/g, '');
         const filePath = join(UPLOAD_DIR, safeName);

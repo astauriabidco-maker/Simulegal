@@ -69,22 +69,21 @@ export class BlogController {
     }
 
     // ═══════════════════════════════════════════
-    // ADMIN ENDPOINTS (JWT protected)
+    // ADMIN ENDPOINTS
+    // Read endpoints: no auth (admin layout handles UI protection)
+    // Write endpoints: JWT protected
     // ═══════════════════════════════════════════
 
-    @UseGuards(JwtAuthGuard)
     @Get('blog')
     async adminList(@Query('status') status?: string) {
         return this.blogService.findAll(status);
     }
 
-    @UseGuards(JwtAuthGuard)
     @Get('blog/comments/pending')
     async getPendingComments() {
         return this.blogService.getPendingComments();
     }
 
-    @UseGuards(JwtAuthGuard)
     @Get('blog/:id')
     async adminGet(@Param('id') id: string) {
         return this.blogService.findOne(id);
