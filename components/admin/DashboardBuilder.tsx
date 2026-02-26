@@ -8,11 +8,22 @@ import {
     DollarSign, ArrowRightLeft, Calendar, Briefcase,
     PieChart, AlertTriangle, RefreshCw, LayoutGrid, XCircle
 } from 'lucide-react';
-import { usePermission } from '../../hooks/usePermission';
 import { PermissionKey } from '../../config/PermissionRegistry';
 import { FinanceStore } from '../../services/FinanceStore';
 import { CRM } from '../../services/crmStore';
 import { AgencyStore } from '../../services/AgencyStore';
+import { AuthStore } from '../../services/authStore';
+
+// ═══════════════════════════════════════════════
+// Simple permission check without hooks (avoids re-render loops)
+// ═══════════════════════════════════════════════
+function canAccess(permission: PermissionKey): boolean {
+    const user = AuthStore.getCurrentUser();
+    if (!user) return false;
+    if (user.role === 'SUPERADMIN' || user.role === 'SUPER_ADMIN') return true;
+    const perms = (user.permissions as string[]) || [];
+    return perms.includes(permission);
+}
 
 // ═══════════════════════════════════════════════
 // WIDGET CATALOG — Each widget has an id, permission, and data fetcher
@@ -65,7 +76,6 @@ const CATEGORY_LABELS: Record<string, string> = {
 const STORAGE_KEY = 'simulegal_custom_dashboard';
 
 export default function DashboardBuilder() {
-    const { can, user, isLoading: permLoading } = usePermission();
     const [activeWidgets, setActiveWidgets] = useState<string[]>([]);
     const [isEditing, setIsEditing] = useState(false);
     const [showPicker, setShowPicker] = useState(false);
@@ -73,65 +83,48 @@ export default function DashboardBuilder() {
     const [data, setData] = useState<Record<string, any>>({});
     const [loading, setLoading] = useState(true);
     const [dragIdx, setDragIdx] = useState<number | null>(null);
-    const [hasFetched, setHasFetched] = useState(false);
 
-    // Stable ref for `can` to avoid infinite re-render loops
-    const canRef = React.useRef(can);
-    canRef.current = can;
-
-    // Load saved layout
+    // Load saved layout (once)
     useEffect(() => {
         const saved = localStorage.getItem(STORAGE_KEY);
         if (saved) {
-            try {
-                const parsed = JSON.parse(saved);
-                setActiveWidgets(parsed);
-            } catch { setActiveWidgets([]); }
+            try { setActiveWidgets(JSON.parse(saved)); } catch { /* ignore */ }
         }
     }, []);
 
-    // Get available widgets based on permissions
-    const availableWidgets = WIDGET_CATALOG.filter(w => can(w.permission));
+    // Get available widgets based on permissions (synchronous, no re-renders)
+    const availableWidgets = WIDGET_CATALOG.filter(w => canAccess(w.permission));
 
-    // Fetch all data — stable function, no deps on `can`
+    // Safe fetch with 5s timeout — never hangs
+    const safeFetch = async <T,>(fn: () => Promise<T>, fallback: T): Promise<T> => {
+        try {
+            return await Promise.race([
+                fn(),
+                new Promise<T>((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000))
+            ]);
+        } catch { return fallback; }
+    };
+
+    // Fetch all data — runs once on mount, always finishes
     const fetchData = useCallback(async () => {
         setLoading(true);
-        const c = canRef.current;
-        const d: Record<string, any> = {};
 
-        try {
-            const [summary, breakdown, invoices, transactions, creditNotes, leads, agencies] = await Promise.all([
-                c('finance.view_agency') ? FinanceStore.getFinancialSummary().catch(() => null) : null,
-                c('finance.view_global') ? FinanceStore.getRevenueBreakdown().catch(() => null) : null,
-                c('finance.view_agency') ? FinanceStore.getInvoices().catch(() => []) : [],
-                c('finance.view_agency') ? FinanceStore.getTransactions().catch(() => []) : [],
-                c('finance.view_global') ? FinanceStore.getCreditNotes().catch(() => []) : [],
-                c('crm.view_agency') ? CRM.getAllLeads().catch(() => []) : [],
-                c('network.manage') ? AgencyStore.getAllAgencies().catch(() => []) : [],
-            ]);
+        const [summary, breakdown, invoices, transactions, creditNotes, leads, agencies] = await Promise.all([
+            safeFetch(() => FinanceStore.getFinancialSummary(), null),
+            safeFetch(() => FinanceStore.getRevenueBreakdown(), null),
+            safeFetch(() => FinanceStore.getInvoices(), []),
+            safeFetch(() => FinanceStore.getTransactions(), []),
+            safeFetch(() => FinanceStore.getCreditNotes(), []),
+            safeFetch(() => CRM.getAllLeads(), []),
+            safeFetch(() => AgencyStore.getAllAgencies(), []),
+        ]);
 
-            d.summary = summary;
-            d.breakdown = breakdown;
-            d.invoices = invoices;
-            d.transactions = transactions;
-            d.creditNotes = creditNotes;
-            d.leads = leads;
-            d.agencies = agencies;
-        } catch (err) {
-            console.error('[DashboardBuilder] Fetch error:', err);
-        }
-
-        setData(d);
+        setData({ summary, breakdown, invoices, transactions, creditNotes, leads, agencies });
         setLoading(false);
     }, []);
 
-    // Fetch once when permissions are loaded
-    useEffect(() => {
-        if (!permLoading && !hasFetched) {
-            setHasFetched(true);
-            fetchData();
-        }
-    }, [permLoading, hasFetched, fetchData]);
+    // Fetch once on mount
+    useEffect(() => { fetchData(); }, [fetchData]);
 
     const saveLayout = () => {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(activeWidgets));
@@ -382,7 +375,7 @@ export default function DashboardBuilder() {
         return def.size === 'lg' ? 'col-span-3' : def.size === 'md' ? 'col-span-2' : 'col-span-1';
     };
 
-    if (permLoading || loading) return (
+    if (loading) return (
         <div className="flex items-center justify-center h-[60vh]">
             <RefreshCw size={32} className="animate-spin text-indigo-500" />
         </div>
