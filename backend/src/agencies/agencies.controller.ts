@@ -8,19 +8,22 @@ import { AuthGuard } from '@nestjs/passport';
 export class AgenciesController {
     constructor(private readonly agenciesService: AgenciesService) { }
 
-    @Get()
-    findAll() {
-        return this.agenciesService.findAll();
-    }
-
+    // Non-param routes first
     @Get('export/csv')
     async exportCSV(@Res() res: Response) {
         const csv = await this.agenciesService.exportToCSV();
-        res.set({
-            'Content-Type': 'text/csv; charset=utf-8',
-            'Content-Disposition': 'attachment; filename=agencies.csv'
-        });
+        res.set({ 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': 'attachment; filename=agencies.csv' });
         res.send('\uFEFF' + csv);
+    }
+
+    @Get('analytics/network')
+    getNetworkAnalytics() {
+        return this.agenciesService.getNetworkAnalytics();
+    }
+
+    @Get('analytics/map')
+    getMapData() {
+        return this.agenciesService.getMapData();
     }
 
     @Get('check-availability/:zipCode')
@@ -28,9 +31,19 @@ export class AgenciesController {
         return this.agenciesService.checkTerritoryAvailability(zipCode);
     }
 
+    @Get()
+    findAll() {
+        return this.agenciesService.findAll();
+    }
+
     @Get(':id')
     findOne(@Param('id') id: string) {
         return this.agenciesService.findOne(id);
+    }
+
+    @Get(':id/performance')
+    getPerformance(@Param('id') id: string) {
+        return this.agenciesService.getAgencyPerformance(id);
     }
 
     @Post()
@@ -48,4 +61,3 @@ export class AgenciesController {
         return this.agenciesService.delete(id);
     }
 }
-

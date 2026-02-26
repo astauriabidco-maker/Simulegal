@@ -21,7 +21,7 @@ export interface AgencyExt {
     region?: string;
 }
 
-const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3005') + '/agencies';
+const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + '/agencies';
 
 const getHeaders = () => {
     const token = AuthStore.getToken();
@@ -46,9 +46,7 @@ export const AgencyStore = {
     addAgency: async (data: any) => {
         try {
             const response = await fetch(API_URL, {
-                method: 'POST',
-                headers: getHeaders(),
-                body: JSON.stringify(data)
+                method: 'POST', headers: getHeaders(), body: JSON.stringify(data)
             });
             if (!response.ok) throw new Error('Erreur création agence');
             return response.json();
@@ -61,9 +59,7 @@ export const AgencyStore = {
     updateAgency: async (id: string, data: any) => {
         try {
             const response = await fetch(`${API_URL}/${id}`, {
-                method: 'PATCH',
-                headers: getHeaders(),
-                body: JSON.stringify(data)
+                method: 'PATCH', headers: getHeaders(), body: JSON.stringify(data)
             });
             if (!response.ok) throw new Error('Erreur mise à jour agence');
             return response.json();
@@ -75,61 +71,69 @@ export const AgencyStore = {
 
     getAgencyStats: async (id: string): Promise<AgencyStats> => {
         try {
-            // Pour l'instant on utilise l'API balance et on pourrait étendre l'API stats
-            const baseUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3005');
-            const response = await fetch(`${baseUrl}/finance/balance?agencyId=${id}`, {
-                headers: getHeaders()
-            });
+            const baseUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000');
+            const response = await fetch(`${baseUrl}/finance/balance?agencyId=${id}`, { headers: getHeaders() });
             const data = await response.json();
-            return {
-                totalCA: data.totalEarned || 0, // À ajuster selon le besoin exact du front
-                totalCommission: data.totalEarned || 0,
-                dealsCount: 0 // Nécessite une API stats plus complète
-            };
+            return { totalCA: data.totalEarned || 0, totalCommission: data.totalEarned || 0, dealsCount: 0 };
         } catch {
             return { totalCA: 0, totalCommission: 0, dealsCount: 0 };
         }
     },
 
-    async checkTerritoryAvailability(zipCode: string): Promise<{ available: boolean, agencyId?: string, agencyName?: string }> {
+    checkTerritoryAvailability: async (zipCode: string): Promise<{ available: boolean, agencyId?: string, agencyName?: string }> => {
         try {
-            const response = await fetch(`${API_URL}/check-availability/${zipCode}`, {
-                headers: getHeaders()
-            });
+            const response = await fetch(`${API_URL}/check-availability/${zipCode}`, { headers: getHeaders() });
             return response.json();
         } catch {
             return { available: true };
         }
     },
 
-    async getPerformanceTrends(agencyId: string): Promise<any[]> {
+    getPerformanceTrends: async (agencyId: string): Promise<any[]> => {
         try {
-            const baseUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3005');
-            const response = await fetch(`${baseUrl}/finance/performance-trends?agencyId=${agencyId}`, {
-                headers: getHeaders()
-            });
-            if (!response.ok) throw new Error('Erreur chargement trends');
+            const baseUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000');
+            const response = await fetch(`${baseUrl}/finance/performance-trends?agencyId=${agencyId}`, { headers: getHeaders() });
+            if (!response.ok) throw new Error('Erreur');
             return response.json();
-        } catch (error) {
-            console.error('[AgencyStore] Erreur trends:', error);
-            return [];
-        }
+        } catch { return []; }
     },
 
     deleteAgency: async (id: string): Promise<boolean> => {
         try {
-            const response = await fetch(`${API_URL}/${id}`, {
-                method: 'DELETE',
-                headers: getHeaders()
-            });
+            const response = await fetch(`${API_URL}/${id}`, { method: 'DELETE', headers: getHeaders() });
             return response.ok;
-        } catch (error) {
-            console.error('[AgencyStore] Erreur suppression:', error);
-            return false;
-        }
+        } catch { return false; }
     },
+
+    // ── NEW: Network Analytics ──
+    getNetworkAnalytics: async (): Promise<any | null> => {
+        try {
+            const response = await fetch(`${API_URL}/analytics/network`, { headers: getHeaders() });
+            if (!response.ok) throw new Error('Failed');
+            return response.json();
+        } catch { return null; }
+    },
+
+    // ── NEW: Map Data ──
+    getMapData: async (): Promise<any[] | null> => {
+        try {
+            const response = await fetch(`${API_URL}/analytics/map`, { headers: getHeaders() });
+            if (!response.ok) throw new Error('Failed');
+            return response.json();
+        } catch { return null; }
+    },
+
+    // ── NEW: Agency Performance ──
+    getAgencyPerformance: async (id: string): Promise<any | null> => {
+        try {
+            const response = await fetch(`${API_URL}/${id}/performance`, { headers: getHeaders() });
+            if (!response.ok) throw new Error('Failed');
+            return response.json();
+        } catch { return null; }
+    },
+
     downloadCSV: () => {
-        const token = AuthStore.getToken();
-        window.open(`${(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3005')}/agencies/export/csv`, '_blank');
+        window.open(`${API_URL}/export/csv`, '_blank');
     }
 };
+
