@@ -73,6 +73,11 @@ export default function DashboardBuilder() {
     const [data, setData] = useState<Record<string, any>>({});
     const [loading, setLoading] = useState(true);
     const [dragIdx, setDragIdx] = useState<number | null>(null);
+    const [hasFetched, setHasFetched] = useState(false);
+
+    // Stable ref for `can` to avoid infinite re-render loops
+    const canRef = React.useRef(can);
+    canRef.current = can;
 
     // Load saved layout
     useEffect(() => {
@@ -88,20 +93,21 @@ export default function DashboardBuilder() {
     // Get available widgets based on permissions
     const availableWidgets = WIDGET_CATALOG.filter(w => can(w.permission));
 
-    // Fetch all data
+    // Fetch all data — stable function, no deps on `can`
     const fetchData = useCallback(async () => {
         setLoading(true);
+        const c = canRef.current;
         const d: Record<string, any> = {};
 
         try {
             const [summary, breakdown, invoices, transactions, creditNotes, leads, agencies] = await Promise.all([
-                can('finance.view_agency') ? FinanceStore.getFinancialSummary().catch(() => null) : null,
-                can('finance.view_global') ? FinanceStore.getRevenueBreakdown().catch(() => null) : null,
-                can('finance.view_agency') ? FinanceStore.getInvoices().catch(() => []) : [],
-                can('finance.view_agency') ? FinanceStore.getTransactions().catch(() => []) : [],
-                can('finance.view_global') ? FinanceStore.getCreditNotes().catch(() => []) : [],
-                can('crm.view_agency') ? CRM.getAllLeads().catch(() => []) : [],
-                can('network.manage') ? AgencyStore.getAllAgencies().catch(() => []) : [],
+                c('finance.view_agency') ? FinanceStore.getFinancialSummary().catch(() => null) : null,
+                c('finance.view_global') ? FinanceStore.getRevenueBreakdown().catch(() => null) : null,
+                c('finance.view_agency') ? FinanceStore.getInvoices().catch(() => []) : [],
+                c('finance.view_agency') ? FinanceStore.getTransactions().catch(() => []) : [],
+                c('finance.view_global') ? FinanceStore.getCreditNotes().catch(() => []) : [],
+                c('crm.view_agency') ? CRM.getAllLeads().catch(() => []) : [],
+                c('network.manage') ? AgencyStore.getAllAgencies().catch(() => []) : [],
             ]);
 
             d.summary = summary;
@@ -117,9 +123,15 @@ export default function DashboardBuilder() {
 
         setData(d);
         setLoading(false);
-    }, [can]);
+    }, []);
 
-    useEffect(() => { if (!permLoading) fetchData(); }, [permLoading, fetchData]);
+    // Fetch once when permissions are loaded
+    useEffect(() => {
+        if (!permLoading && !hasFetched) {
+            setHasFetched(true);
+            fetchData();
+        }
+    }, [permLoading, hasFetched, fetchData]);
 
     const saveLayout = () => {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(activeWidgets));
