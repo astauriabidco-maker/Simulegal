@@ -19,37 +19,49 @@ export const ROLE_PERMISSIONS: Record<UserRole, PermissionKey[]> = {
     'SUPER_ADMIN': [
         // Tout accès
         'crm.view_all', 'crm.view_agency', 'crm.view_own', 'crm.create', 'crm.edit_technical', 'crm.validate_doc', 'crm.delete', 'crm.assign',
+        'sales.view', 'sales.manage', 'sales.tracking',
+        'calendar.view', 'calendar.manage',
         'finance.view_global', 'finance.view_agency', 'finance.payout',
-        'network.manage', 'fleet.manage',
-        'users.manage', 'roles.manage', 'settings.manage', 'automations.manage',
+        'network.manage', 'fleet.manage', 'franchise.manage',
+        'blog.view', 'blog.manage',
+        'users.manage', 'roles.manage', 'settings.manage', 'automations.manage', 'audit.view',
         'inbox.view', 'inbox.send',
         'profile.view_own', 'profile.edit_own', 'profile.view_team',
     ],
     'HQ_ADMIN': [
         // Gestion opérationnelle complète, pas de suppression ni RBAC
         'crm.view_all', 'crm.view_agency', 'crm.view_own', 'crm.create', 'crm.edit_technical', 'crm.validate_doc', 'crm.assign',
+        'sales.view', 'sales.manage', 'sales.tracking',
+        'calendar.view', 'calendar.manage',
         'finance.view_global', 'finance.view_agency',
-        'network.manage', 'fleet.manage',
-        'users.manage',
+        'network.manage', 'fleet.manage', 'franchise.manage',
+        'blog.view', 'blog.manage',
+        'users.manage', 'audit.view',
         'inbox.view', 'inbox.send',
         'profile.view_own', 'profile.edit_own', 'profile.view_team',
     ],
     'CASE_WORKER': [
         // Traitement juridique des dossiers
         'crm.view_all', 'crm.view_agency', 'crm.view_own', 'crm.create', 'crm.edit_technical', 'crm.validate_doc', 'crm.assign',
+        'calendar.view', 'calendar.manage',
+        'blog.view',
         'inbox.view', 'inbox.send',
         'profile.view_own', 'profile.edit_own', 'profile.view_team',
     ],
     'AGENCY_MANAGER': [
-        // Vision agence + commissions
-        'crm.view_agency', 'crm.view_own', 'crm.create',
+        // Vision agence + commissions + ventes
+        'crm.view_agency', 'crm.view_own', 'crm.create', 'crm.assign',
+        'sales.view', 'sales.manage', 'sales.tracking',
+        'calendar.view', 'calendar.manage',
         'finance.view_agency',
-        'inbox.view',
+        'inbox.view', 'inbox.send',
         'profile.view_own', 'profile.edit_own', 'profile.view_team',
     ],
     'SALES': [
         // Prospection et création de leads
         'crm.view_own', 'crm.create',
+        'sales.view', 'sales.tracking',
+        'calendar.view',
         'inbox.view', 'inbox.send',
         'profile.view_own', 'profile.edit_own',
     ],

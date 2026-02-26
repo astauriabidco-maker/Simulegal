@@ -61,21 +61,21 @@ const DEFAULT_MENU: MenuItem[] = [
     // ─── BLOC 1: TABLEAU DE BORD ─── Vue d'ensemble & monitoring
     { id: 'overview', label: 'Vue d\'ensemble', icon: <Gauge size={20} />, href: '/admin', category: 'DASHBOARD' },
     { id: 'custom-dashboard', label: 'Mon Dashboard', icon: <LayoutGrid size={20} />, href: '/admin/custom-dashboard', category: 'DASHBOARD' },
-    { id: 'agenda-dashboard', label: 'Cockpit Temporel', icon: <BarChart3 size={20} />, href: '/admin/dashboard-agenda', permission: 'crm.view_agency', category: 'DASHBOARD' },
+    { id: 'agenda-dashboard', label: 'Cockpit Temporel', icon: <BarChart3 size={20} />, href: '/admin/dashboard-agenda', permission: 'calendar.view', category: 'DASHBOARD' },
 
     // ─── BLOC 2: ACTIVITÉ ─── Opérations quotidiennes (agences + siège)
-    { id: 'calendar', label: 'Agenda & RDV', icon: <CalendarIcon size={20} />, href: '/admin/calendar', permission: 'crm.view_agency', category: 'ACTIVITE' },
-    { id: 'sales', label: 'Pipeline Ventes', icon: <TrendingUp size={20} />, href: '/admin/sales', permission: 'crm.view_agency', category: 'ACTIVITE' },
-    { id: 'sales-tracking', label: 'Suivi Commercial', icon: <BarChart3 size={20} />, href: '/admin/sales-tracking', permission: 'crm.view_agency', category: 'ACTIVITE' },
+    { id: 'calendar', label: 'Agenda & RDV', icon: <CalendarIcon size={20} />, href: '/admin/calendar', permission: 'calendar.view', category: 'ACTIVITE' },
+    { id: 'sales', label: 'Pipeline Ventes', icon: <TrendingUp size={20} />, href: '/admin/sales', permission: 'sales.view', category: 'ACTIVITE' },
+    { id: 'sales-tracking', label: 'Suivi Commercial', icon: <BarChart3 size={20} />, href: '/admin/sales-tracking', permission: 'sales.tracking', category: 'ACTIVITE' },
     { id: 'dossiers', label: 'Dossiers Clients', icon: <FolderKanban size={20} />, href: '/admin/dossiers', permission: 'crm.view_agency', category: 'ACTIVITE' },
     { id: 'inbox', label: 'Messagerie', icon: <MessageSquare size={20} />, href: '/admin/inbox', permission: 'inbox.view', category: 'ACTIVITE' },
-    { id: 'blog', label: 'Blog & Insights', icon: <Newspaper size={20} />, href: '/admin/blog', permission: 'settings.manage', category: 'ACTIVITE' },
+    { id: 'blog', label: 'Blog & Insights', icon: <Newspaper size={20} />, href: '/admin/blog', permission: 'blog.view', category: 'ACTIVITE' },
 
     // ─── BLOC 3: RÉSEAU & FRANCHISE ─── Gestion du réseau d'agences
-    { id: 'franchise-leads', label: 'CRM Franchise', icon: <Handshake size={20} />, href: '/admin/franchise-leads', permission: 'network.manage', category: 'RESEAU' },
+    { id: 'franchise-leads', label: 'CRM Franchise', icon: <Handshake size={20} />, href: '/admin/franchise-leads', permission: 'franchise.manage', category: 'RESEAU' },
     { id: 'network', label: 'Agences & Points', icon: <Network size={20} />, href: '/admin/network', permission: 'network.manage', category: 'RESEAU' },
     { id: 'devices', label: 'Flotte Terminaux', icon: <Tablet size={20} />, href: '/admin/devices', permission: 'fleet.manage', category: 'RESEAU' },
-    { id: 'commissions', label: 'Commissions Réseau', icon: <ArrowRightLeft size={20} />, href: '/admin/finances/payouts', permission: 'network.manage', category: 'RESEAU' },
+    { id: 'commissions', label: 'Commissions Réseau', icon: <ArrowRightLeft size={20} />, href: '/admin/finances/payouts', permission: 'finance.view_global', category: 'RESEAU' },
 
     // ─── BLOC 4: FINANCES ─── Facturation clients, encaissements et avoirs
     {
@@ -95,7 +95,7 @@ const DEFAULT_MENU: MenuItem[] = [
     // ─── BLOC 5: ADMINISTRATION ─── Configuration & système
     { id: 'staff', label: 'Utilisateurs', icon: <UserCog size={20} />, href: '/admin/staff', permission: 'users.manage', category: 'ADMIN' },
     { id: 'roles', label: 'Rôles & Droits', icon: <Shield size={20} />, href: '/admin/rbac', permission: 'roles.manage', category: 'ADMIN' },
-    { id: 'audit-veille', label: 'Audit & Veille', icon: <Eye size={20} />, href: '/admin/audit', permission: 'settings.manage', category: 'ADMIN' },
+    { id: 'audit-veille', label: 'Audit & Veille', icon: <Eye size={20} />, href: '/admin/audit', permission: 'audit.view', category: 'ADMIN' },
     {
         id: 'settings',
         label: 'Paramètres',
