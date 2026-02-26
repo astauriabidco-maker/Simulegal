@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { FinanceStore, Payout } from '../../../services/FinanceStore';
 import { AgencyStore } from '../../../services/AgencyStore';
+import { BillingStore } from '../../../services/BillingStore';
 import { AuthStore } from '../../../services/authStore';
 
 type Tab = 'dashboard' | 'invoices' | 'transactions' | 'credit-notes' | 'payouts' | 'breakdown' | 'projection';
@@ -25,6 +26,10 @@ export default function FinancePage() {
     const [loading, setLoading] = useState(true);
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'warning' } | null>(null);
     const [payoutModal, setPayoutModal] = useState<{ id: string; name: string; balance: number } | null>(null);
+    const [manualPayment, setManualPayment] = useState<{ leadId: string; name: string; invoiceNumber: string; serviceName: string; currentPaid: number } | null>(null);
+    const [mpAmount, setMpAmount] = useState('');
+    const [mpMethod, setMpMethod] = useState('CASH');
+    const [mpRef, setMpRef] = useState('');
 
     const showToast = useCallback((msg: string, type: 'success' | 'error' | 'warning' = 'success') => {
         setToast({ message: msg, type }); setTimeout(() => setToast(null), 4000);
@@ -72,6 +77,20 @@ export default function FinancePage() {
         showToast(`Virement de ${payoutModal.balance.toLocaleString()}€ vers ${payoutModal.name}`);
         setPayoutModal(null);
         loadData();
+    };
+
+    const handleManualPayment = async () => {
+        if (!manualPayment || !mpAmount) return;
+        const amountCents = Math.round(parseFloat(mpAmount) * 100);
+        if (isNaN(amountCents) || amountCents <= 0) { showToast('Montant invalide', 'error'); return; }
+        const result = await BillingStore.recordPayment(manualPayment.leadId, amountCents, mpMethod, mpRef || undefined);
+        if (result) {
+            showToast(`✅ Paiement de ${mpAmount}€ enregistré (${mpMethod})`);
+            setManualPayment(null); setMpAmount(''); setMpMethod('CASH'); setMpRef('');
+            loadData();
+        } else {
+            showToast('Erreur lors de l\'enregistrement du paiement', 'error');
+        }
     };
 
     const handleDownloadSepa = async (payoutId: string, ref: string) => {
@@ -365,20 +384,41 @@ export default function FinancePage() {
                 <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
                     <table className="w-full text-left">
                         <thead className="bg-slate-50 text-[10px] uppercase font-black tracking-wider text-slate-400">
-                            <tr><th className="p-4">N° Facture</th><th className="p-4">Date</th><th className="p-4">Client</th><th className="p-4">Service</th><th className="p-4">Agence</th><th className="p-4 text-right">Montant</th></tr>
+                            <tr><th className="p-4">N° Facture</th><th className="p-4">Date</th><th className="p-4">Client</th><th className="p-4">Service</th><th className="p-4">Agence</th><th className="p-4 text-right">Payé</th><th className="p-4">Statut</th><th className="p-4"></th></tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
-                            {invoices.length === 0 ? <tr><td colSpan={6} className="p-16 text-center text-slate-400 font-bold">Aucune facture</td></tr> :
-                                invoices.map(inv => (
-                                    <tr key={inv.id} className="hover:bg-slate-50 transition-colors">
-                                        <td className="p-4 font-black text-indigo-600 text-sm">{inv.invoiceNumber}</td>
-                                        <td className="p-4 text-sm text-slate-500">{inv.paymentDate ? new Date(inv.paymentDate).toLocaleDateString('fr-FR') : '-'}</td>
-                                        <td className="p-4 font-bold text-slate-700 text-sm">{inv.name}</td>
-                                        <td className="p-4 text-xs font-bold text-slate-500">{inv.serviceName}</td>
-                                        <td className="p-4 text-xs text-slate-400">{inv.originAgency?.name || 'Direct'}</td>
-                                        <td className="p-4 text-right font-black text-slate-900">{fmt(inv.amountPaid)} €</td>
-                                    </tr>
-                                ))}
+                            {invoices.length === 0 ? <tr><td colSpan={8} className="p-16 text-center text-slate-400 font-bold">Aucune facture</td></tr> :
+                                invoices.map(inv => {
+                                    const paid = inv.amountPaid || 0;
+                                    const isPaid = inv.status === 'PAID' || paid > 0;
+                                    return (
+                                        <tr key={inv.id} className="hover:bg-slate-50 transition-colors">
+                                            <td className="p-4 font-black text-indigo-600 text-sm">{inv.invoiceNumber}</td>
+                                            <td className="p-4 text-sm text-slate-500">{inv.paymentDate ? new Date(inv.paymentDate).toLocaleDateString('fr-FR') : '-'}</td>
+                                            <td className="p-4 font-bold text-slate-700 text-sm">{inv.name}</td>
+                                            <td className="p-4 text-xs font-bold text-slate-500">{inv.serviceName}</td>
+                                            <td className="p-4 text-xs text-slate-400">{inv.originAgency?.name || 'Direct'}</td>
+                                            <td className="p-4 text-right font-black text-slate-900">{fmt(paid)} €</td>
+                                            <td className="p-4">
+                                                {isPaid ? (
+                                                    <span className="bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full text-[10px] font-black uppercase">Soldé</span>
+                                                ) : (
+                                                    <span className="bg-amber-100 text-amber-700 px-2.5 py-1 rounded-full text-[10px] font-black uppercase">En attente</span>
+                                                )}
+                                            </td>
+                                            <td className="p-4 flex gap-1.5">
+                                                <button onClick={() => setManualPayment({ leadId: inv.id, name: inv.name, invoiceNumber: inv.invoiceNumber, serviceName: inv.serviceName, currentPaid: paid })}
+                                                    className="px-3 py-1.5 bg-emerald-600 text-white text-[10px] font-bold rounded-lg hover:bg-emerald-700 transition-colors flex items-center gap-1">
+                                                    <DollarSign size={12} />Encaisser
+                                                </button>
+                                                <button onClick={() => { try { BillingStore.downloadInvoicePdf(inv.id); showToast('Téléchargement facture PDF'); } catch { } }}
+                                                    className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg" title="Télécharger PDF">
+                                                    <Download size={14} />
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
                         </tbody>
                     </table>
                 </div>
@@ -473,6 +513,73 @@ export default function FinancePage() {
                         <div className="p-6 bg-slate-50 flex gap-3">
                             <button onClick={() => setPayoutModal(null)} className="flex-1 py-3 bg-white border border-slate-200 text-slate-500 font-bold rounded-xl hover:bg-slate-100">Annuler</button>
                             <button onClick={handlePayout} className="flex-1 py-3 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 flex items-center justify-center gap-2"><CheckCircle2 size={18} /> Confirmer</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ═══ MANUAL PAYMENT MODAL ═══ */}
+            {manualPayment && (
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
+                        <div className="bg-gradient-to-r from-emerald-600 to-teal-600 p-6 text-white">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <h2 className="text-xl font-black">Encaissement Manuel</h2>
+                                    <p className="text-emerald-200 text-xs font-bold mt-1">{manualPayment.invoiceNumber} — {manualPayment.name}</p>
+                                </div>
+                                <button onClick={() => { setManualPayment(null); setMpAmount(''); setMpRef(''); }} className="p-2 hover:bg-white/20 rounded-lg"><X size={20} /></button>
+                            </div>
+                        </div>
+
+                        <div className="p-6 space-y-5">
+                            {/* Info facture */}
+                            <div className="bg-slate-50 p-4 rounded-xl">
+                                <div className="flex justify-between text-sm"><span className="text-slate-500">Service</span><span className="font-bold text-slate-800">{manualPayment.serviceName}</span></div>
+                                <div className="flex justify-between text-sm mt-1"><span className="text-slate-500">Déjà encaissé</span><span className="font-bold text-emerald-600">{fmt(manualPayment.currentPaid)} €</span></div>
+                            </div>
+
+                            {/* Montant */}
+                            <div>
+                                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Montant à encaisser (€)</label>
+                                <input type="number" step="0.01" min="0" value={mpAmount} onChange={e => setMpAmount(e.target.value)}
+                                    className="w-full h-12 border border-slate-200 rounded-xl px-4 text-lg font-black text-slate-900 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none" placeholder="0.00" />
+                            </div>
+
+                            {/* Méthode de paiement */}
+                            <div>
+                                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">Méthode de paiement</label>
+                                <div className="grid grid-cols-2 gap-2">
+                                    {[
+                                        { id: 'CASH', label: '💵 Espèces', desc: 'Paiement en liquide' },
+                                        { id: 'CHEQUE', label: '📝 Chèque', desc: 'Chèque bancaire' },
+                                        { id: 'VIREMENT', label: '🏦 Virement', desc: 'Virement bancaire' },
+                                        { id: 'CB_AGENCE', label: '💳 CB en agence', desc: 'Terminal de paiement' },
+                                    ].map(m => (
+                                        <button key={m.id} onClick={() => setMpMethod(m.id)}
+                                            className={`p-3 rounded-xl border-2 text-left transition-all ${mpMethod === m.id ? 'border-emerald-500 bg-emerald-50' : 'border-slate-200 hover:border-slate-300'}`}>
+                                            <p className="font-bold text-sm">{m.label}</p>
+                                            <p className="text-[10px] text-slate-400">{m.desc}</p>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Référence */}
+                            <div>
+                                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Référence (optionnel)</label>
+                                <input type="text" value={mpRef} onChange={e => setMpRef(e.target.value)}
+                                    className="w-full h-10 border border-slate-200 rounded-xl px-4 text-sm text-slate-700 focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="N° chèque, réf. virement..." />
+                            </div>
+                        </div>
+
+                        <div className="p-6 bg-slate-50 border-t border-slate-100 flex gap-3">
+                            <button onClick={() => { setManualPayment(null); setMpAmount(''); setMpRef(''); }}
+                                className="flex-1 py-3 bg-white border border-slate-200 text-slate-500 font-bold rounded-xl hover:bg-slate-100">Annuler</button>
+                            <button onClick={handleManualPayment} disabled={!mpAmount || parseFloat(mpAmount) <= 0}
+                                className="flex-1 py-3 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                                <CheckCircle2 size={18} /> Encaisser {mpAmount ? `${mpAmount} €` : ''}
+                            </button>
                         </div>
                     </div>
                 </div>
