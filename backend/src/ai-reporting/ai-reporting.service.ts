@@ -96,8 +96,18 @@ Guidelines:
         const { sql, widget, mapping } = aiResponseJson;
 
         // Security check
-        if (!sql.trim().toUpperCase().startsWith('SELECT')) {
+        const upperSql = sql.trim().toUpperCase();
+        if (!upperSql.startsWith('SELECT')) {
             throw new BadRequestException('Invalid query generated. Only SELECT operations are allowed.');
+        }
+
+        const forbiddenKeywords = ['INSERT', 'UPDATE', 'DELETE', 'DROP', 'ALTER', 'TRUNCATE', 'EXEC', 'GRANT', 'REVOKE'];
+        for (const keyword of forbiddenKeywords) {
+            // Regex to check for whole word matches to avoid false positives (e.g. 'SELECT * FROM update_history')
+            const regex = new RegExp(`\\b${keyword}\\b`, 'i');
+            if (regex.test(sql)) {
+                throw new BadRequestException(`Invalid query generated. Forbidden operation: ${keyword} detected.`);
+            }
         }
 
         try {
