@@ -1,12 +1,12 @@
 'use client';
 
-import React from 'react';
+import React, { Suspense } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import DashboardLayout from '../../components/admin/DashboardLayout';
 import { usePermission } from '../../hooks/usePermission';
 import { AuthStore } from '../../services/authStore';
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+function AdminLayoutInner({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
     const router = useRouter();
     const { user, isLoading } = usePermission();
@@ -63,9 +63,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     }
 
     if (!user) {
-        // Redirect handled by RoleGuard usually, but as a fallback:
-        // router.push('/staff-login');
-        // Let's return a loader while redirect happens elsewhere or show access denied
         return null;
     }
 
@@ -81,5 +78,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         >
             {children}
         </DashboardLayout>
+    );
+}
+
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen bg-slate-100 flex items-center justify-center">
+                <div className="animate-spin w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full"></div>
+            </div>
+        }>
+            <AdminLayoutInner>{children}</AdminLayoutInner>
+        </Suspense>
     );
 }

@@ -202,7 +202,7 @@ export default function GlobalSettingsPanel({ initialTab }: { initialTab?: strin
                     </button>
                     <div>
                         <h2 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-3">
-                            <currentCategory.icon className={currentCategory.color} />
+                            {currentCategory?.icon && <currentCategory.icon className={currentCategory?.color} />}
                             {currentCategory?.title}
                         </h2>
                     </div>

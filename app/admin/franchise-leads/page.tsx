@@ -739,7 +739,7 @@ export default function FranchiseLeadsPage() {
                                 className="text-xs bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg font-bold hover:bg-blue-200"
                             >Marquer Contactés</button>
                             <button
-                                onClick={() => { toggleCompareSelect; setSelectedForCompare(Array.from(multiSelected).slice(0, 3)); }}
+                                onClick={() => { setSelectedForCompare(Array.from(multiSelected).slice(0, 3)); }}
                                 className="text-xs bg-amber-100 text-amber-700 px-3 py-1.5 rounded-lg font-bold hover:bg-amber-200"
                             >Comparer</button>
                             <button
