@@ -77,4 +77,16 @@ export class EligibilityController {
     checkThresholdsHealth() {
         return this.service.checkThresholdsStaleness();
     }
+
+    // ── Notifications & Force Check ─────────────────────────────
+
+    @Get('notifications')
+    getActiveNotifications(@Query('limit') limit?: string) {
+        return this.service.getActiveNotifications(limit ? parseInt(limit) : 20);
+    }
+
+    @Post('thresholds/force-check')
+    forceThresholdCheck() {
+        return this.service.forceThresholdCheck();
+    }
 }

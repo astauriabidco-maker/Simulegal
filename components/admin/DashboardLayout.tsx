@@ -160,14 +160,9 @@ const DEFAULT_MENU: MenuItem[] = [
         id: 'settings',
         label: 'Paramètres',
         icon: <Settings size={20} />,
+        href: '/admin/settings',
         permission: 'settings.manage',
-        category: 'ADMIN',
-        subItems: [
-            { id: 'settings-general', label: 'Général', icon: <Settings size={16} />, href: '/admin/settings', permission: 'settings.manage' },
-            { id: 'settings-pricing', label: 'Tarifs Services', icon: <DollarSign size={16} />, href: '/admin/settings?tab=SERVICE_PRICING', permission: 'settings.manage' },
-            { id: 'settings-docs', label: 'Référentiel Pièces', icon: <FileStack size={16} />, href: '/admin/settings?tab=DOCUMENTS', permission: 'settings.manage' },
-            { id: 'settings-legal', label: 'CGV & Contrats', icon: <Scale size={16} />, href: '/admin/settings?tab=LEGAL_DOCS', permission: 'settings.manage' },
-        ]
+        category: 'ADMIN'
     },
 ];
 

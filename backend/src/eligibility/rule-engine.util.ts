@@ -35,24 +35,51 @@ function getValueByPath(obj: any, path: string): any {
 }
 
 /**
- * Resolves configuration thresholds if needed.
+ * Retrieves a nested value from a configuration object.
+ */
+function resolveConfigPath(path: string, thresholds: any): any {
+    let current = thresholds;
+    for (const key of path.split('.')) {
+        if (current && typeof current === 'object' && key in current) {
+            current = current[key];
+        } else {
+            return undefined;
+        }
+    }
+    // Support versioned thresholds: { value: 1766.92, valid_from: "..." }
+    if (current && typeof current === 'object' && 'value' in current) {
+        return current.value;
+    }
+    return current;
+}
+
+/**
+ * Resolves configuration thresholds or mathematical expressions.
  */
 function resolveValue(val: any, thresholds: any): any {
-    if (typeof val === 'string' && val.startsWith('@config:')) {
-        const path = val.replace('@config:', '').split('.');
-        let current = thresholds;
-        for (const key of path) {
-            if (current && typeof current === 'object' && key in current) {
-                current = current[key];
-            } else {
-                return undefined;
+    if (typeof val === 'string') {
+        if (val.startsWith('@config:')) {
+            return resolveConfigPath(val.replace('@config:', ''), thresholds);
+        } else if (val.startsWith('@math:')) {
+            try {
+                let mathStr = val.replace('@math:', '');
+                // Replace all config references with their numeric values
+                const configRegex = /@config:([a-zA-Z0-9_\.]+)/g;
+                mathStr = mathStr.replace(configRegex, (match, path) => {
+                    const resolved = resolveConfigPath(path, thresholds);
+                    return typeof resolved === 'number' ? resolved.toString() : '0';
+                });
+
+                // Ensure the evaluated string only contains valid math characters
+                if (/^[0-9\.\+\-\*\/\(\)\s]+$/.test(mathStr)) {
+                    const result = new Function('return ' + mathStr)();
+                    return Number(result);
+                }
+            } catch (err) {
+                logger.error(`Failed to evaluate math expression: ${val}`, err);
             }
+            return 0;
         }
-        // Support versioned thresholds: { value: 1766.92, valid_from: "..." }
-        if (current && typeof current === 'object' && 'value' in current) {
-            return current.value;
-        }
-        return current;
     }
     return val;
 }

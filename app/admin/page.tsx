@@ -19,6 +19,7 @@ import RoleGuard from '../../components/auth/RoleGuard';
 import AgencyDashboard from '../../components/backoffice/AgencyDashboard';
 import FranceMap from '../../components/admin/FranceMap';
 import AiReportingChat from '../../components/admin/dashboard/AiReportingChat';
+import AiWidgetGrid from '../../components/admin/dashboard/AiWidgetGrid';
 
 export default function AdminPage() {
     const { can, user: currentUser } = usePermission();
@@ -108,6 +109,7 @@ export default function AdminPage() {
                 {can('crm.view_all') && (
                     <div className="mb-6">
                         <AiReportingChat />
+                        <AiWidgetGrid />
                     </div>
                 )}
 

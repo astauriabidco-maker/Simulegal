@@ -121,7 +121,12 @@ Guidelines:
             return {
                 widget: {
                     ...widget,
-                    data: formattedData
+                    data: formattedData,
+                    config: {
+                        sql,
+                        mapping,
+                        prompt
+                    }
                 },
                 debug: { sql } // Expose SQL for debugging in UI
             };
@@ -147,5 +152,73 @@ Guidelines:
             widget: { type: "PIE_CHART", title: "Répartition des Leads par Statut", description: "Vue globale du tunnel." },
             mapping: { labelColumn: "status", valueColumn: "count" }
         };
+    }
+
+    async saveWidget(userId: string, agencyId: string, widgetData: any) {
+        if (!widgetData.config) {
+            throw new BadRequestException("Widget configuration missing");
+        }
+        return this.prisma.aiDashboardWidget.create({
+            data: {
+                userId,
+                agencyId,
+                title: widgetData.title,
+                description: widgetData.description || '',
+                widgetType: widgetData.type,
+                prompt: widgetData.config.prompt,
+                querySql: widgetData.config.sql,
+                mappingConfig: JSON.stringify(widgetData.config.mapping),
+            }
+        });
+    }
+
+    async getUserWidgets(userId: string) {
+        const widgets = await this.prisma.aiDashboardWidget.findMany({
+            where: { userId },
+            orderBy: { position: 'asc' }
+        });
+
+        // Pou chaque widget, executer dynamiquement la requête SQL pour avoir une donnée Live !
+        const liveWidgets = await Promise.all(widgets.map(async (w) => {
+            try {
+                const rawData = await this.prisma.$queryRawUnsafe<any[]>(w.querySql);
+                const mapping = JSON.parse(w.mappingConfig);
+                let formattedData: any = [];
+                if (w.widgetType === 'KPI_CARD') {
+                    formattedData = rawData[0] ? rawData[0][mapping.valueColumn] || 0 : 0;
+                } else if (w.widgetType === 'TABLE') {
+                    formattedData = rawData;
+                } else {
+                    formattedData = rawData.map(row => ({
+                        label: row[mapping.labelColumn]?.toString() || 'Inconnu',
+                        value: Number(row[mapping.valueColumn]) || 0
+                    }));
+                }
+                return {
+                    id: w.id,
+                    type: w.widgetType,
+                    title: w.title,
+                    description: w.description,
+                    data: formattedData,
+                };
+            } catch (err) {
+                return {
+                    id: w.id,
+                    type: w.widgetType,
+                    title: w.title,
+                    description: "Erreur lors du chargement des données",
+                    data: [],
+                    error: true
+                };
+            }
+        }));
+
+        return liveWidgets;
+    }
+
+    async deleteWidget(id: string, userId: string) {
+        return this.prisma.aiDashboardWidget.deleteMany({
+            where: { id, userId }
+        });
     }
 }

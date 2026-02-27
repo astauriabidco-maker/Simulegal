@@ -4,41 +4,15 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
     ArrowRight,
-    Flag,
-    FileText,
     ShieldCheck,
-    GraduationCap,
-    Languages,
-    BookOpen,
-    Scale,
-    Users,
-    Briefcase,
-    CheckCircle2,
     Lock,
     Zap,
     X,
-    Car,
-    Calendar,
-    Gavel,
     Newspaper,
     Clock
 } from 'lucide-react';
-import { SERVICES_CATALOG, Service } from '../data/services';
-
-const iconMap: Record<string, any> = {
-    Flag,
-    FileText,
-    ShieldCheck,
-    GraduationCap,
-    Languages,
-    BookOpen,
-    Scale,
-    Users,
-    Briefcase,
-    Car,
-    Calendar,
-    Gavel
-};
+import { Service, SERVICE_POLES, getServicesByPole } from '../data/services';
+import { resolveIcon } from '../lib/icon-resolver';
 
 interface LandingPageProps {
     onStartSimulator: (serviceId?: string) => void;
@@ -83,11 +57,12 @@ export default function LandingPage({ onStartSimulator }: LandingPageProps) {
         }
     };
 
-    const poles = [
-        { id: 'PROCEDURES', label: '🚀 PÔLE PROCÉDURES', color: 'text-blue-600', bgColor: 'bg-blue-50' },
-        { id: 'INTEGRATION', label: '🎓 PÔLE INTÉGRATION', color: 'text-indigo-600', bgColor: 'bg-indigo-50' },
-        { id: 'EXPERTISE', label: '⚖️ PÔLE EXPERTISE', color: 'text-purple-600', bgColor: 'bg-purple-50' }
-    ];
+    const poles = SERVICE_POLES.map(p => ({
+        id: p.id,
+        label: `${p.emoji} PÔLE ${p.label.replace('Pôle ', '').toUpperCase()}`,
+        color: p.color,
+        bgColor: p.bgColor
+    }));
 
     return (
         <div className="min-h-screen bg-white font-sans text-slate-900 selection:bg-indigo-100 selection:text-indigo-900">
@@ -146,8 +121,8 @@ export default function LandingPage({ onStartSimulator }: LandingPageProps) {
                                 </div>
 
                                 <div className="space-y-8">
-                                    {SERVICES_CATALOG.filter(s => s.pole === pole.id).map((service) => {
-                                        const Icon = iconMap[service.iconName] || FileText;
+                                    {getServicesByPole(pole.id as any).map((service) => {
+                                        const Icon = resolveIcon(service.iconName);
                                         return (
                                             <div
                                                 key={service.id}
@@ -339,7 +314,7 @@ export default function LandingPage({ onStartSimulator }: LandingPageProps) {
 
                         <div className="p-16">
                             <div className="w-20 h-20 bg-indigo-50 text-indigo-600 rounded-[2rem] flex items-center justify-center mb-10 shadow-inner">
-                                {selectedServiceForContact && React.createElement(iconMap[selectedServiceForContact.iconName] || FileText, { className: 'w-10 h-10' })}
+                                {selectedServiceForContact && React.createElement(resolveIcon(selectedServiceForContact.iconName), { className: 'w-10 h-10' })}
                             </div>
 
                             <h2 className="text-4xl font-black text-slate-900 mb-6 leading-tight">{selectedServiceForContact.title}</h2>

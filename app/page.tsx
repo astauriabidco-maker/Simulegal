@@ -6,7 +6,7 @@ import LandingPage from '@/components/LandingPage';
 import CheckoutFlow from '@/components/CheckoutFlow';
 import HQDashboard from '@/components/backoffice/HQDashboard';
 import AgencyDashboard from '@/components/backoffice/AgencyDashboard';
-import { Building2, LayoutDashboard, X, Radio, Shield } from 'lucide-react';
+import { X, Radio, Shield } from 'lucide-react';
 
 declare global {
   interface Window {
@@ -26,11 +26,10 @@ export default function Home() {
 
   // Checkout State
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
-  const [checkoutConfig, setCheckoutConfig] = useState({ serviceId: '', serviceName: '', price: 0, extraData: null });
+  const [checkoutConfig, setCheckoutConfig] = useState({ serviceId: '', serviceName: '', price: 0, extraData: null as any });
 
-  // Capture du code partenaire depuis l'URL
+  // Capture du code partenaire depuis l'URL (client-side uniquement)
   useEffect(() => {
-    // Récupère depuis l'URL ou le sessionStorage
     const urlParams = new URLSearchParams(window.location.search);
     const refCode = urlParams.get('ref');
     const storedRef = sessionStorage.getItem('kiosk_partner_id');
@@ -53,7 +52,6 @@ export default function Home() {
       if (incomingServiceId) setSelectedService(incomingServiceId);
       setShowSimulator(true);
     } else if (autoSimulator === 'true') {
-      // Lancé depuis l'agenda (bouton "Lancer le Simulateur")
       if (incomingServiceId) setSelectedService(incomingServiceId);
       setShowSimulator(true);
     }
@@ -75,7 +73,6 @@ export default function Home() {
         price,
         extraData
       });
-      // On injecte le code partenaire si forcé (pour dashboard agence)
       if (forceAgencyId) {
         setPartnerId(forceAgencyId);
       }
@@ -89,12 +86,10 @@ export default function Home() {
     setShowSimulator(true);
   };
 
-  // Fonction de reset pour le mode Kiosk
   const handleKioskReset = () => {
     setShowSimulator(false);
     setIsCheckoutOpen(false);
     setSelectedService(undefined);
-    // Garde le ref dans l'URL pour le client suivant
     const currentRef = partnerId || sessionStorage.getItem('kiosk_partner_id');
     if (currentRef) {
       window.location.href = `/?ref=${currentRef}`;
@@ -103,11 +98,9 @@ export default function Home() {
     }
   };
 
-  // Si mode dev activé, affiche le dashboard correspondant
   if (devView !== 'none') {
     return (
       <div className="min-h-screen">
-        {/* Barre de contrôle Dev */}
         <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-4 py-2 rounded-full shadow-2xl flex items-center gap-3 z-50">
           <span className="text-xs font-bold text-slate-400">DEV MODE:</span>
           <button
@@ -132,7 +125,6 @@ export default function Home() {
           </button>
         </div>
 
-        {/* Dashboard affiché */}
         {devView === 'hq' && <HQDashboard />}
         {devView === 'agency' && <AgencyDashboard />}
       </div>
@@ -152,7 +144,7 @@ export default function Home() {
               onClick={() => setShowSimulator(false)}
               className="text-sm font-medium text-slate-500 hover:text-indigo-600 transition-colors"
             >
-              Retour à l'accueil
+              Retour à l&apos;accueil
             </button>
           </div>
           <SimulatorWrapper serviceId={selectedService} prospectId={prospectId} />
@@ -170,7 +162,6 @@ export default function Home() {
         {...checkoutConfig}
       />
 
-      {/* KIOSK MODE: Bandeau d'indication */}
       {partnerId && (
         <div className="fixed bottom-0 left-0 right-0 bg-red-600 text-white py-2 px-4 flex items-center justify-center gap-2 z-40">
           <Radio size={16} className="animate-pulse" />
@@ -178,7 +169,6 @@ export default function Home() {
         </div>
       )}
 
-      {/* LIEN ACCÈS PRO SÉCURISÉ */}
       {!partnerId && (
         <div className="fixed bottom-4 right-4 z-50">
           <a

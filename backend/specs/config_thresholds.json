@@ -1,42 +1,168 @@
 {
-  "financial_thresholds": {
-    "currency": "EUR",
-    "salary_annual_gross": {
-      "passeport_talent_salarie_qualifie": 43243.00,
-      "passeport_talent_carte_bleue_eu": 53836.50,
-      "passeport_talent_mission": 38918.88,
-      "passeport_talent_mandataire_social": 64864.80,
-      "visiteur_ressources_annuelles": 17115.69
+    "_meta": {
+        "last_reviewed": "2026-02-27",
+        "reviewed_by": "admin",
+        "next_review_due": "2026-07-01",
+        "note": "Les montants doivent être vérifiés au 1er janvier de chaque année. Sources: service-public.fr, Légifrance.",
+        "version": "2.0.0"
     },
-    "salary_monthly_gross": {
-      "smic": 1766.92,
-      "entrepreneur_viabilite": 1801.80,
-      "algerien_etudiant_ressources": 615.00,
-      "ict_detache_ressources": 1801.80
+    "financial_thresholds": {
+        "currency": "EUR",
+        "salary_annual_gross": {
+            "passeport_talent_salarie_qualifie": {
+                "value": 43243,
+                "valid_from": "2024-01-01",
+                "source_url": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000043541826",
+                "source_ref": "CESEDA R421-27"
+            },
+            "passeport_talent_carte_bleue_eu": {
+                "value": 53836.5,
+                "valid_from": "2024-01-01",
+                "source_url": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000043541824",
+                "source_ref": "CESEDA R421-28"
+            },
+            "passeport_talent_mission": {
+                "value": 38918.88,
+                "valid_from": "2024-01-01",
+                "source_ref": "CESEDA R421-29"
+            },
+            "passeport_talent_mandataire_social": {
+                "value": 64864.8,
+                "valid_from": "2024-01-01",
+                "source_ref": "CESEDA R421-30"
+            },
+            "visiteur_ressources_annuelles": {
+                "value": 17115.69,
+                "valid_from": "2024-01-01",
+                "source_ref": "CESEDA R421-1"
+            },
+            "plafond_annuel_securite_sociale": {
+                "value": 46368,
+                "valid_from": "2024-01-01",
+                "source_url": "https://www.service-public.fr/particuliers/vosdroits/F2300",
+                "source_ref": "Arrêté PASS annuel"
+            }
+        },
+        "salary_monthly_gross": {
+            "smic": {
+                "value": 1766.92,
+                "valid_from": "2024-01-01",
+                "source_url": "https://www.service-public.fr/particuliers/vosdroits/F2300",
+                "source_ref": "Décret SMIC"
+            },
+            "entrepreneur_viabilite": {
+                "value": 1801.8,
+                "valid_from": "2024-01-01",
+                "source_ref": "CESEDA R421-31"
+            },
+            "algerien_etudiant_ressources": {
+                "value": 615,
+                "valid_from": "2024-01-01",
+                "source_ref": "Accord franco-algérien art. 9"
+            },
+            "ict_detache_ressources": {
+                "value": 1801.8,
+                "valid_from": "2024-01-01",
+                "source_ref": "CESEDA R421-36"
+            },
+            "regroupement_familial_resources": {
+                "value": 1398,
+                "valid_from": "2024-01-01",
+                "source_url": "https://www.service-public.fr/particuliers/vosdroits/F11166",
+                "source_ref": "CESEDA R434-5"
+            },
+            "rsa_socle_personne_seule": {
+                "value": 607.75,
+                "valid_from": "2024-04-01",
+                "source_url": "https://www.service-public.fr/particuliers/vosdroits/F502",
+                "source_ref": "Décret RSA"
+            }
+        },
+        "investments": {
+            "creation_entreprise_fonds": {
+                "value": 30000,
+                "valid_from": "2024-01-01",
+                "source_ref": "CESEDA R421-31"
+            },
+            "investisseur_eco_fonds": {
+                "value": 300000,
+                "valid_from": "2024-01-01",
+                "source_ref": "CESEDA R421-31-1"
+            }
+        },
+        "allocations": {
+            "ada_montant_journalier": {
+                "value": 6.80,
+                "valid_from": "2024-01-01",
+                "source_url": "https://www.service-public.fr/particuliers/vosdroits/F33314",
+                "source_ref": "Décret ADA"
+            },
+            "ada_supplement_hebergement": {
+                "value": 7.40,
+                "valid_from": "2024-01-01",
+                "source_ref": "CESEDA D553-4"
+            }
+        },
+        "taxes_ofii": {
+            "taxe_premier_titre": {
+                "value": 225,
+                "valid_from": "2024-01-01",
+                "source_url": "https://www.service-public.fr/particuliers/vosdroits/F17299",
+                "source_ref": "CESEDA R431-16"
+            },
+            "taxe_renouvellement": {
+                "value": 225,
+                "valid_from": "2024-01-01",
+                "source_ref": "CESEDA R431-16"
+            },
+            "taxe_duplicata": {
+                "value": 25,
+                "valid_from": "2024-01-01",
+                "source_ref": "CESEDA R431-16"
+            },
+            "droit_timbre": {
+                "value": 25,
+                "valid_from": "2024-01-01",
+                "source_ref": "Art. 1635 bis CGI"
+            },
+            "taxe_employeur_travailleur_etranger": {
+                "value": 55,
+                "valid_from": "2024-01-01",
+                "source_ref": "CESEDA R436-1"
+            }
+        }
     },
-    "investments": {
-      "creation_entreprise_fonds": 30000.00,
-      "investisseur_eco_fonds": 300000.00
+    "duration_thresholds": {
+        "unit": "years",
+        "residence_in_france": {
+            "naturalisation_standard": 5,
+            "naturalisation_etudes_sup": 2,
+            "resident_longue_duree_ue": 5,
+            "regroupement_familial_resident": 3,
+            "ascendant_de_francais": 25,
+            "enfant_ne_en_france_continuous": 5,
+            "carte_resident_10_ans": 5
+        },
+        "marriage_duration": {
+            "pour_carte_resident_conjoint_francais": 3,
+            "pour_carte_resident_conjoint_francais_tunisien": 1,
+            "pour_nationalite_mariage": 4
+        },
+        "contract_duration_months": {
+            "cdi_minimum_salarie": 0,
+            "cdd_minimum_travailleur_temporaire": 3,
+            "cdd_minimum_salarie_detache": 3,
+            "contrat_apprentissage_minimum": 6
+        }
     },
-    "references": {
-      "smic_mensuel_reference": "SMIC_temps_plein_2024",
-      "note": "Les montants doivent être mis à jour au 1er janvier."
+    "age_thresholds": {
+        "unit": "years",
+        "age_minimum_mariage": 18,
+        "age_majorite": 18,
+        "age_maximum_etudiant": 30,
+        "age_minimum_naturalisation": 18,
+        "enfant_mineur_max": 18,
+        "enfant_rejoint_max_regroupement": 18,
+        "retraite_minimum": 60
     }
-  },
-  "duration_thresholds": {
-    "unit": "years",
-    "residence_in_france": {
-      "naturalisation_standard": 5,
-      "naturalisation_etudes_sup": 2,
-      "resident_longue_duree_ue": 5,
-      "regroupement_familial_resident": 3,
-      "ascendant_de_francais": 25,
-      "enfant_ne_en_france_continuous": 5
-    },
-    "marriage_duration": {
-      "pour_carte_resident_conjoint_francais": 3,
-      "pour_carte_resident_conjoint_francais_tunisien": 1,
-      "pour_nationalite_mariage": 4
-    }
-  }
 }

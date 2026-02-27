@@ -22,8 +22,11 @@ import {
     Binary,
     History,
     User,
+    Users,
     AlertTriangle,
-    Brain
+    Brain,
+    Calendar,
+    Calculator
 } from 'lucide-react';
 
 // Cartographie COMPLÈTE des variables techniques vers des noms lisibles (96 variables)
@@ -349,6 +352,11 @@ const ConditionBuilder: React.FC<ConditionBuilderProps> = ({ condition, onChange
                     <Zap size={10} /> Lié aux seuils
                 </div>
             )}
+            {typeof condition.val === 'string' && condition.val.startsWith('@math:') && (
+                <div className="flex items-center gap-1 text-[10px] bg-amber-100 text-amber-700 font-black px-2 py-1 rounded-full uppercase tracking-tighter shadow-sm">
+                    <Calculator size={10} /> Calcul Dynamique
+                </div>
+            )}
         </div>
     );
 };
@@ -368,9 +376,10 @@ const SandboxTab: React.FC<SandboxTabProps> = ({ rulesMap, thresholds }) => {
         timeline: { years_continuous_residence: 5, age_at_entry: 25, resides_in_france: true },
         admin: { current_visa_type: 'TALENT', entered_legally: true, has_valid_visa_or_permit: true },
         family: { marriage_duration_years: 0, has_french_child: false },
-        work: { salary_monthly_gross: 3000, has_work_authorization: true },
+        work: { salary_monthly_gross: 3000, annual_gross_salary: 36000, contract_duration_months: 12, has_work_authorization: true },
         financial: { resources_stable_sufficient: true },
-        integration: { french_level: 'B1' },
+        education: { diploma_level: 'MASTER' },
+        integration: { french_level: 'A2' },
         civic: { clean_criminal_record: true, no_expulsion_order: true },
     });
 
@@ -661,12 +670,37 @@ export default function EligibilityConfigPanel() {
     return (
         <div className="h-full flex flex-col bg-slate-100 p-6 overflow-auto">
             {/* Header */}
-            <div className="flex items-center justify-between mb-8">
-                <div>
-                    <h1 className="text-2xl font-black text-slate-900">Critères d'Éligibilité</h1>
-                    <p className="text-slate-500 font-medium">Configurez les seuils financiers et les règles logiques du simulateur.</p>
+            <div className="flex flex-col gap-4 mb-8">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h1 className="text-2xl font-black text-slate-900">Critères d'Éligibilité</h1>
+                        <p className="text-slate-500 font-medium">Configurez les seuils financiers et les règles logiques du simulateur.</p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        {healthData && healthData.staleCount > 0 && (
+                            <span className="px-3 py-1.5 bg-amber-100 text-amber-700 rounded-full text-xs font-black">
+                                ⚠️ {healthData.staleCount} seuil(s) obsolète(s)
+                            </span>
+                        )}
+                        <button
+                            onClick={async () => {
+                                const result = await EligibilityStore.forceThresholdCheck();
+                                if (result) {
+                                    setHealthData(result);
+                                    setNotificationMessage(result.status === 'WARNING'
+                                        ? `⚠️ ${result.staleCount} seuil(s) obsolète(s) détecté(s)`
+                                        : '✅ Tous les seuils sont à jour !');
+                                    setShowNotification(true);
+                                    setTimeout(() => setShowNotification(false), 4000);
+                                }
+                            }}
+                            className="flex items-center gap-2 px-4 py-2.5 bg-slate-900 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-800 transition-all active:scale-95 shadow-lg"
+                        >
+                            <AlertTriangle size={14} /> Vérifier maintenant
+                        </button>
+                    </div>
                 </div>
-                <div className="flex bg-white p-1 rounded-xl shadow-sm border border-slate-200">
+                <div className="flex flex-wrap bg-white p-1 rounded-xl shadow-sm border border-slate-200 gap-1">
                     <button
                         onClick={() => setCategory('thresholds')}
                         className={`px-4 py-2 rounded-lg font-bold text-sm transition-all ${category === 'thresholds' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-600 hover:text-slate-900'
@@ -710,8 +744,44 @@ export default function EligibilityConfigPanel() {
             )}
 
             {category === 'thresholds' && (
-                <div className="space-y-6 max-w-4xl">
-                    {/* SALAIRES ET FINANCES */}
+                <div className="space-y-6 max-w-5xl">
+                    {/* META REVIEW BANNER */}
+                    {thresholds._meta && (
+                        <div className={`rounded-2xl p-5 flex items-start gap-3 border-2 ${thresholds._meta.next_review_due && new Date(thresholds._meta.next_review_due) < new Date()
+                            ? 'bg-red-50 border-red-300'
+                            : 'bg-indigo-50 border-indigo-200'
+                            }`}>
+                            <Calendar className={`flex-shrink-0 mt-0.5 ${thresholds._meta.next_review_due && new Date(thresholds._meta.next_review_due) < new Date()
+                                ? 'text-red-600' : 'text-indigo-600'
+                                }`} size={20} />
+                            <div className="flex-1">
+                                <div className="flex items-center justify-between">
+                                    <p className="font-black text-slate-800 text-sm">📋 Informations de Révision</p>
+                                    {thresholds._meta.version && (
+                                        <span className="text-[10px] font-black bg-slate-200 text-slate-600 px-2 py-1 rounded-full">v{thresholds._meta.version}</span>
+                                    )}
+                                </div>
+                                <div className="flex flex-wrap gap-4 mt-2">
+                                    <p className="text-xs text-slate-600">
+                                        🗓️ <strong>Dernière révision :</strong> {thresholds._meta.last_reviewed || 'N/A'}
+                                    </p>
+                                    <p className="text-xs text-slate-600">
+                                        👤 <strong>Par :</strong> {thresholds._meta.reviewed_by || 'N/A'}
+                                    </p>
+                                    <p className={`text-xs font-bold ${thresholds._meta.next_review_due && new Date(thresholds._meta.next_review_due) < new Date()
+                                        ? 'text-red-600' : 'text-emerald-600'
+                                        }`}>
+                                        📅 <strong>Prochaine révision :</strong> {thresholds._meta.next_review_due || 'Non planifiée'}
+                                        {thresholds._meta.next_review_due && new Date(thresholds._meta.next_review_due) < new Date() && ' ⚠️ EN RETARD'}
+                                    </p>
+                                </div>
+                                {thresholds._meta.note && (
+                                    <p className="text-[10px] text-slate-400 mt-1 italic">{thresholds._meta.note}</p>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
                     {/* Health Banner */}
                     {healthData && healthData.status === 'WARNING' && (
                         <div className="bg-amber-50 border-2 border-amber-300 rounded-2xl p-5 flex items-start gap-3">
@@ -719,7 +789,9 @@ export default function EligibilityConfigPanel() {
                             <div>
                                 <p className="font-black text-amber-800 text-sm">{healthData.recommendation}</p>
                                 {healthData.alerts?.filter((a: any) => a.isStale).map((a: any, i: number) => (
-                                    <p key={i} className="text-xs text-amber-600 mt-1">⚠️ {a.label}: {a.currentValue}€ (valide depuis {a.validFrom})</p>
+                                    <p key={i} className="text-xs text-amber-600 mt-1">⚠️ {a.label}: {a.currentValue}€ (valide depuis {a.validFrom})
+                                        {a.sourceUrl && <a href={a.sourceUrl} target="_blank" rel="noopener noreferrer" className="ml-1 text-indigo-600 underline">Vérifier ↗</a>}
+                                    </p>
                                 ))}
                                 {healthData.meta?.reviewOverdue && (
                                     <p className="text-xs text-amber-600 mt-1">📅 Revue à planifier (prévue le {healthData.meta.nextReviewDue})</p>
@@ -728,6 +800,7 @@ export default function EligibilityConfigPanel() {
                         </div>
                     )}
 
+                    {/* SEUILS FINANCIERS */}
                     <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-sm space-y-6">
                         <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
                             <DollarSign className="text-indigo-600" size={24} />
@@ -744,8 +817,9 @@ export default function EligibilityConfigPanel() {
                                     { label: 'PT — Mission', key: 'passeport_talent_mission' },
                                     { label: 'PT — Mandataire Social', key: 'passeport_talent_mandataire_social' },
                                     { label: 'Visiteur — Ressources annuelles', key: 'visiteur_ressources_annuelles' },
+                                    { label: 'PASS (Plafond SS)', key: 'plafond_annuel_securite_sociale' },
                                 ].map(item => {
-                                    const entry = thresholds.financial_thresholds.salary_annual_gross[item.key];
+                                    const entry = thresholds.financial_thresholds?.salary_annual_gross?.[item.key];
                                     const ref = entry?.source_ref || '';
                                     return (
                                         <div key={item.key} className="bg-slate-50 rounded-xl p-4 border border-slate-100">
@@ -773,8 +847,9 @@ export default function EligibilityConfigPanel() {
                                     { label: 'Algérien Étudiant', key: 'algerien_etudiant_ressources' },
                                     { label: 'ICT Détaché', key: 'ict_detache_ressources' },
                                     { label: 'Regroupement Familial', key: 'regroupement_familial_resources' },
+                                    { label: 'RSA Socle (personne seule)', key: 'rsa_socle_personne_seule' },
                                 ].map(item => {
-                                    const entry = thresholds.financial_thresholds.salary_monthly_gross[item.key];
+                                    const entry = thresholds.financial_thresholds?.salary_monthly_gross?.[item.key];
                                     const ref = entry?.source_ref || '';
                                     return (
                                         <div key={item.key} className="bg-slate-50 rounded-xl p-4 border border-slate-100">
@@ -800,7 +875,7 @@ export default function EligibilityConfigPanel() {
                                     { label: 'Création Entreprise — Fonds', key: 'creation_entreprise_fonds' },
                                     { label: 'Investisseur Économique — Fonds', key: 'investisseur_eco_fonds' },
                                 ].map(item => {
-                                    const entry = thresholds.financial_thresholds.investments[item.key];
+                                    const entry = thresholds.financial_thresholds?.investments?.[item.key];
                                     const ref = entry?.source_ref || '';
                                     return (
                                         <div key={item.key} className="bg-slate-50 rounded-xl p-4 border border-slate-100">
@@ -817,13 +892,69 @@ export default function EligibilityConfigPanel() {
                                 })}
                             </div>
                         </div>
+
+                        {/* Allocations */}
+                        <div className="space-y-4">
+                            <h3 className="font-bold text-slate-400 uppercase tracking-widest text-xs font-mono">🏥 Allocations</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {[
+                                    { label: 'ADA — Montant journalier', key: 'ada_montant_journalier' },
+                                    { label: 'ADA — Supplément hébergement', key: 'ada_supplement_hebergement' },
+                                ].map(item => {
+                                    const entry = thresholds.financial_thresholds?.allocations?.[item.key];
+                                    const ref = entry?.source_ref || '';
+                                    return (
+                                        <div key={item.key} className="bg-cyan-50 rounded-xl p-4 border border-cyan-100">
+                                            <label className="block text-sm font-bold text-slate-700 mb-1">{item.label}</label>
+                                            {ref && <span className="text-[10px] text-cyan-600 font-mono">{ref}</span>}
+                                            <input
+                                                type="number"
+                                                step="0.01"
+                                                value={tv(entry)}
+                                                onChange={(e) => updateNestedThreshold(['financial_thresholds', 'allocations', item.key], parseFloat(e.target.value))}
+                                                className="w-full mt-1 px-4 py-3 bg-white border border-cyan-200 rounded-xl font-bold focus:ring-2 focus:ring-cyan-500"
+                                            />
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        {/* Taxes OFII */}
+                        <div className="space-y-4">
+                            <h3 className="font-bold text-slate-400 uppercase tracking-widest text-xs font-mono">🏛️ Taxes OFII & Timbres</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {[
+                                    { label: 'Taxe 1er titre', key: 'taxe_premier_titre' },
+                                    { label: 'Taxe renouvellement', key: 'taxe_renouvellement' },
+                                    { label: 'Taxe duplicata', key: 'taxe_duplicata' },
+                                    { label: 'Droit de timbre', key: 'droit_timbre' },
+                                    { label: 'Taxe employeur (travailleur étranger)', key: 'taxe_employeur_travailleur_etranger' },
+                                ].map(item => {
+                                    const entry = thresholds.financial_thresholds?.taxes_ofii?.[item.key];
+                                    const ref = entry?.source_ref || '';
+                                    return (
+                                        <div key={item.key} className="bg-violet-50 rounded-xl p-4 border border-violet-100">
+                                            <label className="block text-sm font-bold text-slate-700 mb-1">{item.label}</label>
+                                            {ref && <span className="text-[10px] text-violet-600 font-mono">{ref}</span>}
+                                            <input
+                                                type="number"
+                                                value={tv(entry)}
+                                                onChange={(e) => updateNestedThreshold(['financial_thresholds', 'taxes_ofii', item.key], parseFloat(e.target.value))}
+                                                className="w-full mt-1 px-4 py-3 bg-white border border-violet-200 rounded-xl font-bold focus:ring-2 focus:ring-violet-500"
+                                            />
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
                     </div>
 
                     {/* DUREES DE RESIDENCE ET MARIAGE */}
                     <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-sm space-y-6">
                         <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
                             <Clock className="text-indigo-600" size={24} />
-                            <h2 className="text-xl font-black text-slate-900">Durées de résidence & mariage (années)</h2>
+                            <h2 className="text-xl font-black text-slate-900">Durées de résidence &amp; mariage (années)</h2>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -836,12 +967,13 @@ export default function EligibilityConfigPanel() {
                                     { label: 'Regroupement Familial', key: 'regroupement_familial_resident' },
                                     { label: 'Ascendant de Français', key: 'ascendant_de_francais' },
                                     { label: 'Enfant Né en France (continu)', key: 'enfant_ne_en_france_continuous' },
+                                    { label: 'Carte Résident 10 ans', key: 'carte_resident_10_ans' },
                                 ].map(item => (
                                     <div key={item.key}>
                                         <label className="block text-sm font-bold text-slate-700 mb-1">{item.label}</label>
                                         <input
                                             type="number"
-                                            value={thresholds.duration_thresholds.residence_in_france[item.key]}
+                                            value={thresholds.duration_thresholds?.residence_in_france?.[item.key] ?? ''}
                                             onChange={(e) => updateNestedThreshold(['duration_thresholds', 'residence_in_france', item.key], parseFloat(e.target.value))}
                                             className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold focus:ring-2 focus:ring-indigo-500"
                                         />
@@ -860,13 +992,61 @@ export default function EligibilityConfigPanel() {
                                         <label className="block text-sm font-bold text-slate-700 mb-1">{item.label}</label>
                                         <input
                                             type="number"
-                                            value={thresholds.duration_thresholds.marriage_duration[item.key]}
+                                            value={thresholds.duration_thresholds?.marriage_duration?.[item.key] ?? ''}
                                             onChange={(e) => updateNestedThreshold(['duration_thresholds', 'marriage_duration', item.key], parseFloat(e.target.value))}
                                             className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold focus:ring-2 focus:ring-indigo-500"
                                         />
                                     </div>
                                 ))}
+
+                                <h3 className="font-bold text-slate-400 uppercase tracking-widest text-xs font-mono pt-4">📄 Durées de Contrat (mois)</h3>
+                                {[
+                                    { label: 'CDI minimum salarié', key: 'cdi_minimum_salarie' },
+                                    { label: 'CDD minimum travailleur temporaire', key: 'cdd_minimum_travailleur_temporaire' },
+                                    { label: 'CDD minimum salarié détaché', key: 'cdd_minimum_salarie_detache' },
+                                    { label: 'Contrat apprentissage minimum', key: 'contrat_apprentissage_minimum' },
+                                ].map(item => (
+                                    <div key={item.key}>
+                                        <label className="block text-sm font-bold text-slate-700 mb-1">{item.label}</label>
+                                        <input
+                                            type="number"
+                                            value={thresholds.duration_thresholds?.contract_duration_months?.[item.key] ?? ''}
+                                            onChange={(e) => updateNestedThreshold(['duration_thresholds', 'contract_duration_months', item.key], parseFloat(e.target.value))}
+                                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold focus:ring-2 focus:ring-indigo-500"
+                                        />
+                                    </div>
+                                ))}
                             </div>
+                        </div>
+                    </div>
+
+                    {/* SEUILS D'ÂGE */}
+                    <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-sm space-y-6">
+                        <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
+                            <Users className="text-indigo-600" size={24} />
+                            <h2 className="text-xl font-black text-slate-900">Seuils d&apos;Âge (années)</h2>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {[
+                                { label: 'Âge minimum mariage', key: 'age_minimum_mariage' },
+                                { label: 'Majorité', key: 'age_majorite' },
+                                { label: 'Âge max. étudiant', key: 'age_maximum_etudiant' },
+                                { label: 'Âge min. naturalisation', key: 'age_minimum_naturalisation' },
+                                { label: 'Enfant mineur max.', key: 'enfant_mineur_max' },
+                                { label: 'Enfant max. regroupement familial', key: 'enfant_rejoint_max_regroupement' },
+                                { label: 'Retraite minimum', key: 'retraite_minimum' },
+                            ].map(item => (
+                                <div key={item.key} className="bg-amber-50 rounded-xl p-4 border border-amber-100">
+                                    <label className="block text-sm font-bold text-slate-700 mb-1">{item.label}</label>
+                                    <input
+                                        type="number"
+                                        value={thresholds.age_thresholds?.[item.key] ?? ''}
+                                        onChange={(e) => updateNestedThreshold(['age_thresholds', item.key], parseFloat(e.target.value))}
+                                        className="w-full mt-1 px-4 py-3 bg-white border border-amber-200 rounded-xl font-bold focus:ring-2 focus:ring-amber-500"
+                                    />
+                                </div>
+                            ))}
                         </div>
                     </div>
 

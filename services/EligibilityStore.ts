@@ -226,6 +226,44 @@ export const EligibilityStore = {
         }
         return [];
     },
+
+    // ============================================
+    // NOTIFICATIONS & MONITORING
+    // ============================================
+
+    /**
+     * Récupère les notifications système actives (alertes CRON)
+     */
+    fetchNotifications: async (limit = 20): Promise<any[]> => {
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+        try {
+            const res = await fetch(`${API_URL}/eligibility/notifications?limit=${limit}`);
+            if (res.ok) {
+                return await res.json();
+            }
+        } catch (err) {
+            console.warn('[ELIGIBILITY] ⚠️ Failed to fetch notifications', err);
+        }
+        return [];
+    },
+
+    /**
+     * Force un check immédiat de la fraîcheur des seuils
+     */
+    forceThresholdCheck: async (): Promise<any> => {
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+        try {
+            const res = await fetch(`${API_URL}/eligibility/thresholds/force-check`, {
+                method: 'POST',
+            });
+            if (res.ok) {
+                return await res.json();
+            }
+        } catch (err) {
+            console.warn('[ELIGIBILITY] ⚠️ Force threshold check failed', err);
+        }
+        return null;
+    },
 };
 
 export default EligibilityStore;

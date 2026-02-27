@@ -687,3 +687,22 @@ model SalesCommission {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 }
+
+// ══════════════════════════════════════════════════
+// MODULE AI REPORTING / DASHBOARD
+// ══════════════════════════════════════════════════
+
+model AiDashboardWidget {
+  id             String   @id @default(cuid())
+  userId         String   // Propriétaire du widget
+  agencyId       String?  // Agence liée (si le widget est scope agence)
+  title          String
+  description    String?
+  prompt         String?  // Prompt original qui a généré ce widget
+  widgetType     String   // BAR_CHART, PIE_CHART, KPI_CARD, TABLE
+  querySql       String   // Requête exécutée sauvegardée
+  mappingConfig  String   // JSON { labelColumn: "...", valueColumn: "..." }
+  position       Int      @default(0) // Ordre d'affichage
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}

@@ -1,18 +1,12 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { SERVICES_CATALOG, Service } from '../../data/services';
+import { getActiveServices, Service } from '../../data/services';
 import { AgencyExt } from '../../services/AgencyStore';
 import { CRM } from '../../services/crmStore';
-import {
-    Flag, FileText, Users, Languages, GraduationCap,
-    Phone, Car, Gavel, Calendar, ArrowLeft, Send, CheckCircle
-} from 'lucide-react';
+import { ArrowLeft, Send, CheckCircle } from 'lucide-react';
 import SimulatorWrapper from '../SimulatorWrapper';
-
-const ICON_MAP: Record<string, any> = {
-    Flag, FileText, Users, Languages, GraduationCap, Phone, Car, Gavel, Calendar
-};
+import { resolveIcon } from '../../lib/icon-resolver';
 
 interface AgencyKioskProps {
     agency: AgencyExt;
@@ -81,8 +75,8 @@ export default function AgencyKiosk({ agency, onReset }: AgencyKioskProps) {
             <div className="flex-1 p-8 max-w-6xl mx-auto w-full">
                 {step === 'CHOICE' && (
                     <div className="grid grid-cols-3 gap-6">
-                        {SERVICES_CATALOG.filter(s => s.id !== 'rappel').map(service => {
-                            const Icon = ICON_MAP[service.iconName] || FileText;
+                        {getActiveServices().filter(s => s.id !== 'rappel_echeances').map(service => {
+                            const Icon = resolveIcon(service.iconName);
                             return (
                                 <button
                                     key={service.id}

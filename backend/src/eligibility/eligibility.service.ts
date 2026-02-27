@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -36,7 +37,6 @@ export class EligibilityService {
         } catch (error) {
             this.logger.error('Failed to load thresholds', error);
         }
-
         throw new Error('Critical: Legal specification "config_thresholds.json" not found.');
     }
 
@@ -44,7 +44,6 @@ export class EligibilityService {
         const specsDir = this.getSpecsDir();
         const fileName = this.getFileNames()[category];
         if (!fileName) return [];
-
         try {
             const filePath = path.join(specsDir, fileName);
             if (fs.existsSync(filePath)) {
@@ -53,7 +52,6 @@ export class EligibilityService {
         } catch (error) {
             this.logger.error(`Failed to load rules for category ${category}`, error);
         }
-
         return [];
     }
 
@@ -61,19 +59,14 @@ export class EligibilityService {
         const rules = this.getRules(category);
         const thresholds = this.getThresholds();
         const { evaluateRule } = require('./rule-engine.util');
-
         const eligibleRules = rules.filter((rule: any) =>
             evaluateRule(userProfile, rule.conditions, thresholds)
         );
-
         return eligibleRules.sort((a: any, b: any) => (b.priority || 0) - (a.priority || 0));
     }
 
     // ─── Audit Trail ─────────────────────────────────────────────
 
-    /**
-     * Met à jour une règle dans le JSON et crée un audit log
-     */
     async updateRule(category: string, ruleId: string, newConditions: any, changedBy: string, changeDetails?: string) {
         const specsDir = this.getSpecsDir();
         const fileName = this.getFileNames()[category];
@@ -87,10 +80,8 @@ export class EligibilityService {
         const previousRule = { ...rules[ruleIndex] };
         rules[ruleIndex].conditions = newConditions;
 
-        // Save to file
         fs.writeFileSync(filePath, JSON.stringify(rules, null, 4), 'utf8');
 
-        // Create audit log
         await this.prisma.ruleAuditLog.create({
             data: {
                 category,
@@ -108,9 +99,6 @@ export class EligibilityService {
         return rules[ruleIndex];
     }
 
-    /**
-     * Met à jour les seuils de configuration et crée un audit log
-     */
     async updateThresholds(newThresholds: any, changedBy: string, changeDetails?: string) {
         const specsDir = this.getSpecsDir();
         const filePath = path.join(specsDir, 'config_thresholds.json');
@@ -139,9 +127,6 @@ export class EligibilityService {
         return newThresholds;
     }
 
-    /**
-     * Récupère l'audit log des modifications de règles
-     */
     async getAuditLog(limit = 50) {
         return this.prisma.ruleAuditLog.findMany({
             orderBy: { createdAt: 'desc' },
@@ -149,9 +134,6 @@ export class EligibilityService {
         });
     }
 
-    /**
-     * Récupère l'audit log pour une règle spécifique
-     */
     async getRuleHistory(category: string, ruleId: string) {
         return this.prisma.ruleAuditLog.findMany({
             where: { category, ruleId },
@@ -161,9 +143,6 @@ export class EligibilityService {
 
     // ─── Catalogue de documents ──────────────────────────────────
 
-    /**
-     * Retourne le catalogue complet des documents
-     */
     getDocumentCatalog() {
         const specsDir = this.getSpecsDir();
         try {
@@ -179,9 +158,6 @@ export class EligibilityService {
 
     // ─── Checklist personnalisée ─────────────────────────────────
 
-    /**
-     * Génère une checklist personnalisée basée sur le profil utilisateur
-     */
     async generateChecklist(userProfile: any, category: string) {
         const eligibleRules = await this.evaluateEligibility(userProfile, category);
         const catalog = this.getDocumentCatalog();
@@ -202,10 +178,6 @@ export class EligibilityService {
 
     // ─── Consistency Check (Batch Simulator) ─────────────────────
 
-    /**
-     * Exécute tous les profils-types contre toutes les règles
-     * et détecte : règles orphelines, chevauchements excessifs, profils sans match
-     */
     async runConsistencyCheck() {
         const specsDir = this.getSpecsDir();
         const profilesPath = path.join(specsDir, 'test_profiles.json');
@@ -219,7 +191,6 @@ export class EligibilityService {
         const { evaluateRule } = require('./rule-engine.util');
         const categories = Object.keys(this.getFileNames());
 
-        // Load all rules
         const allRulesMap: Record<string, any[]> = {};
         let totalRules = 0;
         for (const cat of categories) {
@@ -227,7 +198,6 @@ export class EligibilityService {
             totalRules += allRulesMap[cat].length;
         }
 
-        // Track which rules are matched by at least one profile
         const ruleMatchCount: Record<string, number> = {};
         for (const cat of categories) {
             for (const rule of allRulesMap[cat]) {
@@ -235,7 +205,6 @@ export class EligibilityService {
             }
         }
 
-        // Run each profile against all categories
         const profileResults: any[] = [];
         for (const tp of profiles) {
             const matchesByCategory: Record<string, string[]> = {};
@@ -274,12 +243,10 @@ export class EligibilityService {
             });
         }
 
-        // Identify orphan rules (never matched by any profile)
         const orphanRules = Object.entries(ruleMatchCount)
             .filter(([, count]) => count === 0)
             .map(([key]) => key);
 
-        // Identify heavily overlapping rules (matched by many profiles)
         const highOverlap = Object.entries(ruleMatchCount)
             .filter(([, count]) => count >= Math.ceil(profiles.length * 0.7))
             .map(([key, count]) => ({ rule: key, matchedByProfiles: count }));
@@ -298,11 +265,8 @@ export class EligibilityService {
         };
     }
 
-    // ─── Threshold Staleness Check ───────────────────────────────
+    // ─── Threshold Staleness Check (expanded) ────────────────────
 
-    /**
-     * Vérifie la fraîcheur des seuils de configuration
-     */
     checkThresholdsStaleness() {
         const specsDir = this.getSpecsDir();
         const filePath = path.join(specsDir, 'config_thresholds.json');
@@ -317,19 +281,25 @@ export class EligibilityService {
 
         const thresholds = JSON.parse(fs.readFileSync(filePath, 'utf8'));
 
-        // Read _meta if present
         const meta = thresholds._meta || {};
         const lastReviewed = meta.last_reviewed || null;
         const nextReviewDue = meta.next_review_due || null;
         const reviewOverdue = nextReviewDue ? new Date(nextReviewDue) < new Date() : false;
 
-        // Check individual thresholds
+        // Expanded checks — covers all critical thresholds
         const checks = [
             { label: 'SMIC mensuel brut', path: 'financial_thresholds.salary_monthly_gross.smic' },
             { label: 'Passeport Talent salarié qualifié', path: 'financial_thresholds.salary_annual_gross.passeport_talent_salarie_qualifie' },
             { label: 'Carte Bleue UE seuil', path: 'financial_thresholds.salary_annual_gross.passeport_talent_carte_bleue_eu' },
             { label: 'Investisseur économique', path: 'financial_thresholds.investments.investisseur_eco_fonds' },
             { label: 'Création entreprise', path: 'financial_thresholds.investments.creation_entreprise_fonds' },
+            { label: 'PASS (Plafond SS)', path: 'financial_thresholds.salary_annual_gross.plafond_annuel_securite_sociale' },
+            { label: 'RSA Socle', path: 'financial_thresholds.salary_monthly_gross.rsa_socle_personne_seule' },
+            { label: 'ADA journalier', path: 'financial_thresholds.allocations.ada_montant_journalier' },
+            { label: 'Taxe 1er titre OFII', path: 'financial_thresholds.taxes_ofii.taxe_premier_titre' },
+            { label: 'Taxe renouvellement OFII', path: 'financial_thresholds.taxes_ofii.taxe_renouvellement' },
+            { label: 'PT Mandataire Social', path: 'financial_thresholds.salary_annual_gross.passeport_talent_mandataire_social' },
+            { label: 'Regroupement Familial', path: 'financial_thresholds.salary_monthly_gross.regroupement_familial_resources' },
         ];
 
         const currentYear = new Date().getFullYear();
@@ -340,14 +310,14 @@ export class EligibilityService {
             let val: any = thresholds;
             for (const p of parts) { val = val?.[p]; }
 
-            // Handle versioned (object with .value) vs legacy (raw number)
+            if (val === undefined || val === null) continue;
+
             const isVersioned = val && typeof val === 'object' && 'value' in val;
             const numericValue = isVersioned ? val.value : val;
             const validFrom = isVersioned ? val.valid_from : null;
             const sourceUrl = isVersioned ? val.source_url : null;
             const sourceRef = isVersioned ? val.source_ref : null;
 
-            // Stale if valid_from is from a previous year
             const validFromYear = validFrom ? new Date(validFrom).getFullYear() : null;
             const isStale = validFromYear !== null && validFromYear < currentYear;
 
@@ -373,14 +343,100 @@ export class EligibilityService {
                 lastReviewed,
                 nextReviewDue,
                 reviewOverdue,
+                version: meta.version || null,
             },
             staleWarning: daysSinceFileUpdate > 180 ? `⚠️ Fichier non modifié depuis ${daysSinceFileUpdate} jours` : null,
             alerts,
+            staleCount,
+            totalChecked: alerts.length,
             recommendation: staleCount > 0
                 ? `${staleCount} seuil(s) datent de l'année précédente. Vérifiez les montants officiels sur service-public.fr.`
                 : reviewOverdue
                     ? 'La date de prochaine revue est dépassée. Planifiez une revue des seuils.'
                     : 'Tous les seuils paraissent à jour.',
+        };
+    }
+
+    // ─── CRON: Daily Threshold Freshness Check ───────────────────
+
+    /**
+     * Tâche CRON quotidienne — vérifie la fraîcheur des seuils à 8h00
+     */
+    @Cron(CronExpression.EVERY_DAY_AT_8AM)
+    async handleDailyThresholdCheck() {
+        this.logger.log('🕐 [CRON] Vérification quotidienne des seuils...');
+        try {
+            const result = this.checkThresholdsStaleness();
+
+            if (result.status === 'WARNING') {
+                this.logger.warn(`⚠️ [CRON] ${result.staleCount || 0} seuil(s) obsolète(s) détecté(s)`);
+                await this.createThresholdNotification(result);
+            } else {
+                this.logger.log('✅ [CRON] Tous les seuils sont à jour.');
+            }
+        } catch (error) {
+            this.logger.error('❌ [CRON] Erreur vérification seuils', error);
+        }
+    }
+
+    /**
+     * Crée une notification interne dans l'audit log
+     */
+    private async createThresholdNotification(healthResult: any) {
+        const staleAlerts = healthResult.alerts?.filter((a: any) => a.isStale) || [];
+        const staleLabels = staleAlerts.map((a: any) => a.label).join(', ');
+        const message = `⚠️ Seuils obsolètes détectés : ${staleLabels}. ${healthResult.recommendation}`;
+
+        try {
+            await this.prisma.ruleAuditLog.create({
+                data: {
+                    category: 'system',
+                    ruleId: 'threshold_alert',
+                    ruleName: 'Alerte fraîcheur des seuils',
+                    action: 'ALERT',
+                    changedBy: 'CRON_SYSTEM',
+                    previousValue: '',
+                    newValue: JSON.stringify({
+                        staleCount: staleAlerts.length,
+                        staleThresholds: staleAlerts.map((a: any) => ({
+                            label: a.label,
+                            value: a.currentValue,
+                            validFrom: a.validFrom,
+                        })),
+                        reviewOverdue: healthResult.meta?.reviewOverdue || false,
+                        nextReviewDue: healthResult.meta?.nextReviewDue || null,
+                    }),
+                    changeDetails: message,
+                },
+            });
+            this.logger.log('📧 [CRON] Notification créée dans l\'audit log');
+        } catch (error) {
+            this.logger.error('❌ [CRON] Impossible de sauvegarder la notification', error);
+        }
+    }
+
+    // ─── Notifications API ───────────────────────────────────────
+
+    async getActiveNotifications(limit = 20) {
+        return this.prisma.ruleAuditLog.findMany({
+            where: {
+                category: 'system',
+                action: 'ALERT',
+            },
+            orderBy: { createdAt: 'desc' },
+            take: limit,
+        });
+    }
+
+    async forceThresholdCheck() {
+        const result = this.checkThresholdsStaleness();
+        if (result.status === 'WARNING') {
+            await this.createThresholdNotification(result);
+        }
+        return {
+            ...result,
+            checkedAt: new Date().toISOString(),
+            triggeredBy: 'manual',
         };
     }
 }

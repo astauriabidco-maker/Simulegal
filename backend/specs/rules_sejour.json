@@ -348,7 +348,7 @@
                 {
                     "var": "work.annual_gross_salary",
                     "op": "GTE",
-                    "val": "@config:financial_thresholds.salary_annual_gross.passeport_talent_salarie_qualifie"
+                    "val": "@math:@config:financial_thresholds.salary_monthly_gross.smic * 1.5 * 12"
                 }
             ]
         }
@@ -374,7 +374,7 @@
                 {
                     "var": "work.annual_gross_salary",
                     "op": "GTE",
-                    "val": "@config:financial_thresholds.salary_annual_gross.passeport_talent_salarie_qualifie"
+                    "val": "@math:@config:financial_thresholds.salary_monthly_gross.smic * 1.5 * 12"
                 }
             ]
         }

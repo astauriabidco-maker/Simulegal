@@ -1,9 +1,10 @@
 {
     "_meta": {
-        "last_reviewed": "2026-02-18",
+        "last_reviewed": "2026-02-27",
         "reviewed_by": "admin",
         "next_review_due": "2026-07-01",
-        "note": "Les montants doivent être vérifiés au 1er janvier de chaque année."
+        "note": "Les montants doivent être vérifiés au 1er janvier de chaque année. Sources: service-public.fr, Légifrance.",
+        "version": "2.0.0"
     },
     "financial_thresholds": {
         "currency": "EUR",
@@ -34,6 +35,12 @@
                 "value": 17115.69,
                 "valid_from": "2024-01-01",
                 "source_ref": "CESEDA R421-1"
+            },
+            "plafond_annuel_securite_sociale": {
+                "value": 46368,
+                "valid_from": "2024-01-01",
+                "source_url": "https://www.service-public.fr/particuliers/vosdroits/F2300",
+                "source_ref": "Arrêté PASS annuel"
             }
         },
         "salary_monthly_gross": {
@@ -63,6 +70,12 @@
                 "valid_from": "2024-01-01",
                 "source_url": "https://www.service-public.fr/particuliers/vosdroits/F11166",
                 "source_ref": "CESEDA R434-5"
+            },
+            "rsa_socle_personne_seule": {
+                "value": 607.75,
+                "valid_from": "2024-04-01",
+                "source_url": "https://www.service-public.fr/particuliers/vosdroits/F502",
+                "source_ref": "Décret RSA"
             }
         },
         "investments": {
@@ -76,6 +89,47 @@
                 "valid_from": "2024-01-01",
                 "source_ref": "CESEDA R421-31-1"
             }
+        },
+        "allocations": {
+            "ada_montant_journalier": {
+                "value": 6.80,
+                "valid_from": "2024-01-01",
+                "source_url": "https://www.service-public.fr/particuliers/vosdroits/F33314",
+                "source_ref": "Décret ADA"
+            },
+            "ada_supplement_hebergement": {
+                "value": 7.40,
+                "valid_from": "2024-01-01",
+                "source_ref": "CESEDA D553-4"
+            }
+        },
+        "taxes_ofii": {
+            "taxe_premier_titre": {
+                "value": 225,
+                "valid_from": "2024-01-01",
+                "source_url": "https://www.service-public.fr/particuliers/vosdroits/F17299",
+                "source_ref": "CESEDA R431-16"
+            },
+            "taxe_renouvellement": {
+                "value": 225,
+                "valid_from": "2024-01-01",
+                "source_ref": "CESEDA R431-16"
+            },
+            "taxe_duplicata": {
+                "value": 25,
+                "valid_from": "2024-01-01",
+                "source_ref": "CESEDA R431-16"
+            },
+            "droit_timbre": {
+                "value": 25,
+                "valid_from": "2024-01-01",
+                "source_ref": "Art. 1635 bis CGI"
+            },
+            "taxe_employeur_travailleur_etranger": {
+                "value": 55,
+                "valid_from": "2024-01-01",
+                "source_ref": "CESEDA R436-1"
+            }
         }
     },
     "duration_thresholds": {
@@ -86,12 +140,29 @@
             "resident_longue_duree_ue": 5,
             "regroupement_familial_resident": 3,
             "ascendant_de_francais": 25,
-            "enfant_ne_en_france_continuous": 5
+            "enfant_ne_en_france_continuous": 5,
+            "carte_resident_10_ans": 5
         },
         "marriage_duration": {
             "pour_carte_resident_conjoint_francais": 3,
             "pour_carte_resident_conjoint_francais_tunisien": 1,
             "pour_nationalite_mariage": 4
+        },
+        "contract_duration_months": {
+            "cdi_minimum_salarie": 0,
+            "cdd_minimum_travailleur_temporaire": 3,
+            "cdd_minimum_salarie_detache": 3,
+            "contrat_apprentissage_minimum": 6
         }
+    },
+    "age_thresholds": {
+        "unit": "years",
+        "age_minimum_mariage": 18,
+        "age_majorite": 18,
+        "age_maximum_etudiant": 30,
+        "age_minimum_naturalisation": 18,
+        "enfant_mineur_max": 18,
+        "enfant_rejoint_max_regroupement": 18,
+        "retraite_minimum": 60
     }
 }

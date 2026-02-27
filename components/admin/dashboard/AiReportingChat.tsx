@@ -30,6 +30,34 @@ export default function AiReportingChat() {
     const [error, setError] = useState<string | null>(null);
     const [widget, setWidget] = useState<WidgetData | null>(null);
     const [debugSql, setDebugSql] = useState<string | null>(null);
+    const [isPinning, setIsPinning] = useState(false);
+    const [pinnedSuccess, setPinnedSuccess] = useState(false);
+
+    const handlePinWidget = async () => {
+        if (!widget) return;
+        setIsPinning(true);
+        try {
+            const token = localStorage.getItem('admin_token');
+            const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+            const res = await fetch(`${API}/ai-reporting/widgets`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(widget)
+            });
+
+            if (!res.ok) throw new Error('Failed to pin widget');
+            setPinnedSuccess(true);
+            setTimeout(() => setPinnedSuccess(false), 3000);
+        } catch (err) {
+            console.error("Error pinning widget:", err);
+            alert("Erreur lors de l'épinglage du widget");
+        } finally {
+            setIsPinning(false);
+        }
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -200,8 +228,12 @@ export default function AiReportingChat() {
             {widget && (
                 <div className="p-6 rounded-2xl border border-slate-100 bg-slate-50/50 mt-8 relative group">
                     <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button className="px-3 py-1.5 text-xs font-bold bg-white text-indigo-600 hover:bg-indigo-50 rounded-lg shadow-sm border border-slate-200 transition-colors">
-                            Épingler
+                        <button
+                            onClick={handlePinWidget}
+                            disabled={isPinning || pinnedSuccess}
+                            className="px-3 py-1.5 text-xs font-bold bg-white text-indigo-600 hover:bg-indigo-50 rounded-lg shadow-sm border border-slate-200 transition-colors disabled:opacity-50"
+                        >
+                            {isPinning ? 'Épinglage...' : pinnedSuccess ? '✅ Épinglé !' : '📌 Épingler au dashboard'}
                         </button>
                     </div>
 
